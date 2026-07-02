@@ -1,0 +1,553 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="theme-color" content="#14532D">
+<title>คำขอใช้พื้นที่ป่า ขท.กระบี่</title>
+<link rel="manifest" href="manifest.json">
+<link rel="icon" href="icon-192.png">
+<link rel="apple-touch-icon" href="icon-192.png">
+<style>
+:root{
+  --green:#14532D; --green-2:#1B6B3C; --green-soft:#E4EFE6;
+  --bg:#F2F5F1; --card:#FFFFFF; --line:#E2E6E0;
+  --ink:#1C2420; --ink-2:#5C6660; --ink-3:#8A938D;
+  --amber:#B45309; --amber-bg:#FDF1DF; --blue:#1D4ED8; --blue-bg:#E8EEFC;
+  --teal:#0F766E; --teal-bg:#DFF2F0; --red:#B91C1C; --red-bg:#FBE7E7;
+  --purple:#6D28D9; --purple-bg:#EFE9FB; --gray-bg:#EEF1EE;
+  --radius:14px;
+}
+*{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent}
+html{font-size:16px}
+body{
+  font-family:'Noto Sans Thai','Sarabun',system-ui,sans-serif;
+  background:var(--bg);color:var(--ink);line-height:1.55;
+  padding-bottom:calc(64px + env(safe-area-inset-bottom));
+}
+header{
+  position:sticky;top:0;z-index:20;background:var(--green);color:#fff;
+  padding:calc(10px + env(safe-area-inset-top)) 16px 10px;
+  display:flex;align-items:center;gap:10px;
+}
+header .ttl{flex:1;min-width:0}
+header .ttl b{font-size:1.05rem;font-weight:600;display:block}
+header .ttl small{font-size:.72rem;opacity:.85;display:block;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+#netdot{width:9px;height:9px;border-radius:50%;background:#F87171;flex:none}
+#netdot.on{background:#6EE7A0}
+#syncBtn{
+  border:1px solid rgba(255,255,255,.4);background:rgba(255,255,255,.12);color:#fff;
+  border-radius:999px;padding:7px 14px;font:inherit;font-size:.85rem;display:flex;align-items:center;gap:6px;
+}
+#syncBtn:disabled{opacity:.55}
+#syncBtn .sp{width:13px;height:13px;border:2px solid #fff;border-top-color:transparent;border-radius:50%;display:none;animation:spin 1s linear infinite}
+#syncBtn.busy .sp{display:block}
+@keyframes spin{to{transform:rotate(360deg)}}
+main{padding:14px 14px 8px;max-width:760px;margin:0 auto}
+.view{display:none}.view.on{display:block}
+.card{background:var(--card);border:1px solid var(--line);border-radius:var(--radius);padding:14px;margin-bottom:12px}
+h2{font-size:.95rem;font-weight:600;color:var(--ink-2);margin-bottom:10px}
+.kpis{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:12px}
+.kpi{background:var(--card);border:1px solid var(--line);border-radius:var(--radius);padding:12px 14px}
+.kpi b{font-size:1.7rem;font-weight:600;color:var(--green);display:block;line-height:1.2}
+.kpi span{font-size:.78rem;color:var(--ink-2)}
+.chips{display:flex;flex-wrap:wrap;gap:8px}
+.chip{
+  border:1px solid var(--line);background:var(--card);border-radius:999px;
+  padding:6px 12px;font:inherit;font-size:.82rem;color:var(--ink-2);display:flex;align-items:center;gap:6px;
+}
+.chip .n{font-weight:600;color:var(--ink)}
+.chip.sel{background:var(--green);border-color:var(--green);color:#fff}
+.chip.sel .n{color:#fff}
+.searchrow{display:flex;gap:8px;margin-bottom:10px}
+input,select,textarea{
+  font:inherit;color:var(--ink);background:var(--card);
+  border:1px solid var(--line);border-radius:10px;padding:10px 12px;width:100%;
+}
+input:focus,select:focus,textarea:focus,button:focus-visible{outline:2px solid var(--green-2);outline-offset:1px}
+.item{
+  background:var(--card);border:1px solid var(--line);border-radius:var(--radius);
+  padding:12px 14px;margin-bottom:10px;display:block;width:100%;text-align:left;font:inherit;
+}
+.item .r1{display:flex;align-items:center;gap:8px;flex-wrap:wrap}
+.item .route{font-weight:600;font-size:1rem}
+.item .r2{font-size:.82rem;color:var(--ink-2);margin-top:3px}
+.badge{font-size:.72rem;border-radius:999px;padding:2px 10px;white-space:nowrap}
+.b-gray{background:var(--gray-bg);color:var(--ink-2)}
+.b-blue{background:var(--blue-bg);color:var(--blue)}
+.b-amber{background:var(--amber-bg);color:var(--amber)}
+.b-green{background:var(--green-soft);color:var(--green)}
+.b-purple{background:var(--purple-bg);color:var(--purple)}
+.b-teal{background:var(--teal-bg);color:var(--teal)}
+.b-red{background:var(--red-bg);color:var(--red)}
+.pend{font-size:.72rem;color:var(--amber);white-space:nowrap}
+.empty{color:var(--ink-3);text-align:center;padding:26px 10px;font-size:.9rem}
+nav{
+  position:fixed;bottom:0;left:0;right:0;z-index:20;background:var(--card);
+  border-top:1px solid var(--line);display:flex;
+  padding-bottom:env(safe-area-inset-bottom);
+}
+nav button{
+  flex:1;border:0;background:none;font:inherit;font-size:.72rem;color:var(--ink-3);
+  padding:8px 0 6px;display:flex;flex-direction:column;align-items:center;gap:2px;
+}
+nav button .ic{font-size:1.25rem;line-height:1}
+nav button.on{color:var(--green);font-weight:600}
+#sheetWrap{position:fixed;inset:0;z-index:30;display:none}
+#sheetWrap.on{display:block}
+#sheetBg{position:absolute;inset:0;background:rgba(20,30,24,.45)}
+#sheet{
+  position:absolute;left:0;right:0;bottom:0;max-height:88vh;overflow:auto;
+  background:var(--bg);border-radius:18px 18px 0 0;padding:8px 16px calc(20px + env(safe-area-inset-bottom));
+}
+#sheet .grab{width:42px;height:4px;border-radius:2px;background:var(--line);margin:6px auto 12px}
+.frow{margin-bottom:10px}
+.frow label{font-size:.78rem;color:var(--ink-2);display:block;margin-bottom:4px}
+.f2{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.btn{font:inherit;border:0;border-radius:12px;padding:12px;width:100%;font-weight:600}
+.btn-p{background:var(--green);color:#fff}
+.btn-o{background:var(--card);border:1px solid var(--line);color:var(--ink-2)}
+.btnrow{display:flex;gap:10px;margin-top:14px}
+.dl{display:grid;grid-template-columns:auto 1fr;gap:4px 14px;font-size:.88rem}
+.dl dt{color:var(--ink-2)}
+.dl dd{text-align:right;word-break:break-word}
+#toast{
+  position:fixed;left:50%;bottom:84px;transform:translateX(-50%);z-index:40;
+  background:var(--ink);color:#fff;border-radius:999px;padding:9px 18px;font-size:.85rem;
+  opacity:0;pointer-events:none;transition:opacity .25s;max-width:88vw;text-align:center;
+}
+#toast.on{opacity:1}
+.subhd{display:flex;align-items:center;justify-content:space-between;margin:4px 0 8px}
+.subhd h2{margin:0}
+.linkbtn{border:0;background:none;font:inherit;font-size:.82rem;color:var(--green-2);font-weight:600}
+@media (prefers-reduced-motion:reduce){*{animation:none!important;transition:none!important}}
+</style>
+</head>
+<body>
+
+<header>
+  <div class="ttl">
+    <b>คำขอใช้พื้นที่ป่า</b>
+    <small>แขวงทางหลวงกระบี่ · <span id="lastSync">ยังไม่เคย sync</span></small>
+  </div>
+  <span id="netdot" title="สถานะเครือข่าย"></span>
+  <button id="syncBtn" onclick="doSync()"><span class="sp"></span><span id="syncTxt">Sync</span></button>
+</header>
+
+<main>
+  <section id="v-home" class="view">
+    <div class="kpis">
+      <div class="kpi"><b id="kReq">–</b><span>คำขอทั้งหมด</span></div>
+      <div class="kpi"><b id="kPend">–</b><span>รอ sync ขึ้นชีต</span></div>
+    </div>
+    <div class="card"><h2>สถานะคำขอ (แตะเพื่อกรอง)</h2><div class="chips" id="homeStatus"></div></div>
+    <div class="card"><h2>ประเภทป่า</h2><div class="chips" id="homeType"></div></div>
+    <div class="card"><h2>มติสภา อปท.</h2><div id="homeCouncil" class="dl"></div></div>
+  </section>
+
+  <section id="v-req" class="view">
+    <div class="searchrow">
+      <input id="qReq" type="search" placeholder="ค้นหา: สายทาง เลขคำขอ หมายเหตุ" oninput="renderReq()">
+    </div>
+    <div class="chips" id="fType" style="margin-bottom:8px"></div>
+    <div class="chips" id="fStatus" style="margin-bottom:12px"></div>
+    <div class="subhd"><h2 id="reqCount"></h2><button class="linkbtn" onclick="openEdit('DB_Requests',null)">+ เพิ่มคำขอ</button></div>
+    <div id="reqList"></div>
+  </section>
+
+  <section id="v-cnc" class="view">
+    <div class="searchrow">
+      <input id="qCnc" type="search" placeholder="ค้นหา: อบต. / ทต. / สายทาง" oninput="renderCnc()">
+    </div>
+    <div class="subhd"><h2 id="cncCount"></h2><button class="linkbtn" onclick="openEdit('DB_Council',null)">+ เพิ่มมติสภา</button></div>
+    <div id="cncList"></div>
+  </section>
+
+  <section id="v-set" class="view">
+    <div class="card">
+      <h2>การเชื่อมต่อ</h2>
+      <div class="frow"><label>GAS Web App URL (/exec)</label><input id="cfgUrl" type="url" placeholder="https://script.google.com/macros/s/..../exec"></div>
+      <div class="frow"><label>Token</label><input id="cfgToken" type="password" autocomplete="off"></div>
+      <div class="btnrow">
+        <button class="btn btn-o" onclick="testConn()">ทดสอบ</button>
+        <button class="btn btn-p" onclick="saveCfg()">บันทึก</button>
+      </div>
+    </div>
+    <div class="card">
+      <h2>ข้อมูลในเครื่อง</h2>
+      <div class="dl" id="setInfo"></div>
+      <div class="btnrow"><button class="btn btn-o" style="color:var(--red)" onclick="clearLocal()">ล้างข้อมูลในเครื่อง</button></div>
+    </div>
+  </section>
+</main>
+
+<nav>
+  <button data-v="home" class="on" onclick="go('home')"><span class="ic">▦</span>ภาพรวม</button>
+  <button data-v="req" onclick="go('req')"><span class="ic">🗂</span>คำขอ</button>
+  <button data-v="cnc" onclick="go('cnc')"><span class="ic">🏛</span>มติสภา</button>
+  <button data-v="set" onclick="go('set')"><span class="ic">⚙</span>ตั้งค่า</button>
+</nav>
+
+<div id="sheetWrap"><div id="sheetBg" onclick="closeSheet()"></div><div id="sheet"><div class="grab"></div><div id="sheetBody"></div></div></div>
+<div id="toast"></div>
+
+<script>
+'use strict';
+const STATUSES = ['ยื่นแล้ว','แจ้งตรวจป่าแล้ว','รอลงตรวจป่า','ลงตรวจแล้ว','รอมติสภา','ได้รับอนุญาต'];
+const STCLS = {'ยื่นแล้ว':'b-gray','แจ้งตรวจป่าแล้ว':'b-blue','รอลงตรวจป่า':'b-amber','ลงตรวจแล้ว':'b-green','รอมติสภา':'b-purple','ได้รับอนุญาต':'b-teal'};
+const FTYPES = ['ป่าสงวนแห่งชาติ','ป่าถาวร (ม.4(1))','ป่าชายเลน'];
+const AGENCIES = ['สนง.ป่าไม้ที่ 12','สนง.ป่าชายเลนที่ 10'];
+const PROVS = ['กระบี่','นครศรีธรรมราช'];
+const TH_M = ['ม.ค.','ก.พ.','มี.ค.','เม.ย.','พ.ค.','มิ.ย.','ก.ค.','ส.ค.','ก.ย.','ต.ค.','พ.ย.','ธ.ค.'];
+const $ = (s) => document.querySelector(s);
+const esc = (s) => String(s ?? '').replace(/[&<>"']/g, (c) => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+
+let state = {
+  tab: 'home',
+  data: { requests: [], council: [], routes: [] },
+  queue: [],
+  fType: '', fStatus: ''
+};
+
+/* ---------- IndexedDB ---------- */
+let db;
+function idb() {
+  return new Promise((res, rej) => {
+    if (db) return res(db);
+    const r = indexedDB.open('forestdb', 1);
+    r.onupgradeneeded = () => {
+      const d = r.result;
+      d.createObjectStore('tables');
+      d.createObjectStore('queue', { keyPath: 'qid', autoIncrement: true });
+      d.createObjectStore('kv');
+    };
+    r.onsuccess = () => { db = r.result; res(db); };
+    r.onerror = () => rej(r.error);
+  });
+}
+function tx(store, mode, fn) {
+  return idb().then((d) => new Promise((res, rej) => {
+    const t = d.transaction(store, mode);
+    const req = fn(t.objectStore(store));
+    t.oncomplete = () => res(req ? req.result : undefined);
+    t.onerror = () => rej(t.error);
+  }));
+}
+const kvGet = (k) => tx('kv', 'readonly', (s) => s.get(k));
+const kvSet = (k, v) => tx('kv', 'readwrite', (s) => s.put(v, k));
+const tblGet = (k) => tx('tables', 'readonly', (s) => s.get(k));
+const tblSet = (k, v) => tx('tables', 'readwrite', (s) => s.put(v, k));
+const qAll = () => tx('queue', 'readonly', (s) => s.getAll());
+const qDel = (qid) => tx('queue', 'readwrite', (s) => s.delete(qid));
+function qUpsert(table, record) {
+  const idCol = table === 'DB_Requests' ? 'req_id' : 'res_id';
+  return qAll().then((all) => {
+    const dup = all.find((q) => q.table === table && q.record[idCol] === record[idCol]);
+    return tx('queue', 'readwrite', (s) => {
+      if (dup) s.delete(dup.qid);
+      s.add({ table, record });
+    });
+  }).then(loadQueue);
+}
+function loadQueue() { return qAll().then((q) => { state.queue = q || []; }); }
+
+/* ---------- helpers ---------- */
+function fmtTH(iso) {
+  if (!iso || !/^\d{4}-\d{2}-\d{2}/.test(iso)) return iso || '–';
+  const y = +iso.slice(0, 4) + 543, m = +iso.slice(5, 7), d = +iso.slice(8, 10);
+  return d + ' ' + TH_M[m - 1] + ' ' + y;
+}
+function nowISO() {
+  const d = new Date(), p = (n) => String(n).padStart(2, '0');
+  return d.getFullYear() + '-' + p(d.getMonth() + 1) + '-' + p(d.getDate()) +
+         'T' + p(d.getHours()) + ':' + p(d.getMinutes()) + ':' + p(d.getSeconds());
+}
+function toast(msg, ms) {
+  const t = $('#toast'); t.textContent = msg; t.classList.add('on');
+  clearTimeout(toast._h); toast._h = setTimeout(() => t.classList.remove('on'), ms || 2600);
+}
+function isPending(table, id) {
+  const idCol = table === 'DB_Requests' ? 'req_id' : 'res_id';
+  return state.queue.some((q) => q.table === table && q.record[idCol] === id);
+}
+function nextId(prefix, rows, idCol) {
+  let mx = 0;
+  rows.forEach((r) => { const m = String(r[idCol] || '').match(/(\d+)$/); if (m) mx = Math.max(mx, +m[1]); });
+  return prefix + '-' + String(mx + 1).padStart(3, '0');
+}
+function cfg() {
+  return { url: localStorage.getItem('gas_url') || '', token: localStorage.getItem('gas_token') || '' };
+}
+
+/* ---------- sync ---------- */
+async function apiGet() {
+  const c = cfg();
+  if (!c.url || !c.token) throw new Error('ยังไม่ได้ตั้งค่า URL/Token (ไปที่แท็บ ตั้งค่า)');
+  const r = await fetch(c.url + '?token=' + encodeURIComponent(c.token));
+  const j = await r.json();
+  if (!j.ok) throw new Error(j.error === 'unauthorized' ? 'Token ไม่ถูกต้อง' : j.error);
+  return j;
+}
+async function apiPost(body) {
+  const c = cfg();
+  const r = await fetch(c.url, {
+    method: 'POST',
+    headers: { 'Content-Type': 'text/plain' },
+    body: JSON.stringify(Object.assign({ token: c.token }, body))
+  });
+  return r.json();
+}
+async function doSync() {
+  const btn = $('#syncBtn');
+  if (btn.disabled) return;
+  btn.disabled = true; btn.classList.add('busy'); $('#syncTxt').textContent = 'กำลัง sync';
+  try {
+    let pushed = 0, conflicts = 0;
+    for (const q of state.queue.slice()) {
+      const res = await apiPost({ action: 'upsert', table: q.table, record: q.record });
+      if (res.ok) { await qDel(q.qid); pushed++; }
+      else if (res.error === 'conflict') { await qDel(q.qid); conflicts++; }
+      else throw new Error(res.error || 'เขียนขึ้นชีตไม่สำเร็จ');
+    }
+    const j = await apiGet();
+    state.data = { requests: j.requests || [], council: j.council || [], routes: j.routes || [] };
+    await tblSet('requests', state.data.requests);
+    await tblSet('council', state.data.council);
+    await tblSet('routes', state.data.routes);
+    await kvSet('last_sync', nowISO());
+    await loadQueue();
+    renderAll();
+    let msg = 'Sync สำเร็จ · คำขอ ' + state.data.requests.length + ' รายการ';
+    if (pushed) msg += ' · ส่งขึ้นชีต ' + pushed;
+    if (conflicts) msg += ' · ข้าม ' + conflicts + ' (ข้อมูลบนชีตใหม่กว่า)';
+    toast(msg, 3200);
+  } catch (err) {
+    toast('Sync ไม่สำเร็จ: ' + err.message, 3600);
+  }
+  btn.disabled = false; btn.classList.remove('busy'); $('#syncTxt').textContent = 'Sync';
+  refreshMeta();
+}
+
+/* ---------- บันทึกแก้ไข (offline-first) ---------- */
+async function saveRecord(table, record) {
+  record.updated_at = nowISO();
+  const idCol = table === 'DB_Requests' ? 'req_id' : 'res_id';
+  const key = table === 'DB_Requests' ? 'requests' : 'council';
+  const rows = state.data[key];
+  const i = rows.findIndex((r) => r[idCol] === record[idCol]);
+  if (i >= 0) rows[i] = Object.assign({}, rows[i], record); else rows.push(record);
+  await tblSet(key, rows);
+  await qUpsert(table, record);
+  renderAll();
+  closeSheet();
+  if (navigator.onLine && cfg().url) { toast('บันทึกแล้ว · กำลัง sync ขึ้นชีต'); doSync(); }
+  else toast('บันทึกในเครื่องแล้ว · จะขึ้นชีตเมื่อกด Sync ตอนมีเน็ต', 3200);
+}
+
+/* ---------- navigation & render ---------- */
+function go(v) {
+  state.tab = v;
+  document.querySelectorAll('.view').forEach((el) => el.classList.remove('on'));
+  $('#v-' + v).classList.add('on');
+  document.querySelectorAll('nav button').forEach((b) => b.classList.toggle('on', b.dataset.v === v));
+}
+function renderHome() {
+  const R = state.data.requests;
+  $('#kReq').textContent = R.length;
+  $('#kPend').textContent = state.queue.length;
+  $('#homeStatus').innerHTML = STATUSES.map((s) =>
+    '<button class="chip" onclick="filterJump(\'\',\'' + s + '\')">' + esc(s) +
+    ' <span class="n">' + R.filter((r) => r.status === s).length + '</span></button>').join('');
+  $('#homeType').innerHTML = FTYPES.map((t, i) =>
+    '<button class="chip" onclick="filterJumpT(' + i + ')">' + esc(t) +
+    ' <span class="n">' + R.filter((r) => r.forest_type === t).length + '</span></button>').join('');
+  const C = state.data.council;
+  const uniq = new Set(C.map((c) => c.local_gov)).size;
+  $('#homeCouncil').innerHTML =
+    '<dt>ส่งมติแล้ว</dt><dd>' + C.filter((c) => c.status === 'ส่งแล้ว').length + ' รายการ</dd>' +
+    '<dt>จำนวน อปท.</dt><dd>' + uniq + ' แห่ง</dd>';
+}
+function filterJump(t, s) { state.fType = t; state.fStatus = s; go('req'); renderReq(); }
+function filterJumpT(i) { filterJump(FTYPES[i], ''); }
+function toggleFType(i) { state.fType = state.fType === FTYPES[i] ? '' : FTYPES[i]; renderReq(); }
+function toggleFStatus(i) { state.fStatus = state.fStatus === STATUSES[i] ? '' : STATUSES[i]; renderReq(); }
+function renderReq() {
+  const q = ($('#qReq').value || '').trim().toLowerCase();
+  $('#fType').innerHTML = FTYPES.map((t, i) =>
+    '<button class="chip' + (state.fType === t ? ' sel' : '') + '" onclick="toggleFType(' + i + ')">' + esc(t) + '</button>').join('');
+  $('#fStatus').innerHTML = STATUSES.map((s, i) =>
+    '<button class="chip' + (state.fStatus === s ? ' sel' : '') + '" onclick="toggleFStatus(' + i + ')">' + esc(s) + '</button>').join('');
+  let rows = state.data.requests.filter((r) =>
+    (!state.fType || r.forest_type === state.fType) &&
+    (!state.fStatus || r.status === state.fStatus) &&
+    (!q || (r.route_no + ' ' + r.request_no + ' ' + (r.remark || '') + ' ' + (r.province_area || '')).toLowerCase().includes(q)));
+  rows = rows.slice().sort((a, b) =>
+    String(a.route_no).localeCompare(String(b.route_no), 'th', { numeric: true }) ||
+    String(a.forest_type).localeCompare(String(b.forest_type), 'th'));
+  $('#reqCount').textContent = 'พบ ' + rows.length + ' คำขอ';
+  $('#reqList').innerHTML = rows.length ? rows.map((r) =>
+    '<button class="item" onclick="openDetail(\'' + esc(r.req_id) + '\')">' +
+      '<div class="r1"><span class="route">ทล.' + esc(r.route_no) + (r.route_extra ? ' ' + esc(r.route_extra) : '') + '</span>' +
+      '<span class="badge ' + (STCLS[r.status] || 'b-gray') + '">' + esc(r.status || '–') + '</span>' +
+      (isPending('DB_Requests', r.req_id) ? '<span class="pend">⏳ รอ sync</span>' : '') + '</div>' +
+      '<div class="r2">' + esc(r.forest_type) + ' · ' + esc(r.province_area) + ' · คำขอที่ ' + esc(r.request_no) + ' · ยื่น ' + fmtTH(r.request_date) + '</div>' +
+    '</button>').join('') : '<div class="empty">ไม่พบคำขอตามเงื่อนไข</div>';
+}
+function renderCnc() {
+  const q = ($('#qCnc').value || '').trim().toLowerCase();
+  let rows = state.data.council.filter((c) =>
+    !q || ((c.local_gov || '') + ' ' + c.route_no + ' ' + (c.province_group || '')).toLowerCase().includes(q));
+  rows = rows.slice().sort((a, b) =>
+    String(a.route_no).localeCompare(String(b.route_no), 'th', { numeric: true }) ||
+    String(a.local_gov).localeCompare(String(b.local_gov), 'th'));
+  $('#cncCount').textContent = 'พบ ' + rows.length + ' รายการ';
+  $('#cncList').innerHTML = rows.length ? rows.map((c) =>
+    '<button class="item" onclick="openEdit(\'DB_Council\',\'' + esc(c.res_id) + '\')">' +
+      '<div class="r1"><span class="route">' + esc(c.local_gov) + '</span>' +
+      '<span class="badge ' + (c.status === 'ส่งแล้ว' ? 'b-green' : 'b-amber') + '">' + esc(c.status || '–') + '</span>' +
+      (isPending('DB_Council', c.res_id) ? '<span class="pend">⏳ รอ sync</span>' : '') + '</div>' +
+      '<div class="r2">ทล.' + esc(c.route_no) + ' · กลุ่ม' + esc(c.province_group) + ' · ส่งเมื่อ ' + fmtTH(c.sent_date) + (c.remark ? ' · ' + esc(c.remark) : '') + '</div>' +
+    '</button>').join('') : '<div class="empty">ไม่พบรายการ</div>';
+}
+async function refreshMeta() {
+  const ls = await kvGet('last_sync');
+  $('#lastSync').textContent = ls ? 'อัปเดต ' + fmtTH(ls.slice(0, 10)) + ' ' + ls.slice(11, 16) + ' น.' : 'ยังไม่เคย sync';
+  $('#setInfo').innerHTML =
+    '<dt>คำขอ</dt><dd>' + state.data.requests.length + ' รายการ</dd>' +
+    '<dt>มติสภา</dt><dd>' + state.data.council.length + ' รายการ</dd>' +
+    '<dt>รอ sync</dt><dd>' + state.queue.length + ' รายการ</dd>' +
+    '<dt>sync ล่าสุด</dt><dd>' + (ls ? esc(ls.replace('T', ' ')) : '–') + '</dd>';
+}
+function renderAll() { renderHome(); renderReq(); renderCnc(); refreshMeta(); }
+
+/* ---------- รายละเอียด & ฟอร์ม ---------- */
+function openSheet(html) { $('#sheetBody').innerHTML = html; $('#sheetWrap').classList.add('on'); }
+function closeSheet() { $('#sheetWrap').classList.remove('on'); }
+function openDetail(id) {
+  const r = state.data.requests.find((x) => x.req_id === id);
+  if (!r) return;
+  const cnc = state.data.council.filter((c) => c.route_no === r.route_no);
+  openSheet(
+    '<div style="display:flex;gap:8px;align-items:center;margin-bottom:10px">' +
+      '<b style="font-size:1.1rem;flex:1">ทล.' + esc(r.route_no) + (r.route_extra ? ' ' + esc(r.route_extra) : '') + ' · คำขอที่ ' + esc(r.request_no) + '</b>' +
+      '<span class="badge ' + (STCLS[r.status] || 'b-gray') + '">' + esc(r.status || '–') + '</span></div>' +
+    '<div class="card"><dl class="dl">' +
+      '<dt>ประเภทป่า</dt><dd>' + esc(r.forest_type) + '</dd>' +
+      '<dt>หน่วยงาน</dt><dd>' + esc(r.agency) + '</dd>' +
+      '<dt>พื้นที่</dt><dd>' + esc(r.province_area) + '</dd>' +
+      '<dt>วันที่ยื่น</dt><dd>' + fmtTH(r.request_date) + '</dd>' +
+      '<dt>หนังสือแจ้งตรวจป่า</dt><dd>' + (r.inspect_notify_no ? esc(r.inspect_notify_no) + ' · ' + fmtTH(r.inspect_notify_date) : '–') + '</dd>' +
+      '<dt>วันลงตรวจป่า</dt><dd>' + fmtTH(r.inspect_date) + '</dd>' +
+      '<dt>EC/EAR</dt><dd>' + (esc(r.ec_ear) || '–') + '</dd>' +
+      '<dt>แบบ 1 แจ้งตรวจ</dt><dd>' + (esc(r.form1_notify) || '–') + '</dd>' +
+      '<dt>แบบ 1 ลงตรวจ</dt><dd>' + (esc(r.form1_inspect) || '–') + '</dd>' +
+      '<dt>หมายเหตุ</dt><dd>' + (esc(r.remark) || '–') + '</dd>' +
+      '<dt>แก้ไขล่าสุด</dt><dd>' + esc((r.updated_at || '').replace('T', ' ')) + '</dd>' +
+    '</dl></div>' +
+    (cnc.length ? '<div class="card"><h2>มติสภา อปท. สายทางนี้ (' + cnc.length + ')</h2>' +
+      cnc.map((c) => '<div class="dl" style="margin-bottom:6px"><dt>' + esc(c.local_gov) + '</dt><dd>' + fmtTH(c.sent_date) + ' · ' + esc(c.status) + '</dd></div>').join('') + '</div>' : '') +
+    '<div class="btnrow">' +
+      '<button class="btn btn-o" onclick="closeSheet()">ปิด</button>' +
+      '<button class="btn btn-p" onclick="openEdit(\'DB_Requests\',\'' + esc(r.req_id) + '\')">แก้ไข</button>' +
+    '</div>');
+}
+function fld(label, name, val, type, opts) {
+  if (type === 'select') {
+    return '<div class="frow"><label>' + label + '</label><select name="' + name + '">' +
+      '<option value=""' + (!val ? ' selected' : '') + '>– ไม่ระบุ –</option>' +
+      opts.map((o) => '<option' + (o === val ? ' selected' : '') + '>' + esc(o) + '</option>').join('') +
+      '</select></div>';
+  }
+  if (type === 'textarea') return '<div class="frow"><label>' + label + '</label><textarea name="' + name + '" rows="2">' + esc(val) + '</textarea></div>';
+  const extra = type === 'route' ? ' list="dlRoutes" inputmode="numeric"' : '';
+  return '<div class="frow"><label>' + label + '</label><input name="' + name + '" type="' + (type === 'route' ? 'text' : (type || 'text')) + '"' + extra + ' value="' + esc(val) + '"></div>';
+}
+function openEdit(table, id) {
+  const isReq = table === 'DB_Requests';
+  const key = isReq ? 'requests' : 'council';
+  const idCol = isReq ? 'req_id' : 'res_id';
+  let r = id ? state.data[key].find((x) => x[idCol] === id) : null;
+  const isNew = !r;
+  if (!r) {
+    r = isReq
+      ? { req_id: nextId('REQ', state.data.requests, 'req_id'), route_no: '', route_extra: '', forest_type: '', agency: '', province_area: '', request_no: '', request_date: '', inspect_notify_no: '', inspect_notify_date: '', inspect_date: '', ec_ear: '', form1_notify: '', form1_inspect: '', status: 'ยื่นแล้ว', remark: '' }
+      : { res_id: nextId('CNC', state.data.council, 'res_id'), route_no: '', province_group: '', local_gov: '', sent_date: '', status: 'ส่งแล้ว', remark: '' };
+  }
+  const routeOpts = '<datalist id="dlRoutes">' + state.data.routes.map((x) => '<option value="' + esc(x.route_no) + '">').join('') + '</datalist>';
+  const body = isReq ?
+    '<div class="f2">' + fld('สายทาง (ทล.)', 'route_no', r.route_no, 'route') + fld('สายทางพ่วง', 'route_extra', r.route_extra) + '</div>' +
+    fld('ประเภทป่า', 'forest_type', r.forest_type, 'select', FTYPES) +
+    '<div class="f2">' + fld('หน่วยงาน', 'agency', r.agency, 'select', AGENCIES) + fld('พื้นที่', 'province_area', r.province_area, 'select', PROVS) + '</div>' +
+    '<div class="f2">' + fld('เลขที่คำขอ', 'request_no', r.request_no) + fld('วันที่ยื่น', 'request_date', r.request_date, 'date') + '</div>' +
+    '<div class="f2">' + fld('เลขหนังสือแจ้งตรวจ', 'inspect_notify_no', r.inspect_notify_no) + fld('วันที่แจ้งตรวจ', 'inspect_notify_date', r.inspect_notify_date, 'date') + '</div>' +
+    '<div class="f2">' + fld('วันลงตรวจป่า', 'inspect_date', r.inspect_date, 'date') + fld('EC/EAR', 'ec_ear', r.ec_ear, 'select', ['EC', 'EAR', 'EAR+EC']) + '</div>' +
+    '<div class="f2">' + fld('แบบ 1 แจ้งตรวจ', 'form1_notify', r.form1_notify, 'select', ['ส่งแล้ว']) + fld('แบบ 1 ลงตรวจ', 'form1_inspect', r.form1_inspect, 'select', ['ส่งแล้ว']) + '</div>' +
+    fld('สถานะ', 'status', r.status, 'select', STATUSES) +
+    fld('หมายเหตุ', 'remark', r.remark, 'textarea')
+    :
+    '<div class="f2">' + fld('สายทาง (ทล.)', 'route_no', r.route_no, 'route') + fld('กลุ่มพื้นที่', 'province_group', r.province_group, 'select', ['กระบี่', 'นครฯ']) + '</div>' +
+    fld('อปท. (เช่น อบต.อ่าวนาง)', 'local_gov', r.local_gov) +
+    '<div class="f2">' + fld('วันที่ส่งมติ', 'sent_date', r.sent_date, 'date') + fld('สถานะ', 'status', r.status, 'select', ['ส่งแล้ว', 'ยังไม่ส่ง', 'ไม่มีหนังสือ']) + '</div>' +
+    fld('หมายเหตุ', 'remark', r.remark, 'textarea');
+  openSheet(
+    '<b style="font-size:1.05rem;display:block;margin-bottom:12px">' +
+      (isNew ? (isReq ? 'เพิ่มคำขอใหม่' : 'เพิ่มมติสภา') : 'แก้ไข ' + esc(r[idCol])) + '</b>' +
+    '<form id="editForm">' + routeOpts + body +
+      '<div class="btnrow">' +
+        '<button type="button" class="btn btn-o" onclick="closeSheet()">ยกเลิก</button>' +
+        '<button type="submit" class="btn btn-p">บันทึก</button>' +
+      '</div></form>');
+  $('#editForm').addEventListener('submit', (ev) => {
+    ev.preventDefault();
+    const f = new FormData(ev.target);
+    const rec = {};
+    rec[idCol] = r[idCol];
+    f.forEach((v, k) => { rec[k] = String(v).trim(); });
+    if (!rec.route_no) { toast('กรุณาระบุสายทาง'); return; }
+    saveRecord(table, rec);
+  });
+}
+
+/* ---------- ตั้งค่า ---------- */
+function saveCfg() {
+  localStorage.setItem('gas_url', $('#cfgUrl').value.trim());
+  localStorage.setItem('gas_token', $('#cfgToken').value.trim());
+  toast('บันทึกการตั้งค่าแล้ว');
+}
+async function testConn() {
+  saveCfg();
+  toast('กำลังทดสอบ...');
+  try {
+    const j = await apiGet();
+    toast('เชื่อมต่อสำเร็จ · คำขอ ' + j.requests.length + ' · มติสภา ' + j.council.length + ' · สายทาง ' + j.routes.length, 3600);
+  } catch (err) { toast('เชื่อมต่อไม่ได้: ' + err.message, 3600); }
+}
+async function clearLocal() {
+  if (!confirm('ล้างข้อมูลในเครื่องทั้งหมด รวมถึงรายการที่ยังไม่ sync?')) return;
+  await tblSet('requests', []); await tblSet('council', []); await tblSet('routes', []);
+  const q = await qAll();
+  for (const it of q) await qDel(it.qid);
+  await kvSet('last_sync', '');
+  state.data = { requests: [], council: [], routes: [] }; state.queue = [];
+  renderAll(); toast('ล้างข้อมูลแล้ว');
+}
+
+/* ---------- เริ่มต้น ---------- */
+function netdot() { $('#netdot').classList.toggle('on', navigator.onLine); }
+window.addEventListener('online', netdot);
+window.addEventListener('offline', netdot);
+(async function init() {
+  netdot();
+  $('#cfgUrl').value = cfg().url; $('#cfgToken').value = cfg().token;
+  state.data.requests = (await tblGet('requests')) || [];
+  state.data.council = (await tblGet('council')) || [];
+  state.data.routes = (await tblGet('routes')) || [];
+  await loadQueue();
+  renderAll();
+  go(cfg().url ? 'home' : 'set');
+  if (!cfg().url) toast('เริ่มต้นใช้งาน: กรอก URL และ Token แล้วกด Sync', 4200);
+  if ('serviceWorker' in navigator) navigator.serviceWorker.register('sw.js').catch(function () {});
+})();
+</script>
+</body>
+</html>
