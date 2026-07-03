@@ -116,6 +116,7 @@ const groups={};      // name -> featureGroup
 const routeMeta={};   // name -> {color, ptCount, infoText, imported}
 const routePts={};    // name -> [{n,lat,lon}] สำหรับป้ายเลขหมุด
 let colorIdx=0;
+let statusApplied=false; // สีตามสถานะคำขอถูกใช้แล้วหรือยัง (ประกาศก่อน rebuildSheet ถูกเรียก)
 
 function toast(msg,ms){const t=document.getElementById('toast');t.textContent=msg;t.classList.add('show');
   clearTimeout(t._h);t._h=setTimeout(()=>t.classList.remove('show'),ms||2600);}
@@ -372,7 +373,6 @@ rebuildSheet();
 /* ---------- สีตามสถานะคำขอป่าไม้ (อ่านจาก IndexedDB ของแอพคำขอ) ---------- */
 const C_DONE="#ffffff", C_NOREQ="#8a8a8a";
 const ST_DONE=['ลงตรวจแล้ว','รอมติสภา','ได้รับอนุญาต'];
-let statusApplied=false;
 function recolorGroup(name,color,ring){
   const g=groups[name]; if(!g) return;
   g.eachLayer(l=>{
