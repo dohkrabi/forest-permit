@@ -24,7 +24,9 @@ html,body{height:100%;font-family:'Segoe UI',Tahoma,'Leelawadee UI',sans-serif}
   padding:2px 8px;border-radius:4px;letter-spacing:.5px}
 .topbar h1 a.home{margin-left:auto;color:#fff;text-decoration:none;font-size:12px;
   border:1px solid rgba(255,255,255,.35);padding:3px 10px;border-radius:14px}
-.chips{display:flex;gap:6px;margin-top:8px;overflow-x:auto;-webkit-overflow-scrolling:touch;padding-bottom:2px}
+.chips{display:flex;gap:6px;margin-top:6px;overflow-x:auto;-webkit-overflow-scrolling:touch;padding-bottom:2px}
+.glabel{flex:0 0 auto;align-self:center;font-size:11px;color:rgba(255,255,255,.65);
+  padding:0 2px 0 0;white-space:nowrap;font-weight:600;letter-spacing:.3px}
 .chip{flex:0 0 auto;border:1.5px solid rgba(255,255,255,.35);background:rgba(255,255,255,.08);
   color:#fff;font-size:12.5px;padding:5px 12px;border-radius:20px;cursor:pointer;
   display:flex;align-items:center;gap:6px;user-select:none;transition:.15s}
@@ -83,7 +85,8 @@ html,body{height:100%;font-family:'Segoe UI',Tahoma,'Leelawadee UI',sans-serif}
   <h1><span class="badge">ทล.</span> แผนที่เขตทางหลวง
       <span id="routeCount" style="opacity:.65;font-weight:400;font-size:12px"></span>
       <a class="home" href="./index.html">🌲 คำขอป่าไม้</a></h1>
-  <div class="chips" id="chips"></div>
+  <div class="chips" id="chipsRoutes"></div>
+  <div class="chips" id="chipsLayers"></div>
 </div>
 
 <button class="gpsbtn" id="gps" title="ตำแหน่งของฉัน">📍</button>
@@ -126,7 +129,7 @@ function forestLayer(polys,cls,stroke){
   return g;
 }
 const gNRF=forestLayer(FOREST.nrf,'f-nrf','#00b8d4').addTo(map);   // ป่าสงวนแห่งชาติ = ตารางเขียว
-const gPERM=forestLayer(FOREST.perm,'f-perm','#c62828').addTo(map); // ป่าไม้ถาวร = ตารางแดง
+const gPERM=forestLayer(FOREST.perm,'f-perm','#d500f9').addTo(map); // ป่าไม้ถาวร = ตารางม่วงบานเย็น
 function ensurePatterns(){
   const svg=forestRenderer._container;
   if(!svg||svg.querySelector('#pat-nrf'))return;
@@ -134,7 +137,7 @@ function ensurePatterns(){
   defs.innerHTML='<pattern id="pat-nrf" width="12" height="12" patternUnits="userSpaceOnUse">'+
     '<path d="M0 0H12 M0 0V12" stroke="#00e5ff" stroke-width="1.2"/></pattern>'+
     '<pattern id="pat-perm" width="12" height="12" patternUnits="userSpaceOnUse">'+
-    '<path d="M0 0H12 M0 0V12" stroke="#c62828" stroke-width="1"/></pattern>';
+    '<path d="M0 0H12 M0 0V12" stroke="#ff00e5" stroke-width="1.2"/></pattern>';
   svg.insertBefore(defs,svg.firstChild);
 }
 map.whenReady(()=>setTimeout(ensurePatterns,0));
@@ -286,7 +289,11 @@ async function handleFiles(files){
 document.getElementById('filein').addEventListener('change',e=>handleFiles(e.target.files));
 
 /* ---------- chips ---------- */
-const chips=document.getElementById('chips');
+const chips=document.getElementById('chipsRoutes');   // แถวสายทาง (คงชื่อตัวแปรเดิมให้ querySelector สายทางทำงานตามเดิม)
+const chipsL=document.getElementById('chipsLayers');  // แถวป่าไม้/พื้นหลัง
+function glabel(row,text){const g=document.createElement('span');g.className='glabel';g.textContent=text;row.appendChild(g);}
+glabel(chips,'สายทาง');
+glabel(chipsL,'ป่าไม้');
 let allOn=true;
 const allBtn=document.createElement('div');
 allBtn.className='chip on';allBtn.textContent='ทั้งหมด';
@@ -309,10 +316,10 @@ function forestChip(label,color,layer){
     if(map.hasLayer(layer)){map.removeLayer(layer);c.classList.remove('on');}
     else{map.addLayer(layer);c.classList.add('on');setTimeout(ensurePatterns,0);}
   };
-  chips.appendChild(c);
+  chipsL.appendChild(c);
 }
 forestChip('ป่าสงวน','#00e5ff',gNRF);
-forestChip('ป่าถาวร','#c62828',gPERM);
+forestChip('ป่าถาวร','#ff00e5',gPERM);
 
 function addChip(name,color){
   const c=document.createElement('div');
@@ -331,11 +338,12 @@ const addBtn=document.createElement('div');
 addBtn.className='chip add';addBtn.id='chipAdd';addBtn.textContent='＋ นำเข้า';
 addBtn.onclick=()=>document.getElementById('filein').click();
 chips.appendChild(addBtn);
+glabel(chipsL,'พื้นหลัง');
 const bm=document.createElement('div');
 bm.className='chip';bm.textContent='🗺 ดาวเทียม';
 bm.onclick=()=>{map.removeLayer(bases[baseIdx][1]);baseIdx=(baseIdx+1)%bases.length;
   bases[baseIdx][1].addTo(map);bm.textContent='🗺 '+bases[baseIdx][0];};
-chips.appendChild(bm);
+chipsL.appendChild(bm);
 
 /* ---------- GPS ---------- */
 let meMarker=null,meCircle=null,watching=false,watchId=null;
