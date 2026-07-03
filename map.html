@@ -125,14 +125,14 @@ function forestLayer(polys,cls,stroke){
   }
   return g;
 }
-const gNRF=forestLayer(FOREST.nrf,'f-nrf','#2e7d32').addTo(map);   // ป่าสงวนแห่งชาติ = ตารางเขียว
+const gNRF=forestLayer(FOREST.nrf,'f-nrf','#00b8d4').addTo(map);   // ป่าสงวนแห่งชาติ = ตารางเขียว
 const gPERM=forestLayer(FOREST.perm,'f-perm','#c62828').addTo(map); // ป่าไม้ถาวร = ตารางแดง
 function ensurePatterns(){
   const svg=forestRenderer._container;
   if(!svg||svg.querySelector('#pat-nrf'))return;
   const defs=document.createElementNS('http://www.w3.org/2000/svg','defs');
   defs.innerHTML='<pattern id="pat-nrf" width="12" height="12" patternUnits="userSpaceOnUse">'+
-    '<path d="M0 0H12 M0 0V12" stroke="#2e7d32" stroke-width="1"/></pattern>'+
+    '<path d="M0 0H12 M0 0V12" stroke="#00e5ff" stroke-width="1.2"/></pattern>'+
     '<pattern id="pat-perm" width="12" height="12" patternUnits="userSpaceOnUse">'+
     '<path d="M0 0H12 M0 0V12" stroke="#c62828" stroke-width="1"/></pattern>';
   svg.insertBefore(defs,svg.firstChild);
@@ -311,7 +311,7 @@ function forestChip(label,color,layer){
   };
   chips.appendChild(c);
 }
-forestChip('ป่าสงวน','#2e7d32',gNRF);
+forestChip('ป่าสงวน','#00e5ff',gNRF);
 forestChip('ป่าถาวร','#c62828',gPERM);
 
 function addChip(name,color){
