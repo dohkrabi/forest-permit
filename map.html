@@ -27,6 +27,17 @@ html,body{height:100%;font-family:'Segoe UI',Tahoma,'Leelawadee UI',sans-serif}
 .chips{display:flex;gap:6px;margin-top:6px;overflow-x:auto;-webkit-overflow-scrolling:touch;padding-bottom:2px}
 .glabel{flex:0 0 auto;align-self:center;font-size:11px;color:rgba(255,255,255,.65);
   padding:0 2px 0 0;white-space:nowrap;font-weight:600;letter-spacing:.3px}
+.rpanel{margin-top:8px;background:rgba(255,255,255,.06);border:1px solid rgba(255,255,255,.18);
+  border-radius:12px;padding:10px}
+.rpanel input{width:100%;border:1px solid rgba(255,255,255,.25);background:rgba(0,0,0,.25);
+  color:#fff;border-radius:8px;padding:7px 10px;font-size:13px;font-family:inherit;outline:none}
+.rpanel input::placeholder{color:rgba(255,255,255,.45)}
+.chipwrap{display:flex;flex-wrap:wrap;gap:6px;margin-top:8px;max-height:38vh;overflow-y:auto;
+  -webkit-overflow-scrolling:touch;padding-bottom:2px}
+.rpact{display:flex;gap:8px;margin-top:10px}
+.rpact button{flex:1;border:1px solid rgba(255,255,255,.3);background:rgba(255,255,255,.08);
+  color:#fff;font-size:12.5px;padding:7px 0;border-radius:8px;font-family:inherit;cursor:pointer}
+.rpact button.pri{background:var(--road);color:#1a1c1e;border-color:var(--road);font-weight:700}
 .chip{flex:0 0 auto;border:1.5px solid rgba(255,255,255,.35);background:rgba(255,255,255,.08);
   color:#fff;font-size:12.5px;padding:5px 12px;border-radius:20px;cursor:pointer;
   display:flex;align-items:center;gap:6px;user-select:none;transition:.15s}
@@ -87,6 +98,15 @@ html,body{height:100%;font-family:'Segoe UI',Tahoma,'Leelawadee UI',sans-serif}
       <a class="home" href="./index.html">🌲 คำขอป่าไม้</a></h1>
   <div class="chips" id="chipsRoutes"></div>
   <div class="chips" id="chipsLayers"></div>
+  <div class="rpanel" id="routePanel" style="display:none">
+    <input id="rpq" type="search" placeholder="ค้นหาสายทาง เช่น 4038, อ่าวนาง">
+    <div class="chipwrap" id="chipPanel"></div>
+    <div class="rpact">
+      <button id="rpAllOn">เปิดทั้งหมด</button>
+      <button id="rpAllOff">ปิดทั้งหมด</button>
+      <button id="rpClose" class="pri">ปิดแผง</button>
+    </div>
+  </div>
 </div>
 
 <button class="gpsbtn" id="gps" title="ตำแหน่งของฉัน">📍</button>
@@ -289,11 +309,51 @@ async function handleFiles(files){
 document.getElementById('filein').addEventListener('change',e=>handleFiles(e.target.files));
 
 /* ---------- chips ---------- */
-const chips=document.getElementById('chipsRoutes');   // แถวสายทาง (คงชื่อตัวแปรเดิมให้ querySelector สายทางทำงานตามเดิม)
+const rowR=document.getElementById('chipsRoutes');    // แถวบน: ปุ่มสายทาง▾ / ทั้งหมด / นำเข้า
 const chipsL=document.getElementById('chipsLayers');  // แถวป่าไม้/พื้นหลัง
+const chips=document.getElementById('chipPanel');     // แผงชิพสายทาง (คงชื่อตัวแปรเดิมให้ querySelector ทำงานต่อ)
+const routePanel=document.getElementById('routePanel');
 function glabel(row,text){const g=document.createElement('span');g.className='glabel';g.textContent=text;row.appendChild(g);}
-glabel(chips,'สายทาง');
 glabel(chipsL,'ป่าไม้');
+
+const btnRoutes=document.createElement('div');
+btnRoutes.className='chip';
+rowR.appendChild(btnRoutes);
+function updateRouteBtn(){
+  const names=Object.keys(groups);
+  const on=names.filter(n=>map.hasLayer(groups[n])).length;
+  btnRoutes.textContent=`🛣 สายทาง ▾ ${on}/${names.length}`;
+}
+btnRoutes.onclick=()=>{
+  const show=routePanel.style.display==='none';
+  routePanel.style.display=show?'block':'none';
+  if(show) document.getElementById('rpq').value='';
+  filterPanel('');
+};
+function closePanel(){routePanel.style.display='none';}
+map.on('click',closePanel);
+document.getElementById('rpClose').onclick=closePanel;
+function filterPanel(q){
+  q=(q||'').trim().toLowerCase();
+  chips.querySelectorAll('.chip').forEach(c=>{
+    c.style.display=(!q||c.dataset.route.toLowerCase().includes(q))?'':'none';
+  });
+}
+document.getElementById('rpq').addEventListener('input',e=>filterPanel(e.target.value));
+document.getElementById('rpAllOn').onclick=()=>{
+  for(const [n,g] of Object.entries(groups)){
+    if(!map.hasLayer(g))map.addLayer(g);
+    const ch=chips.querySelector(`[data-route="${CSS.escape(n)}"]`);if(ch)ch.classList.add('on');
+  }
+  allOn=true;allBtn.classList.add('on');updateRouteBtn();refreshLabels();
+};
+document.getElementById('rpAllOff').onclick=()=>{
+  for(const [n,g] of Object.entries(groups)){
+    if(map.hasLayer(g))map.removeLayer(g);
+    const ch=chips.querySelector(`[data-route="${CSS.escape(n)}"]`);if(ch)ch.classList.remove('on');
+  }
+  allOn=false;allBtn.classList.remove('on');updateRouteBtn();refreshLabels();
+};
 let allOn=true;
 const allBtn=document.createElement('div');
 allBtn.className='chip on';allBtn.textContent='ทั้งหมด';
@@ -304,9 +364,9 @@ allBtn.onclick=()=>{
     if(allOn){if(!map.hasLayer(g))map.addLayer(g);if(ch)ch.classList.add('on');}
     else{if(map.hasLayer(g))map.removeLayer(g);if(ch)ch.classList.remove('on');}
   }
-  refreshLabels();
+  updateRouteBtn();refreshLabels();
 };
-chips.appendChild(allBtn);
+rowR.appendChild(allBtn);
 
 function forestChip(label,color,layer){
   const c=document.createElement('div');
@@ -328,16 +388,17 @@ function addChip(name,color){
   c.onclick=()=>{
     if(map.hasLayer(groups[name])){map.removeLayer(groups[name]);c.classList.remove('on');}
     else{map.addLayer(groups[name]);c.classList.add('on');}
-    refreshLabels();
+    updateRouteBtn();refreshLabels();
   };
-  chips.insertBefore(c,document.getElementById('chipAdd')||null);
+  chips.appendChild(c);
+  updateRouteBtn();
 }
 for(const name of Object.keys(BUILTIN)) addChip(name,routeMeta[name].color);
 
 const addBtn=document.createElement('div');
 addBtn.className='chip add';addBtn.id='chipAdd';addBtn.textContent='＋ นำเข้า';
 addBtn.onclick=()=>document.getElementById('filein').click();
-chips.appendChild(addBtn);
+rowR.appendChild(addBtn);
 glabel(chipsL,'พื้นหลัง');
 const bm=document.createElement('div');
 bm.className='chip';bm.textContent='🗺 ดาวเทียม';
@@ -399,7 +460,7 @@ function rebuildSheet(){
         if(!confirm(`ลบ "${n}" ออกจากแผนที่?`))return;
         map.removeLayer(groups[n]);delete groups[n];delete routeMeta[n];delete routePts[n];
         const ch=chips.querySelector(`[data-route="${CSS.escape(n)}"]`);if(ch)ch.remove();
-        unpersist(n);rebuildSheet();refreshLabels();};
+        unpersist(n);rebuildSheet();updateRouteBtn();refreshLabels();};
       d.appendChild(del);
     }
     el.appendChild(d);
