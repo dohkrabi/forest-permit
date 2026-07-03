@@ -326,7 +326,9 @@ function rebuildSheet(){
   const names=Object.keys(routeMeta);
   document.getElementById('routeCount').textContent=`${names.length} สายทาง`;
   const total=names.reduce((s,n)=>s+routeMeta[n].ptCount,0);
-  document.getElementById('sum').textContent=`หมุดพิกัดรวม ${total.toLocaleString()} จุด · WGS84/UTM 47N · ซูมเข้าเพื่อดูเลขหมุด · ＋ นำเข้า รับ .zip หรือ .shp+.dbf+.prj`;
+  document.getElementById('sum').textContent=
+    (statusApplied?`⬜ ขาว = ลงตรวจแล้ว · เทา = ไม่มีคำขอ · สีอื่น = มีคำขอรอดำเนินการ · `:``)+
+    `หมุดรวม ${total.toLocaleString()} จุด · WGS84/UTM 47N · ซูมเข้าเพื่อดูเลขหมุด · ＋ นำเข้า รับ .zip หรือ .shp+.dbf+.prj`;
   const q=(document.getElementById('q').value||"").trim().toLowerCase();
   const el=document.getElementById('routes');el.innerHTML="";
   for(const n of names){
@@ -334,7 +336,7 @@ function rebuildSheet(){
     const m=routeMeta[n];
     const d=document.createElement('div');
     d.className='rcard';d.style.borderLeftColor=m.color;
-    d.innerHTML=`<div style="flex:1"><b>${n}</b><div class="meta">${m.infoText}</div></div><span class="go">ซูมไป ›</span>`;
+    d.innerHTML=`<div style="flex:1"><b>${n}</b><div class="meta">${m.infoText}${m.status?' · '+m.status:''}</div></div><span class="go">ซูมไป ›</span>`;
     d.onclick=()=>{
       if(!map.hasLayer(groups[n])){map.addLayer(groups[n]);
         const ch=chips.querySelector(`[data-route="${CSS.escape(n)}"]`);if(ch)ch.classList.add('on');}
@@ -366,6 +368,62 @@ function rebuildSheet(){
 })();
 
 rebuildSheet();
+
+/* ---------- สีตามสถานะคำขอป่าไม้ (อ่านจาก IndexedDB ของแอพคำขอ) ---------- */
+const C_DONE="#ffffff", C_NOREQ="#8a8a8a";
+const ST_DONE=['ลงตรวจแล้ว','รอมติสภา','ได้รับอนุญาต'];
+let statusApplied=false;
+function recolorGroup(name,color,ring){
+  const g=groups[name]; if(!g) return;
+  g.eachLayer(l=>{
+    if(l instanceof L.CircleMarker) l.setStyle({fillColor:color,color:ring});
+    else if(l.setStyle) l.setStyle({color:color,fillColor:color});
+  });
+  routeMeta[name].color=color;
+  const dot=chips.querySelector(`[data-route="${CSS.escape(name)}"] .dot`);
+  if(dot) dot.style.background=color;
+}
+function applyStatusColors(){
+  try{
+    const req=indexedDB.open('forestdb');
+    // ถ้าฐานข้อมูลยังไม่เคยถูกสร้าง (เครื่องที่ไม่เคยเปิดแอพคำขอ) ให้ยกเลิก ไม่สร้าง DB เปล่าทิ้งไว้
+    req.onupgradeneeded=(e)=>{try{e.target.transaction.abort();}catch(_){}}; 
+    req.onerror=()=>{};
+    req.onsuccess=()=>{
+      const d=req.result;
+      try{
+        if(!d.objectStoreNames.contains('tables')){d.close();return;}
+        const t=d.transaction('tables','readonly').objectStore('tables').get('requests');
+        t.onsuccess=()=>{
+          const rows=t.result||[]; d.close();
+          if(!rows.length) return;
+          let nW=0,nG=0;
+          for(const name of Object.keys(BUILTIN)){
+            const nn=norm(name);
+            const match=rows.filter(r=>{
+              const q=norm(String(r.route_no||'')+(r.route_extra?' '+r.route_extra:''));
+              return q&&(nn.includes(q)||q.includes(nn));
+            });
+            if(!match.length){
+              recolorGroup(name,C_NOREQ,'#ffffff');
+              routeMeta[name].status='ไม่มีคำขอ'; nG++;
+            }else if(match.every(r=>ST_DONE.includes(r.status))){
+              recolorGroup(name,C_DONE,'#555555');
+              routeMeta[name].status='ลงตรวจแล้ว'; nW++;
+            }else{
+              routeMeta[name].status='มีคำขอ · รอดำเนินการ';
+            }
+          }
+          statusApplied=true;
+          rebuildSheet();
+          toast(`อัปเดตสีตามสถานะ: ขาว = ลงตรวจแล้ว (${nW}) · เทา = ไม่มีคำขอ (${nG})`,3800);
+        };
+        t.onerror=()=>{try{d.close();}catch(_){}};
+      }catch(e){try{d.close();}catch(_){}}
+    };
+  }catch(e){}
+}
+applyStatusColors();
 
 /* ---------- ?route= จากหน้าคำขอป่าไม้ ---------- */
 function norm(s){return String(s).toLowerCase().replace(/ทล\.?/g,"").replace(/\s+/g,"");}
