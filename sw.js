@@ -1,12 +1,17 @@
 /* Service Worker — คำขอใช้พื้นที่ป่า ขท.กระบี่ */
-const CACHE = 'forest-app-v3';
+const CACHE = 'forest-app-v4';
 const ASSETS = ['./', './index.html', './map.html', './manifest.json', './icon-192.png', './icon-512.png'];
 
 // CDN ของหน้าแผนที่ (Leaflet / proj4 / shpjs) — cache-first เพื่อให้เปิดออฟไลน์ได้
 const CDN_HOSTS = ['cdnjs.cloudflare.com', 'unpkg.com', 'cdn.jsdelivr.net'];
 
 self.addEventListener('install', (e) => {
-  e.waitUntil(caches.open(CACHE).then((c) => c.addAll(ASSETS)).then(() => self.skipWaiting()));
+  e.waitUntil(
+    caches.open(CACHE)
+      // cache:'reload' = ข้าม HTTP cache ดึงไฟล์สดจากเซิร์ฟเวอร์เสมอ ป้องกันได้ไฟล์เก่าตอนอัปเดตเวอร์ชัน
+      .then((c) => c.addAll(ASSETS.map((u) => new Request(u, { cache: 'reload' }))))
+      .then(() => self.skipWaiting())
+  );
 });
 
 self.addEventListener('activate', (e) => {
@@ -17,7 +22,6 @@ self.addEventListener('activate', (e) => {
   );
 });
 
-// same-origin: cache-first แล้วอัปเดตเงียบๆ / cross-origin (GAS API): ผ่านตรง ไม่ cache
 self.addEventListener('fetch', (e) => {
   const url = new URL(e.request.url);
   if (e.request.method !== 'GET') return;
@@ -34,9 +38,10 @@ self.addEventListener('fetch', (e) => {
     return;
   }
   if (url.origin !== self.location.origin) return;
+  // same-origin: cache-first แล้วอัปเดตเงียบๆ (บังคับ revalidate กับเซิร์ฟเวอร์ ไม่พึ่ง HTTP cache)
   e.respondWith(
     caches.match(e.request).then((cached) => {
-      const fresh = fetch(e.request)
+      const fresh = fetch(e.request, { cache: 'no-cache' })
         .then((res) => {
           if (res && res.ok) {
             const copy = res.clone();
