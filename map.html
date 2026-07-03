@@ -68,6 +68,15 @@ html,body{height:100%;font-family:'Segoe UI',Tahoma,'Leelawadee UI',sans-serif}
 .rcard .go{font-size:11px;color:#1565c0;font-weight:600;white-space:nowrap}
 .rcard .del{font-size:15px;color:#c62828;border:none;background:none;cursor:pointer;padding:4px 6px}
 
+.navbar{position:absolute;left:8px;right:8px;z-index:1050;display:none;align-items:center;gap:10px;
+  background:rgba(26,28,30,.94);color:#fff;border-radius:12px;padding:9px 12px;
+  box-shadow:0 3px 14px rgba(0,0,0,.35);backdrop-filter:blur(4px)}
+.navbar .arr{font-size:24px;line-height:1;transition:transform .2s;transform-origin:center}
+.navbar .nt{flex:1;min-width:0}
+.navbar .nt b{font-size:13px;display:block;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.navbar .nt span{font-size:12px;color:#ffd54f;font-weight:700}
+.navbar button{border:none;background:rgba(255,255,255,.15);color:#fff;border-radius:8px;
+  padding:6px 10px;font-size:13px;font-family:inherit;cursor:pointer}
 .toast{position:absolute;left:50%;bottom:70px;transform:translateX(-50%);z-index:1200;
   background:rgba(26,28,30,.92);color:#fff;font-size:13px;padding:9px 16px;border-radius:8px;
   opacity:0;transition:opacity .25s;pointer-events:none;max-width:86vw;text-align:center}
@@ -97,7 +106,6 @@ html,body{height:100%;font-family:'Segoe UI',Tahoma,'Leelawadee UI',sans-serif}
       <span id="routeCount" style="opacity:.65;font-weight:400;font-size:12px"></span>
       <a class="home" href="./index.html">🌲 คำขอป่าไม้</a></h1>
   <div class="chips" id="chipsRoutes"></div>
-  <div class="chips" id="chipsLayers"></div>
   <div class="rpanel" id="routePanel" style="display:none">
     <input id="rpq" type="search" placeholder="ค้นหาสายทาง เช่น 4038, อ่าวนาง">
     <div class="chipwrap" id="chipPanel"></div>
@@ -110,6 +118,12 @@ html,body{height:100%;font-family:'Segoe UI',Tahoma,'Leelawadee UI',sans-serif}
 </div>
 
 <button class="gpsbtn" id="gps" title="ตำแหน่งของฉัน">📍</button>
+
+<div class="navbar" id="navbar">
+  <span class="arr" id="navArr">⬆️</span>
+  <div class="nt"><b id="navTitle">—</b><span id="navDist">รอสัญญาณ GPS…</span></div>
+  <button onclick="stopNav()">✕ เลิก</button>
+</div>
 <input type="file" id="filein" multiple accept=".zip,.shp,.dbf,.prj,.cpg,.shx" style="display:none">
 <div class="toast" id="toast"></div>
 
@@ -179,7 +193,8 @@ function pointPopup(title,lat,lon,extraRows){
   rows+=`<tr><td>Lat</td><td>${lat.toFixed(7)}</td></tr><tr><td>Lon</td><td>${lon.toFixed(7)}</td></tr>`;
   rows+=extraRows||"";
   return `<div class="pp"><b>${title}</b><table>${rows}</table>
-    <a class="nav" target="_blank" href="https://www.google.com/maps?q=${lat},${lon}">นำทางด้วย Google Maps</a></div>`;
+    <a class="nav" target="_blank" href="https://www.google.com/maps?q=${lat},${lon}">นำทาง Google Maps</a>
+    <a class="nav" style="background:#37474f;margin-left:6px" href="#" onclick='startNav(${lat},${lon},${JSON.stringify(title)});return false'>🧭 ออฟไลน์</a></div>`;
 }
 
 function addPoint(g,name,color,n,lat,lon,extraRows){
@@ -309,12 +324,10 @@ async function handleFiles(files){
 document.getElementById('filein').addEventListener('change',e=>handleFiles(e.target.files));
 
 /* ---------- chips ---------- */
-const rowR=document.getElementById('chipsRoutes');    // แถวบน: ปุ่มสายทาง▾ / ทั้งหมด / นำเข้า
-const chipsL=document.getElementById('chipsLayers');  // แถวป่าไม้/พื้นหลัง
+const rowR=document.getElementById('chipsRoutes');    // แถวเดียว: สายทาง / ป่าไม้ / พื้นหลัง
+const chipsL=rowR;                                    // ชิพป่าไม้/พื้นหลังอยู่แถวเดียวกัน
 const chips=document.getElementById('chipPanel');     // แผงชิพสายทาง (คงชื่อตัวแปรเดิมให้ querySelector ทำงานต่อ)
 const routePanel=document.getElementById('routePanel');
-function glabel(row,text){const g=document.createElement('span');g.className='glabel';g.textContent=text;row.appendChild(g);}
-glabel(chipsL,'ป่าไม้');
 
 const btnRoutes=document.createElement('div');
 btnRoutes.className='chip';
@@ -378,8 +391,7 @@ function forestChip(label,color,layer){
   };
   chipsL.appendChild(c);
 }
-forestChip('ป่าสงวน','#00e5ff',gNRF);
-forestChip('ป่าถาวร','#ff00e5',gPERM);
+
 
 function addChip(name,color){
   const c=document.createElement('div');
@@ -399,12 +411,18 @@ const addBtn=document.createElement('div');
 addBtn.className='chip add';addBtn.id='chipAdd';addBtn.textContent='＋ นำเข้า';
 addBtn.onclick=()=>document.getElementById('filein').click();
 rowR.appendChild(addBtn);
-glabel(chipsL,'พื้นหลัง');
+forestChip('ป่าสงวน','#00e5ff',gNRF);
+forestChip('ป่าถาวร','#ff00e5',gPERM);
 const bm=document.createElement('div');
 bm.className='chip';bm.textContent='🗺 ดาวเทียม';
 bm.onclick=()=>{map.removeLayer(bases[baseIdx][1]);baseIdx=(baseIdx+1)%bases.length;
   bases[baseIdx][1].addTo(map);bm.textContent='🗺 '+bases[baseIdx][0];};
 chipsL.appendChild(bm);
+const dlBtn=document.createElement('div');
+dlBtn.className='chip';dlBtn.textContent='⤓ ออฟไลน์';
+dlBtn.title='ดาวน์โหลดแผนที่บริเวณที่เห็นเก็บไว้ใช้ออฟไลน์';
+dlBtn.onclick=downloadArea;
+chipsL.appendChild(dlBtn);
 
 /* ---------- GPS ---------- */
 let meMarker=null,meCircle=null,watching=false,watchId=null;
@@ -422,9 +440,97 @@ gpsBtn.onclick=()=>{
       meCircle=L.circle(ll,{radius:pos.coords.accuracy,color:'#1a73e8',weight:1,fillOpacity:.08}).addTo(map);
       map.setView(ll,17);
     }else{meMarker.setLatLng(ll);meCircle.setLatLng(ll);meCircle.setRadius(pos.coords.accuracy);}
+    if(navTarget)drawNav();
   },err=>{toast('เปิดตำแหน่งไม่ได้: '+err.message);watching=false;gpsBtn.classList.remove('active');},
   {enableHighAccuracy:true,maximumAge:3000});
 };
+
+/* ---------- นำทางออฟไลน์ (เข็มทิศ + ระยะทางจาก GPS ไม่ใช้อินเทอร์เน็ต) ---------- */
+let navTarget=null,navLine=null,navHeading=null,navTargetMk=null;
+function fmtDist(m){return m<1000?Math.round(m)+' ม.':(m/1000).toFixed(2)+' กม.';}
+function bearingTo(a,b){
+  const toR=Math.PI/180,toD=180/Math.PI;
+  const dL=(b.lng-a.lng)*toR,la1=a.lat*toR,la2=b.lat*toR;
+  const y=Math.sin(dL)*Math.cos(la2);
+  const x=Math.cos(la1)*Math.sin(la2)-Math.sin(la1)*Math.cos(la2)*Math.cos(dL);
+  return (Math.atan2(y,x)*toD+360)%360;
+}
+const DIRS=['เหนือ','ตอ.เฉียงเหนือ','ตะวันออก','ตอ.เฉียงใต้','ใต้','ตต.เฉียงใต้','ตะวันตก','ตต.เฉียงเหนือ'];
+function onHead(ev){
+  let h=ev.webkitCompassHeading;
+  if(h==null&&ev.alpha!=null&&(ev.absolute||ev.type==='deviceorientationabsolute')) h=360-ev.alpha;
+  if(h!=null){navHeading=h;drawNav();}
+}
+function drawNav(){
+  if(!navTarget||!meMarker)return;
+  const me=meMarker.getLatLng(),tg=L.latLng(navTarget.lat,navTarget.lon);
+  const d=me.distanceTo(tg),brg=bearingTo(me,tg);
+  document.getElementById('navDist').textContent=
+    fmtDist(d)+' · ทิศ'+DIRS[Math.round(brg/45)%8]+' ('+Math.round(brg)+'°)';
+  const rot=navHeading==null?brg:(brg-navHeading+360)%360;
+  document.getElementById('navArr').style.transform='rotate('+rot+'deg)';
+  if(navLine)navLine.setLatLngs([me,tg]);
+}
+function startNav(lat,lon,title){
+  navTarget={lat,lon,title};
+  const bar=document.getElementById('navbar');
+  bar.style.display='flex';
+  bar.style.top=(document.querySelector('.topbar').offsetHeight+8)+'px';
+  document.getElementById('navTitle').textContent='🧭 '+title;
+  document.getElementById('navDist').textContent='รอสัญญาณ GPS…';
+  map.closePopup();
+  if(navTargetMk)map.removeLayer(navTargetMk);
+  navTargetMk=L.circleMarker([lat,lon],{radius:11,color:'#ffd54f',weight:3,fill:false}).addTo(map);
+  if(navLine)map.removeLayer(navLine);
+  navLine=L.polyline([[lat,lon],[lat,lon]],{color:'#ffd54f',weight:3,dashArray:'8 6'}).addTo(map);
+  if(!watching)gpsBtn.click(); // เปิด GPS อัตโนมัติ
+  try{
+    if(window.DeviceOrientationEvent&&DeviceOrientationEvent.requestPermission)
+      DeviceOrientationEvent.requestPermission().catch(()=>{});
+  }catch(e){}
+  window.addEventListener('deviceorientationabsolute',onHead,true);
+  window.addEventListener('deviceorientation',onHead,true);
+  drawNav();
+}
+function stopNav(){
+  navTarget=null;
+  document.getElementById('navbar').style.display='none';
+  if(navLine){map.removeLayer(navLine);navLine=null;}
+  if(navTargetMk){map.removeLayer(navTargetMk);navTargetMk=null;}
+  window.removeEventListener('deviceorientationabsolute',onHead,true);
+  window.removeEventListener('deviceorientation',onHead,true);
+}
+
+/* ---------- ดาวน์โหลดแผนที่พื้นที่ปัจจุบันไว้ใช้ออฟไลน์ ---------- */
+function tileRange(b,z){
+  const t=v=>Math.floor(v);
+  const x0=t((b.getWest()+180)/360*Math.pow(2,z)), x1=t((b.getEast()+180)/360*Math.pow(2,z));
+  const lat2y=la=>{const r=la*Math.PI/180;return t((1-Math.log(Math.tan(r)+1/Math.cos(r))/Math.PI)/2*Math.pow(2,z));};
+  return {x0,x1,y0:lat2y(b.getNorth()),y1:lat2y(b.getSouth())};
+}
+async function downloadArea(){
+  const tpl=bases[baseIdx][1]._url;
+  const b=map.getBounds(), z0=Math.max(map.getZoom(),11), z1=Math.min(bases[baseIdx][1].options.maxZoom,16);
+  const urls=[];
+  for(let z=z0;z<=z1;z++){
+    const r=tileRange(b,z);
+    for(let x=r.x0;x<=r.x1;x++)for(let y=r.y0;y<=r.y1;y++)
+      urls.push(tpl.replace('{z}',z).replace('{x}',x).replace('{y}',y));
+  }
+  if(urls.length>3000){toast(`พื้นที่กว้างเกิน (${urls.length.toLocaleString()} แผ่น) — ซูมเข้าใกล้ขึ้นแล้วลองใหม่`,3800);return;}
+  if(!confirm(`ดาวน์โหลดแผนที่บริเวณนี้ ${urls.length.toLocaleString()} แผ่น (ราว ${Math.max(1,Math.round(urls.length*18/1024))} MB) เก็บไว้ใช้ออฟไลน์?`))return;
+  let done=0,fail=0;
+  toast('เริ่มดาวน์โหลด…');
+  const CONC=8;
+  await Promise.all(Array.from({length:CONC},async(_,k)=>{
+    for(let i=k;i<urls.length;i+=CONC){
+      try{await fetch(urls[i],{mode:'no-cors'});}catch(e){fail++;}
+      done++;
+      if(done%150===0)toast(`ดาวน์โหลดแล้ว ${done}/${urls.length} แผ่น…`,1500);
+    }
+  }));
+  toast(fail? `เสร็จ ${done-fail}/${urls.length} แผ่น (พลาด ${fail})`:`ดาวน์โหลดครบ ${done.toLocaleString()} แผ่น — พื้นที่นี้เปิดออฟไลน์ได้แล้ว`,4200);
+}
 
 /* ---------- bottom sheet + ค้นหา ---------- */
 const sheet=document.getElementById('sheet');
