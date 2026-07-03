@@ -185,6 +185,7 @@ nav button.on{color:var(--green);font-weight:600}
   <button data-v="home" class="on" onclick="go('home')"><span class="ic">▦</span>ภาพรวม</button>
   <button data-v="req" onclick="go('req')"><span class="ic">🗂</span>คำขอ</button>
   <button data-v="cnc" onclick="go('cnc')"><span class="ic">🏛</span>มติสภา</button>
+  <button onclick="location.href='./map.html'"><span class="ic">🗺</span>แผนที่</button>
   <button data-v="set" onclick="go('set')"><span class="ic">⚙</span>ตั้งค่า</button>
 </nav>
 
@@ -448,6 +449,7 @@ function openDetail(id) {
       cnc.map((c) => '<div class="dl" style="margin-bottom:6px"><dt>' + esc(c.local_gov) + '</dt><dd>' + fmtTH(c.sent_date) + ' · ' + esc(c.status) + '</dd></div>').join('') + '</div>' : '') +
     '<div class="btnrow">' +
       '<button class="btn btn-o" onclick="closeSheet()">ปิด</button>' +
+      '<button class="btn btn-o" onclick="location.href=\'./map.html?route=\' + encodeURIComponent(\'' + esc(r.route_no) + (r.route_extra ? ' ' + esc(r.route_extra) : '') + '\')">🗺 แผนที่</button>' +
       '<button class="btn btn-p" onclick="openEdit(\'DB_Requests\',\'' + esc(r.req_id) + '\')">แก้ไข</button>' +
     '</div>');
 }
