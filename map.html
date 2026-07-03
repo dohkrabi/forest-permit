@@ -396,23 +396,34 @@ function applyStatusColors(){
         const t=d.transaction('tables','readonly').objectStore('tables').get('requests');
         t.onsuccess=()=>{
           const rows=t.result||[]; d.close();
-          if(!rows.length) return;
+          if(!rows.length){toast('ไม่พบข้อมูลคำขอในเครื่องนี้ — เปิดแอพคำขอป่าไม้แล้วกด Sync ก่อน สีสถานะจึงจะแสดง',4200);return;}
+          // จัดกลุ่มช่วงตามเลขสาย
+          const byNum={};
+          for(const name of Object.keys(BUILTIN)){
+            const [num,extra]=splitNum(name);
+            if(!num) continue;
+            (byNum[num]=byNum[num]||[]).push({name,extra});
+          }
+          // ยึดเลขสายเป็นหลัก ใช้ชื่อช่วงช่วยระบุ ถ้าไม่ตรงป้ายใดให้มีผลทั้งสาย
+          const acc={};
+          for(const r of rows){
+            const [rn]=splitNum(String(r.route_no||''));
+            if(!rn||!byNum[rn]) continue;
+            const rx=norm(r.route_extra||'');
+            let hit=rx?byNum[rn].filter(sg=>sg.extra&&(sg.extra.includes(rx)||rx.includes(sg.extra))):[];
+            if(!hit.length) hit=byNum[rn];
+            const done=ST_DONE.includes(String(r.status||'').trim());
+            for(const sg of hit){
+              const a=acc[sg.name]||(acc[sg.name]={has:false,allDone:true});
+              a.has=true; if(!done)a.allDone=false;
+            }
+          }
           let nW=0,nG=0;
           for(const name of Object.keys(BUILTIN)){
-            const nn=norm(name);
-            const match=rows.filter(r=>{
-              const q=norm(String(r.route_no||'')+(r.route_extra?' '+r.route_extra:''));
-              return q&&(nn.includes(q)||q.includes(nn));
-            });
-            if(!match.length){
-              recolorGroup(name,C_NOREQ,'#ffffff');
-              routeMeta[name].status='ไม่มีคำขอ'; nG++;
-            }else if(match.every(r=>ST_DONE.includes(r.status))){
-              recolorGroup(name,C_DONE,'#555555');
-              routeMeta[name].status='ลงตรวจแล้ว'; nW++;
-            }else{
-              routeMeta[name].status='มีคำขอ · รอดำเนินการ';
-            }
+            const a=acc[name];
+            if(!a){recolorGroup(name,C_NOREQ,'#ffffff');routeMeta[name].status='ไม่มีคำขอ';nG++;}
+            else if(a.allDone){recolorGroup(name,C_DONE,'#555555');routeMeta[name].status='ลงตรวจแล้ว';nW++;}
+            else routeMeta[name].status='มีคำขอ · รอดำเนินการ';
           }
           statusApplied=true;
           rebuildSheet();
@@ -426,7 +437,13 @@ function applyStatusColors(){
 applyStatusColors();
 
 /* ---------- ?route= จากหน้าคำขอป่าไม้ ---------- */
-function norm(s){return String(s).toLowerCase().replace(/ทล\.?/g,"").replace(/\s+/g,"");}
+const ALIAS=[["นครศรีธรรมราช","นครฯ"],["นครศรีฯ","นครฯ"],["จ.กระบี่","กระบี่"],["จ.ตรัง","ตรัง"]];
+function norm(s){
+  s=String(s==null?"":s).toLowerCase().replace(/ทล\.?/g,"").replace(/\s+/g,"");
+  for(const [a,b] of ALIAS) s=s.split(a.toLowerCase()).join(b);
+  return s;
+}
+function splitNum(s){const m=norm(s).match(/^(\d+)(.*)$/);return m?[m[1],m[2]]:[null,norm(s)];}
 const routeQ=new URLSearchParams(location.search).get('route');
 let jumped=false;
 if(routeQ){
