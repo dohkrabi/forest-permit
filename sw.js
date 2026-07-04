@@ -1,5 +1,5 @@
 /* Service Worker — คำขอใช้พื้นที่ป่า ขท.กระบี่ */
-const CACHE = 'forest-app-v15';
+const CACHE = 'forest-app-v16';
 const ASSETS = ['./', './index.html', './map.html', './manifest.json', './icon-192.png', './icon-512.png', './apple-touch-icon.png'];
 
 // CDN ของหน้าแผนที่ (Leaflet / proj4 / shpjs) — cache-first เพื่อให้เปิดออฟไลน์ได้
@@ -9,11 +9,22 @@ const CDN_HOSTS = ['cdnjs.cloudflare.com', 'unpkg.com', 'cdn.jsdelivr.net'];
 const TILE_HOSTS = ['mt1.google.com', 'tile.openstreetmap.org'];
 const TILE_CACHE = 'tiles-v1';
 
+// ไลบรารีที่ map.html ต้องใช้ — precache ตั้งแต่ติดตั้ง ให้เปิดแผนที่ออฟไลน์ได้แม้ไม่เคยเปิดมาก่อน
+const CDN_ASSETS = [
+  'https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.css',
+  'https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.js',
+  'https://cdnjs.cloudflare.com/ajax/libs/proj4js/2.9.2/proj4.min.js',
+  'https://unpkg.com/shpjs@4.0.4/dist/shp.js',
+];
+
 self.addEventListener('install', (e) => {
   e.waitUntil(
     caches.open(CACHE)
       // cache:'reload' = ข้าม HTTP cache ดึงไฟล์สดจากเซิร์ฟเวอร์เสมอ ป้องกันได้ไฟล์เก่าตอนอัปเดตเวอร์ชัน
-      .then((c) => c.addAll(ASSETS.map((u) => new Request(u, { cache: 'reload' }))))
+      .then((c) => c.addAll(ASSETS.map((u) => new Request(u, { cache: 'reload' })))
+        .then(() => Promise.allSettled(   // CDN พลาดบางไฟล์ได้โดยไม่ทำให้ติดตั้งล้ม
+          CDN_ASSETS.map((u) => fetch(new Request(u, { mode: 'no-cors' })).then((r) => c.put(u, r)))
+        )))
       .then(() => self.skipWaiting())
   );
 });
