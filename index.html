@@ -7,11 +7,7 @@
 <title>คำขอใช้พื้นที่ป่า ขท.กระบี่</title>
 <link rel="manifest" href="manifest.json">
 <link rel="icon" href="icon-192.png">
-<link rel="apple-touch-icon" href="apple-touch-icon.png">
-<meta name="apple-mobile-web-app-capable" content="yes">
-<meta name="mobile-web-app-capable" content="yes">
-<meta name="apple-mobile-web-app-status-bar-style" content="default">
-<meta name="apple-mobile-web-app-title" content="พื้นที่ป่า">
+<link rel="apple-touch-icon" href="icon-192.png">
 <style>
 :root{
   --green:#14532D; --green-2:#1B6B3C; --green-soft:#E4EFE6;
@@ -20,6 +16,7 @@
   --amber:#B45309; --amber-bg:#FDF1DF; --blue:#1D4ED8; --blue-bg:#E8EEFC;
   --teal:#0F766E; --teal-bg:#DFF2F0; --red:#B91C1C; --red-bg:#FBE7E7;
   --purple:#6D28D9; --purple-bg:#EFE9FB; --gray-bg:#EEF1EE;
+  --indigo:#3730A3; --indigo-bg:#E5E7FB;
   --radius:14px;
 }
 *{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent}
@@ -82,6 +79,7 @@ input:focus,select:focus,textarea:focus,button:focus-visible{outline:2px solid v
 .b-amber{background:var(--amber-bg);color:var(--amber)}
 .b-green{background:var(--green-soft);color:var(--green)}
 .b-purple{background:var(--purple-bg);color:var(--purple)}
+.b-indigo{background:var(--indigo-bg);color:var(--indigo)}
 .b-teal{background:var(--teal-bg);color:var(--teal)}
 .b-red{background:var(--red-bg);color:var(--red)}
 .pend{font-size:.72rem;color:var(--amber);white-space:nowrap}
@@ -189,7 +187,6 @@ nav button.on{color:var(--green);font-weight:600}
   <button data-v="home" class="on" onclick="go('home')"><span class="ic">▦</span>ภาพรวม</button>
   <button data-v="req" onclick="go('req')"><span class="ic">🗂</span>คำขอ</button>
   <button data-v="cnc" onclick="go('cnc')"><span class="ic">🏛</span>มติสภา</button>
-  <button onclick="location.href='./map.html'"><span class="ic">🗺</span>แผนที่</button>
   <button data-v="set" onclick="go('set')"><span class="ic">⚙</span>ตั้งค่า</button>
 </nav>
 
@@ -198,8 +195,8 @@ nav button.on{color:var(--green);font-weight:600}
 
 <script>
 'use strict';
-const STATUSES = ['ยื่นแล้ว','แจ้งตรวจป่าแล้ว','รอลงตรวจป่า','ลงตรวจแล้ว','รอมติสภา','ได้รับอนุญาต'];
-const STCLS = {'ยื่นแล้ว':'b-gray','แจ้งตรวจป่าแล้ว':'b-blue','รอลงตรวจป่า':'b-amber','ลงตรวจแล้ว':'b-green','รอมติสภา':'b-purple','ได้รับอนุญาต':'b-teal'};
+const STATUSES = ['ยื่นแล้ว','รอมติสภา','แจ้งตรวจป่าแล้ว','รอลงตรวจป่า','ลงตรวจแล้ว','เซ็นรายงานแล้ว','ได้รับอนุญาต'];
+const STCLS = {'ยื่นแล้ว':'b-gray','รอมติสภา':'b-purple','แจ้งตรวจป่าแล้ว':'b-blue','รอลงตรวจป่า':'b-amber','ลงตรวจแล้ว':'b-green','เซ็นรายงานแล้ว':'b-indigo','ได้รับอนุญาต':'b-teal'};
 const FTYPES = ['ป่าสงวนแห่งชาติ','ป่าถาวร (ม.4(1))','ป่าชายเลน'];
 const AGENCIES = ['สนง.ป่าไม้ที่ 12','สนง.ป่าชายเลนที่ 10'];
 const PROVS = ['กระบี่','นครศรีธรรมราช'];
@@ -453,7 +450,6 @@ function openDetail(id) {
       cnc.map((c) => '<div class="dl" style="margin-bottom:6px"><dt>' + esc(c.local_gov) + '</dt><dd>' + fmtTH(c.sent_date) + ' · ' + esc(c.status) + '</dd></div>').join('') + '</div>' : '') +
     '<div class="btnrow">' +
       '<button class="btn btn-o" onclick="closeSheet()">ปิด</button>' +
-      '<button class="btn btn-o" onclick="location.href=\'./map.html?route=\' + encodeURIComponent(\'' + esc(r.route_no) + (r.route_extra ? ' ' + esc(r.route_extra) : '') + '\')">🗺 แผนที่</button>' +
       '<button class="btn btn-p" onclick="openEdit(\'DB_Requests\',\'' + esc(r.req_id) + '\')">แก้ไข</button>' +
     '</div>');
 }
