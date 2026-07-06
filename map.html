@@ -246,7 +246,7 @@ for(const [name,e] of Object.entries(BUILTIN)){
   e.points.forEach(p=>addPoint(g,name,col,p.n,p.lat,p.lon));
   g.addTo(map); groups[name]=g;
   const i=e.info||{};
-  routeMeta[name]={color:col,ptCount:e.points.length,
+  routeMeta[name]={color:col,origColor:col,ptCount:e.points.length,
     infoText:(i.rai!=null?`${i.rai.toFixed(0)} ไร่ ${i.ngan.toFixed(0)} งาน ${i.wa.toFixed(0)} ตร.วา · `:"")+`หมุด ${e.points.length} จุด`,
     imported:false};
 }
@@ -671,7 +671,8 @@ rebuildSheet();
 /* ---------- สีตามสถานะคำขอป่าไม้ (อ่านจาก IndexedDB ของแอพคำขอ) ---------- */
 const C_DONE="#ffffff", C_NOREQ="#8a8a8a";
 // override สถานะสายทาง (แก้/ถอนได้ที่นี่) — 'noreq'=บังคับเทา, 'done'=บังคับขาว
-const STATUS_OVERRIDE={"ทล.4156 นครฯ":"noreq"};
+// 'noreq'=บังคับเทา(ไม่มีคำขอ) · 'done'=บังคับขาว(ลงตรวจแล้ว) · 'hasreq'=บังคับสีปกติ(มีคำขอ รอดำเนินการ)
+const STATUS_OVERRIDE={"ทล.4156 นครฯ":"noreq","ทล.4046":"hasreq"};
 const ST_DONE=['ลงตรวจแล้ว','รอมติสภา','ได้รับอนุญาต'];
 function recolorGroup(name,color,ring){
   const g=groups[name]; if(!g) return;
@@ -688,6 +689,7 @@ function paintNoData(){
   for(const name of Object.keys(BUILTIN)){
     const ov=STATUS_OVERRIDE[name];
     if(ov==='done'){recolorGroup(name,C_DONE,'#555555');routeMeta[name].status='ลงตรวจแล้ว';continue;}
+    if(ov==='hasreq'){recolorGroup(name,routeMeta[name].origColor,'#ffffff');routeMeta[name].status='มีคำขอ · รอดำเนินการ';continue;}
     recolorGroup(name,C_NOREQ,'#ffffff');routeMeta[name].status='ไม่มีคำขอ';
   }
   statusApplied=true;rebuildSheet();
@@ -735,6 +737,7 @@ function applyStatusColors(){
             const ov=STATUS_OVERRIDE[name];
             if(ov==='noreq'){recolorGroup(name,C_NOREQ,'#ffffff');routeMeta[name].status='ไม่มีคำขอ';nG++;continue;}
             if(ov==='done'){recolorGroup(name,C_DONE,'#555555');routeMeta[name].status='ลงตรวจแล้ว';nW++;continue;}
+            if(ov==='hasreq'){recolorGroup(name,routeMeta[name].origColor,'#ffffff');routeMeta[name].status='มีคำขอ · รอดำเนินการ';continue;}
             const a=acc[name];
             if(!a){recolorGroup(name,C_NOREQ,'#ffffff');routeMeta[name].status='ไม่มีคำขอ';nG++;}
             else if(a.allDone){recolorGroup(name,C_DONE,'#555555');routeMeta[name].status='ลงตรวจแล้ว';nW++;}
