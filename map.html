@@ -683,20 +683,32 @@ function recolorGroup(name,color,ring){
   const dot=chips.querySelector(`[data-route="${CSS.escape(name)}"] .dot`);
   if(dot) dot.style.background=color;
 }
+function paintNoData(){
+  // ไม่มีข้อมูลคำขอ → ลงสีตาม override + ที่เหลือเป็นเทาทั้งหมด (เห็นว่าสายไหนยังไม่มีคำขอ)
+  for(const name of Object.keys(BUILTIN)){
+    const ov=STATUS_OVERRIDE[name];
+    if(ov==='done'){recolorGroup(name,C_DONE,'#555555');routeMeta[name].status='ลงตรวจแล้ว';continue;}
+    recolorGroup(name,C_NOREQ,'#ffffff');routeMeta[name].status='ไม่มีคำขอ';
+  }
+  statusApplied=true;rebuildSheet();
+  toast('ยังไม่มีข้อมูลคำขอในเครื่องนี้ — แสดงทุกสายเป็นสีเทา · เปิดแอพคำขอแล้วกด Sync เพื่อดูสถานะจริง',4600);
+}
 function applyStatusColors(){
+  let opened=false;
+  const fallback=setTimeout(()=>{if(!opened){opened=true;paintNoData();}},2500); // กันเปิด DB ค้าง
   try{
-    const req=indexedDB.open('forestdb');
-    // ถ้าฐานข้อมูลยังไม่เคยถูกสร้าง (เครื่องที่ไม่เคยเปิดแอพคำขอ) ให้ยกเลิก ไม่สร้าง DB เปล่าทิ้งไว้
-    req.onupgradeneeded=(e)=>{try{e.target.transaction.abort();}catch(_){}}; 
-    req.onerror=()=>{};
+    const req=indexedDB.open('forestdb'); // เปิด read-only ไม่ระบุ version → ไม่ยุ่งกับ schema ของแอพ
+    req.onerror=()=>{clearTimeout(fallback);if(!opened){opened=true;paintNoData();}};
+    req.onblocked=()=>{};
     req.onsuccess=()=>{
       const d=req.result;
       try{
-        if(!d.objectStoreNames.contains('tables')){d.close();return;}
+        if(!d.objectStoreNames.contains('tables')){d.close();clearTimeout(fallback);if(!opened){opened=true;paintNoData();}return;}
         const t=d.transaction('tables','readonly').objectStore('tables').get('requests');
         t.onsuccess=()=>{
+          opened=true;clearTimeout(fallback);
           const rows=t.result||[]; d.close();
-          if(!rows.length){toast('ไม่พบข้อมูลคำขอในเครื่องนี้ — เปิดแอพคำขอป่าไม้แล้วกด Sync ก่อน สีสถานะจึงจะแสดง',4200);return;}
+          if(!rows.length){paintNoData();return;}
           // จัดกลุ่มช่วงตามเลขสาย
           const byNum={};
           for(const name of Object.keys(BUILTIN)){
