@@ -89,11 +89,12 @@ nav{
   border-top:1px solid var(--line);display:flex;
   padding-bottom:env(safe-area-inset-bottom);
 }
-nav button{
+nav button,nav .navlink{
   flex:1;border:0;background:none;font:inherit;font-size:.72rem;color:var(--ink-3);
   padding:8px 0 6px;display:flex;flex-direction:column;align-items:center;gap:2px;
+  text-decoration:none;
 }
-nav button .ic{font-size:1.25rem;line-height:1}
+nav button .ic,nav .navlink .ic{font-size:1.25rem;line-height:1}
 nav button.on{color:var(--green);font-weight:600}
 #sheetWrap{position:fixed;inset:0;z-index:30;display:none}
 #sheetWrap.on{display:block}
@@ -187,6 +188,7 @@ nav button.on{color:var(--green);font-weight:600}
   <button data-v="home" class="on" onclick="go('home')"><span class="ic">▦</span>ภาพรวม</button>
   <button data-v="req" onclick="go('req')"><span class="ic">🗂</span>คำขอ</button>
   <button data-v="cnc" onclick="go('cnc')"><span class="ic">🏛</span>มติสภา</button>
+  <a href="map.html" class="navlink"><span class="ic">🗺</span>แผนที่</a>
   <button data-v="set" onclick="go('set')"><span class="ic">⚙</span>ตั้งค่า</button>
 </nav>
 
