@@ -143,7 +143,7 @@ nav button.on{color:var(--green);font-weight:600}
       <div class="kpi"><b id="kReq">–</b><span>คำขอทั้งหมด</span></div>
       <div class="kpi"><b id="kPend">–</b><span>รอ sync ขึ้นชีต</span></div>
     </div>
-    <div class="card"><h2>ถึงขั้นตอนนี้แล้ว — ยอดสะสม (แตะเพื่อกรอง)</h2><div class="chips" id="homeStatus"></div></div>
+    <div class="card"><h2>สถานะคำขอ (แตะเพื่อกรอง · ยื่นแล้ว = ทั้งหมด)</h2><div class="chips" id="homeStatus"></div></div>
     <div class="card"><h2>ประเภทป่า</h2><div class="chips" id="homeType"></div></div>
     <div class="card"><h2>มติสภา อปท.</h2><div id="homeCouncil" class="dl"></div></div>
   </section>
@@ -274,10 +274,9 @@ function isPending(table, id) {
   const idCol = table === 'DB_Requests' ? 'req_id' : 'res_id';
   return state.queue.some((q) => q.table === table && q.record[idCol] === id);
 }
-// สถานะแบบสะสม: คำขอ "ผ่านขั้น s" ถ้าสถานะปัจจุบันอยู่ที่ s หรือเลยไปแล้ว
-function reached(r, s) {
-  const cur = STATUSES.indexOf(r.status), want = STATUSES.indexOf(s);
-  return cur >= 0 && want >= 0 && cur >= want;
+// "ยื่นแล้ว" = ทุกคำขอ (ทุกใบยื่นแล้วโดยนิยาม) / สถานะอื่น = เฉพาะใบที่อยู่ขั้นนั้นจริง
+function matchStatus(r, s) {
+  return s === 'ยื่นแล้ว' ? true : r.status === s;
 }
 function nextId(prefix, rows, idCol) {
   let mx = 0;
@@ -366,7 +365,7 @@ function renderHome() {
   $('#kPend').textContent = state.queue.length;
   $('#homeStatus').innerHTML = STATUSES.map((s) =>
     '<button class="chip" onclick="filterJump(\'\',\'' + s + '\')">' + esc(s) +
-    ' <span class="n">' + R.filter((r) => reached(r, s)).length + '</span></button>').join('');
+    ' <span class="n">' + R.filter((r) => matchStatus(r, s)).length + '</span></button>').join('');
   $('#homeType').innerHTML = FTYPES.map((t, i) =>
     '<button class="chip" onclick="filterJumpT(' + i + ')">' + esc(t) +
     ' <span class="n">' + R.filter((r) => r.forest_type === t).length + '</span></button>').join('');
@@ -388,7 +387,7 @@ function renderReq() {
     '<button class="chip' + (state.fStatus === s ? ' sel' : '') + '" onclick="toggleFStatus(' + i + ')">' + esc(s) + '</button>').join('');
   let rows = state.data.requests.filter((r) =>
     (!state.fType || r.forest_type === state.fType) &&
-    (!state.fStatus || reached(r, state.fStatus)) &&
+    (!state.fStatus || matchStatus(r, state.fStatus)) &&
     (!q || (r.route_no + ' ' + r.request_no + ' ' + (r.remark || '') + ' ' + (r.province_area || '')).toLowerCase().includes(q)));
   rows = rows.slice().sort((a, b) =>
     String(a.route_no).localeCompare(String(b.route_no), 'th', { numeric: true }) ||
