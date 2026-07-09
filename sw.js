@@ -1,5 +1,5 @@
 /* Service Worker — คำขอใช้พื้นที่ป่า ขท.กระบี่ */
-const CACHE = 'forest-app-v3';
+const CACHE = 'forest-app-v4';
 const ASSETS = ['./', './index.html', './manifest.json', './icon-192.png', './icon-512.png'];
 
 self.addEventListener('install', (e) => {
