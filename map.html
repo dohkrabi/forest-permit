@@ -81,6 +81,8 @@ html,body{height:100%;font-family:'Segoe UI',Tahoma,'Leelawadee UI',sans-serif}
 .kmlab.minor div{background:rgba(26,28,30,.72);color:#ffe082;font-size:9px;font-weight:600;
   padding:0 4px;border-radius:4px;transform:translate(-50%,-150%)}
 .kmtick.major div{width:8px;height:8px;background:#ff6f00;border:1.5px solid #fff}
+.kmtick.small div{width:4px;height:4px}
+.kmtick.tiny div{width:2.5px;height:2.5px;background:#fff59d;border:none}
 .mypt{background:transparent;border:none}
 .mypt div{transform:translate(-50%,-50%);width:22px;height:22px;border-radius:50%;display:flex;
   align-items:center;justify-content:center;font-size:12px;border:2px solid #fff;box-shadow:0 1px 5px rgba(0,0,0,.5)}
@@ -123,6 +125,10 @@ html,body{height:100%;font-family:'Segoe UI',Tahoma,'Leelawadee UI',sans-serif}
 .navbar .nt span{font-size:12px;color:#ffd54f;font-weight:700}
 .navbar button{border:none;background:rgba(255,255,255,.15);color:#fff;border-radius:8px;
   padding:6px 10px;font-size:13px;font-family:inherit;cursor:pointer}
+.kmnow{position:absolute;right:12px;bottom:152px;z-index:1000;display:none;
+  background:rgba(26,28,30,.92);color:#ffd54f;font-size:12.5px;font-weight:800;
+  padding:6px 12px;border-radius:16px;box-shadow:0 2px 10px rgba(0,0,0,.3);white-space:nowrap}
+.kmnow small{display:block;color:rgba(255,255,255,.7);font-weight:500;font-size:10.5px}
 .toast{position:absolute;left:50%;bottom:70px;transform:translateX(-50%);z-index:1200;
   background:rgba(26,28,30,.92);color:#fff;font-size:13px;padding:9px 16px;border-radius:8px;
   opacity:0;transition:opacity .25s;pointer-events:none;max-width:86vw;text-align:center}
@@ -155,7 +161,7 @@ html,body{height:100%;font-family:'Segoe UI',Tahoma,'Leelawadee UI',sans-serif}
   <div class="rpanel" id="toolPanel" style="display:none">
     <div class="tools">
       <button id="tbKm">📏 ตั้งค่า กม. สายทาง (ปักจุดเริ่ม–สิ้นสุด)</button>
-      <button id="tbTick">📐 แสดงขีด กม. ทุก 10 ม. (ซูมเข้าใกล้)</button>
+      <button id="tbTick" class="on">📐 ขีด กม. — ซูมเข้ายิ่งละเอียด (100→10→1 ม.)</button>
       <button id="tbAdd">📍 ปักจุดใหม่ — แตะตำแหน่งบนแผนที่</button>
       <button id="tbAddGps">🛰 ปักที่ตำแหน่ง GPS ของฉัน</button>
       <button id="tbList">🗂 จุดที่ปักไว้ / ส่งออกข้อมูล</button>
@@ -199,6 +205,7 @@ html,body{height:100%;font-family:'Segoe UI',Tahoma,'Leelawadee UI',sans-serif}
   <button onclick="stopNav()">✕ เลิก</button>
 </div>
 <input type="file" id="filein" multiple accept=".zip,.shp,.dbf,.prj,.cpg,.shx" style="display:none">
+<div class="kmnow" id="kmNow"></div>
 <div class="toast" id="toast"></div>
 
 <div class="modal" id="kmModal">
@@ -544,7 +551,9 @@ const gpsBtn=document.getElementById('gps');
 gpsBtn.onclick=()=>{
   if(watching){navigator.geolocation.clearWatch(watchId);watching=false;
     gpsBtn.classList.remove('active');
-    if(meMarker){map.removeLayer(meMarker);map.removeLayer(meCircle);meMarker=null;}return;}
+    if(meMarker){map.removeLayer(meMarker);map.removeLayer(meCircle);meMarker=null;}
+    const kn=document.getElementById('kmNow'); if(kn)kn.style.display='none';
+    return;}
   if(!navigator.geolocation){toast('อุปกรณ์นี้ไม่รองรับ GPS');return;}
   watching=true;gpsBtn.classList.add('active');
   watchId=navigator.geolocation.watchPosition(pos=>{
@@ -555,6 +564,7 @@ gpsBtn.onclick=()=>{
       map.setView(ll,17);
     }else{meMarker.setLatLng(ll);meCircle.setLatLng(ll);meCircle.setRadius(pos.coords.accuracy);}
     if(navTarget)drawNav();
+    if(typeof updateKmNow==='function') updateKmNow(ll);
   },err=>{toast('เปิดตำแหน่งไม่ได้: '+err.message);watching=false;gpsBtn.classList.remove('active');},
   {enableHighAccuracy:true,maximumAge:3000});
 };
@@ -779,8 +789,10 @@ rebuildSheet();
 
 /* ================= เครื่องมือ กม. + ปักจุด ================= */
 const KM_KEY="khet_thang_km_v1", PT_KEY="khet_thang_points_v1";
-const TICK_ZOOM=17, TICK_STEP=10, TICK_MAX=1400;
-const LABEL10_ZOOM=18;  // ซูมระดับนี้ขึ้นไป จึงติดป้ายทุกขีด 10 ม.
+// ระดับขีด กม. ตามการซูม: [ซูมขั้นต่ำ, ระยะห่าง(ม.)]
+const TICK_LEVELS=[[20,1],[18,10],[16,100],[13,1000]];
+const TICK_MAX=1600;
+function tickStep(z){ for(const [mz,st] of TICK_LEVELS) if(z>=mz) return st; return null; }
 const PT_STYLE={forest:{ic:'🌲',c:'#2e7d32',n:'จุดตรวจป่า'},
                 light:{ic:'💡',c:'#f9a825',n:'เสาไฟฟ้าแสงสว่าง'},
                 other:{ic:'📌',c:'#ef6c00',n:'อื่น ๆ'}};
@@ -853,11 +865,13 @@ function kmAt(ll){
 }
 
 /* ---------- ขีด กม. ทุก 10 ม. ---------- */
-let tickOn=false;
+let tickOn=true;   // แสดงขีด กม. ตลอด (กม.เต็ม+100 ม.) · 10 ม./1 ม. โผล่เองเมื่อซูมเข้าใกล้
 const tickLayer=L.layerGroup().addTo(map);
 function refreshTicks(){
   tickLayer.clearLayers();
-  if(!tickOn||map.getZoom()<TICK_ZOOM)return;
+  const z=map.getZoom();
+  const STEP=tickStep(z);
+  if(!tickOn||!STEP)return;
   const b=map.getBounds().pad(0.15);
   let n=0;
   for(const name of Object.keys(BUILTIN)){
@@ -878,27 +892,36 @@ function refreshTicks(){
     const kmA=kmFromD(name,c.li,d0), kmB=kmFromD(name,c.li,d1);
     if(kmA==null||kmB==null)continue;
     let lo=Math.min(kmA,kmB), hi=Math.max(kmA,kmB);
-    let k=Math.ceil(lo/TICK_STEP)*TICK_STEP;
-    for(;k<=hi&&n<TICK_MAX;k+=TICK_STEP){
+    let k=Math.ceil(lo/STEP)*STEP;
+    for(;k<=hi&&n<TICK_MAX;k+=STEP){
       const d=c.d0+(k-c.km0)/kmDir;
       const ll=interpLine(L0,d);
       if(!b.contains(ll))continue;
       const kr=Math.round(k);
-      const isKm=(kr%1000===0), isMid=(kr%100===0);
-      const z=map.getZoom();
+      const isKm=(kr%1000===0), isMid=(kr%100===0), isTen=(kr%10===0);
+      let tcls='kmtick', lcls=null;
+      if(isKm){tcls='kmtick major'; lcls='kmlab';}
+      else if(isMid){lcls='kmlab mid';}
+      else if(isTen){tcls='kmtick small'; lcls='kmlab minor';}
+      else {tcls='kmtick tiny'; lcls=(z>=21)?'kmlab minor':null;}   // ระดับ 1 ม.
       tickLayer.addLayer(L.marker(ll,{interactive:false,
-        icon:L.divIcon({className:'kmtick'+(isKm?' major':''),html:'<div></div>',iconSize:[0,0]})}));
-      let cls=null;
-      if(isKm) cls='kmlab';
-      else if(isMid) cls='kmlab mid';
-      else if(z>=LABEL10_ZOOM) cls='kmlab minor';   // ป้ายย่อยทุก 10 ม. เมื่อซูมเข้าใกล้
-      if(cls) tickLayer.addLayer(L.marker(ll,{interactive:false,
-        icon:L.divIcon({className:cls,html:'<div>'+fmtKm(k)+'</div>',iconSize:[0,0]})}));
+        icon:L.divIcon({className:tcls,html:'<div></div>',iconSize:[0,0]})}));
+      if(lcls) tickLayer.addLayer(L.marker(ll,{interactive:false,
+        icon:L.divIcon({className:lcls,html:'<div>'+fmtKm(k)+'</div>',iconSize:[0,0]})}));
       n++;
     }
   }
 }
 map.on('zoomend moveend',refreshTicks);
+
+/* ---------- ป้าย กม. ปัจจุบัน (ตามตำแหน่ง GPS · ละเอียด 1 ม.) ---------- */
+function updateKmNow(ll){
+  const el=document.getElementById('kmNow'); if(!el)return;
+  const info=kmAt(L.latLng(ll[0],ll[1]));
+  if(!info||info.km==null||info.off>200){el.style.display='none';return;}
+  el.style.display='block';
+  el.innerHTML=`กม.${fmtKm(Math.round(info.km))}<small>${info.route} · ห่างกลางถนน ${Math.round(info.off)} ม.</small>`;
+}
 
 /* ---------- จุดที่ปักเอง ---------- */
 const ptLayer=L.layerGroup().addTo(map);
@@ -930,7 +953,7 @@ function drawPts(){
 function fillModal(ll){
   const info=kmAt(ll);
   document.getElementById('pmRoute').textContent=info?info.route:'—';
-  document.getElementById('pmKm').textContent=(info&&info.km!=null)?fmtKm(Math.round(info.km/10)*10):'— (ยังไม่ได้ตั้ง กม. สายนี้)';
+  document.getElementById('pmKm').textContent=(info&&info.km!=null)?fmtKm(Math.round(info.km)):'— (ยังไม่ได้ตั้ง กม. สายนี้)';
   document.getElementById('pmOff').textContent=info?Math.round(info.off)+' ม.':'—';
   document.getElementById('pmLL').textContent=ll.lat.toFixed(7)+', '+ll.lng.toFixed(7);
   const u=utmOf(ll.lat,ll.lng);
@@ -962,7 +985,7 @@ document.getElementById('pmSave').onclick=()=>{
   if(!pendingLL)return;
   const type=document.getElementById('pmType').value;
   const note=document.getElementById('pmNote').value.trim();
-  const km=(pendingInfo&&pendingInfo.km!=null)?Math.round(pendingInfo.km/10)*10:null;
+  const km=(pendingInfo&&pendingInfo.km!=null)?Math.round(pendingInfo.km):null;  // ละเอียดระดับ 1 ม.
   if(editingId){
     const p=MYPTS.find(x=>x.id===editingId);
     Object.assign(p,{type,note,lat:pendingLL.lat,lon:pendingLL.lng,
@@ -1126,7 +1149,7 @@ document.getElementById('ptCsv').onclick=exportCsv;
 document.getElementById('ptKml').onclick=exportKml;
 document.getElementById('tbTick').onclick=(e)=>{
   tickOn=!tickOn; e.target.classList.toggle('on',tickOn); refreshTicks();
-  toast(tickOn?'เปิดขีด กม. ทุก 10 ม. — ซูมเข้าใกล้เพื่อดู (ต้องตั้ง กม. สายนั้นก่อน)':'ปิดขีด กม.',3600);
+  toast(tickOn?'เปิดขีด กม. — ยิ่งซูมเข้ายิ่งละเอียด (100 ม. → 10 ม. → 1 ม.)':'ปิดขีด กม. ทั้งหมด',3600);
 };
 document.getElementById('tbAdd').onclick=(e)=>{
   addMode=!addMode; e.target.classList.toggle('on',addMode);
