@@ -71,18 +71,12 @@ html,body{height:100%;font-family:'Segoe UI',Tahoma,'Leelawadee UI',sans-serif}
   cursor:pointer;font-weight:600;background:#eceff1;color:#37474f}
 .mact button.pri{background:var(--road);color:#1a1c1e}
 .mact button.dgr{background:#ffebee;color:#c62828}
-.kmtick{background:transparent;border:none}
-.kmtick div{transform:translate(-50%,-50%);width:5px;height:5px;border-radius:50%;background:#ffd54f;
-  border:1px solid rgba(0,0,0,.5)}
 .kmlab{background:transparent;border:none}
 .kmlab div{transform:translate(-50%,-160%);background:rgba(255,213,79,.95);color:#1a1c1e;font-size:10px;
   font-weight:800;padding:1px 5px;border-radius:5px;white-space:nowrap;display:inline-block}
 .kmlab.mid div{background:rgba(255,213,79,.85);font-size:9.5px;font-weight:700}
 .kmlab.minor div{background:rgba(26,28,30,.72);color:#ffe082;font-size:9px;font-weight:600;
   padding:0 4px;border-radius:4px;transform:translate(-50%,-150%)}
-.kmtick.major div{width:8px;height:8px;background:#ff6f00;border:1.5px solid #fff}
-.kmtick.small div{width:4px;height:4px}
-.kmtick.tiny div{width:2.5px;height:2.5px;background:#fff59d;border:none}
 .mypt{background:transparent;border:none}
 .mypt div{transform:translate(-50%,-50%);width:22px;height:22px;border-radius:50%;display:flex;
   align-items:center;justify-content:center;font-size:12px;border:2px solid #fff;box-shadow:0 1px 5px rgba(0,0,0,.5)}
@@ -161,7 +155,8 @@ html,body{height:100%;font-family:'Segoe UI',Tahoma,'Leelawadee UI',sans-serif}
   <div class="rpanel" id="toolPanel" style="display:none">
     <div class="tools">
       <button id="tbKm">📏 ตั้งค่า กม. สายทาง (ปักจุดเริ่ม–สิ้นสุด)</button>
-      <button id="tbTick" class="on">📐 ขีด กม. — ซูมเข้ายิ่งละเอียด (100→10→1 ม.)</button>
+      <button id="tbTick">📐 เปิดขีดย่อย 10 ม. / 1 ม. (ซูมเข้าใกล้)</button>
+  <button id="tbTickOff" class="on">👁 แสดงขีด กม. (กม.เต็ม + 100 ม.)</button>
       <button id="tbAdd">📍 ปักจุดใหม่ — แตะตำแหน่งบนแผนที่</button>
       <button id="tbAddGps">🛰 ปักที่ตำแหน่ง GPS ของฉัน</button>
       <button id="tbList">🗂 จุดที่ปักไว้ / ส่งออกข้อมูล</button>
@@ -789,10 +784,17 @@ rebuildSheet();
 
 /* ================= เครื่องมือ กม. + ปักจุด ================= */
 const KM_KEY="khet_thang_km_v1", PT_KEY="khet_thang_points_v1";
-// ระดับขีด กม. ตามการซูม: [ซูมขั้นต่ำ, ระยะห่าง(ม.)]
-const TICK_LEVELS=[[20,1],[18,10],[16,100],[13,1000]];
 const TICK_MAX=1600;
-function tickStep(z){ for(const [mz,st] of TICK_LEVELS) if(z>=mz) return st; return null; }
+let fineOn=false;   // ขีดย่อย 10 ม./1 ม. — เปิดด้วยปุ่มใน 🛠 เครื่องมือ
+function tickStep(z){
+  if(fineOn){
+    if(z>=20) return 1;    // ซูมสุด: จุดทุก 1 ม. (ไม่มีป้าย — แตะที่จุดเพื่อดูค่า)
+    if(z>=18) return 10;   // ทุก 10 ม. พร้อมป้าย
+  }
+  if(z>=16) return 100;    // ค่าเริ่มต้น: ทุก 100 ม.
+  if(z>=13) return 1000;   // กม.เต็ม
+  return null;
+}
 const PT_STYLE={forest:{ic:'🌲',c:'#2e7d32',n:'จุดตรวจป่า'},
                 light:{ic:'💡',c:'#f9a825',n:'เสาไฟฟ้าแสงสว่าง'},
                 other:{ic:'📌',c:'#ef6c00',n:'อื่น ๆ'}};
@@ -865,8 +867,8 @@ function kmAt(ll){
 }
 
 /* ---------- ขีด กม. ทุก 10 ม. ---------- */
-let tickOn=true;   // แสดงขีด กม. ตลอด (กม.เต็ม+100 ม.) · 10 ม./1 ม. โผล่เองเมื่อซูมเข้าใกล้
-const tickLayer=L.layerGroup().addTo(map);
+let tickOn=true;   // ขีด กม. หลัก (กม.เต็ม + 100 ม.) แสดงตลอด
+const tickLayer=L.featureGroup().addTo(map);
 function refreshTicks(){
   tickLayer.clearLayers();
   const z=map.getZoom();
@@ -899,13 +901,26 @@ function refreshTicks(){
       if(!b.contains(ll))continue;
       const kr=Math.round(k);
       const isKm=(kr%1000===0), isMid=(kr%100===0), isTen=(kr%10===0);
-      let tcls='kmtick', lcls=null;
-      if(isKm){tcls='kmtick major'; lcls='kmlab';}
-      else if(isMid){lcls='kmlab mid';}
-      else if(isTen){tcls='kmtick small'; lcls='kmlab minor';}
-      else {tcls='kmtick tiny'; lcls=(z>=21)?'kmlab minor':null;}   // ระดับ 1 ม.
-      tickLayer.addLayer(L.marker(ll,{interactive:false,
-        icon:L.divIcon({className:tcls,html:'<div></div>',iconSize:[0,0]})}));
+      let R=3, col='#ffd54f', ring='#000', lcls=null;
+      if(isKm){R=5;col='#ff6f00';ring='#fff';lcls='kmlab';}
+      else if(isMid){R=3.5;lcls='kmlab mid';}
+      else if(isTen){R=2.5;lcls='kmlab minor';}          // ป้าย 10 ม. (เฉพาะตอนเปิดขีดย่อย)
+      else {R=1.8;col='#fff59d';ring='#fff59d';lcls=null;} // 1 ม. = จุดล้วน แตะเพื่อดูค่า
+      const mk=L.circleMarker(ll,{radius:R,color:ring,weight:isKm?1.5:0.8,
+        fillColor:col,fillOpacity:1,interactive:true}).addTo(tickLayer);
+      const rn=name, kk=kr, la=ll.lat, lo2=ll.lng;
+      mk.bindPopup(()=>{
+        const u=utmOf(la,lo2);
+        return `<div class="pp"><b>กม. ${fmtKm(kk)}</b><table>
+        <tr><td>สายทาง</td><td>${rn}</td></tr>
+        <tr><td>Lat</td><td>${la.toFixed(7)}</td></tr>
+        <tr><td>Lon</td><td>${lo2.toFixed(7)}</td></tr>
+        ${u?`<tr><td>X</td><td>${u.x.toFixed(3)}</td></tr><tr><td>Y</td><td>${u.y.toFixed(3)}</td></tr>`:''}
+        </table>
+        <a class="nav" href="#" onclick='openModal(L.latLng(${la},${lo2}),null);return false'>📍 ปักจุดที่นี่</a>
+        <a class="nav" style="background:#37474f;margin-left:6px" href="#" onclick='startNav(${la},${lo2},"กม. ${fmtKm(kk)}","${rn}");return false'>🧭 ไปที่นี่</a>
+        </div>`;
+      });
       if(lcls) tickLayer.addLayer(L.marker(ll,{interactive:false,
         icon:L.divIcon({className:lcls,html:'<div>'+fmtKm(k)+'</div>',iconSize:[0,0]})}));
       n++;
@@ -1135,7 +1150,8 @@ toolBtn.onclick=()=>{
   const show=toolPanel.style.display==='none';
   closeAllPanels();
   if(show){toolPanel.style.display='block';
-    document.getElementById('tbTick').classList.toggle('on',tickOn);
+    document.getElementById('tbTick').classList.toggle('on',fineOn);
+    document.getElementById('tbTickOff').classList.toggle('on',tickOn);
     document.getElementById('tbAdd').classList.toggle('on',addMode);}
 };
 rowR.appendChild(toolBtn);
@@ -1148,8 +1164,12 @@ document.getElementById('ptClose').onclick=closeAllPanels;
 document.getElementById('ptCsv').onclick=exportCsv;
 document.getElementById('ptKml').onclick=exportKml;
 document.getElementById('tbTick').onclick=(e)=>{
+  fineOn=!fineOn; e.target.classList.toggle('on',fineOn); refreshTicks();
+  toast(fineOn?'เปิดขีดย่อย — ซูมระดับ 18+ เห็นทุก 10 ม. (มีป้าย) · ระดับ 20+ เห็นทุก 1 ม. (จุดล้วน แตะที่จุดเพื่อดูค่า)':'ปิดขีดย่อย',4600);
+};
+document.getElementById('tbTickOff').onclick=(e)=>{
   tickOn=!tickOn; e.target.classList.toggle('on',tickOn); refreshTicks();
-  toast(tickOn?'เปิดขีด กม. — ยิ่งซูมเข้ายิ่งละเอียด (100 ม. → 10 ม. → 1 ม.)':'ปิดขีด กม. ทั้งหมด',3600);
+  toast(tickOn?'แสดงขีด กม.':'ซ่อนขีด กม. ทั้งหมด',2600);
 };
 document.getElementById('tbAdd').onclick=(e)=>{
   addMode=!addMode; e.target.classList.toggle('on',addMode);
@@ -1174,6 +1194,7 @@ map.on('click',modeClick);
 function hookGroup(g){ if(g&&g.on) g.on('click',modeClick); }
 for(const g of Object.values(groups)) hookGroup(g);
 hookGroup(ptLayer);
+hookGroup(tickLayer);
 window._hookGroup=hookGroup;   // ให้สายทางที่นำเข้าใหม่ผูกด้วย
 // กันป๊อปอัพเด้งระหว่างอยู่ในโหมด
 map.on('popupopen',()=>{ if(calState||addMode) map.closePopup(); });
