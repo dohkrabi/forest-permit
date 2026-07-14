@@ -195,6 +195,13 @@ html,body{height:100%;font-family:'Segoe UI',Tahoma,'Leelawadee UI',sans-serif}
 
 <button class="gpsbtn" id="gps" title="ตำแหน่งของฉัน">📍</button>
 
+<div class="navbar" id="calbar" style="background:rgba(245,180,0,.96);color:#1a1c1e">
+  <span class="arr">📏</span>
+  <div class="nt"><b id="calTitle">—</b><span id="calInfo" style="color:#5d4037">—</span></div>
+  <button id="calDone" style="background:#1a1c1e;color:#fff;font-weight:700">✓ เสร็จ</button>
+  <button id="calCancel" style="background:rgba(0,0,0,.15);color:#1a1c1e">✕</button>
+</div>
+
 <div class="navbar" id="navbar">
   <span class="arr" id="navArr">⬆️</span>
   <div class="nt"><b id="navTitle">—</b><span id="navDist">รอสัญญาณ GPS…</span></div>
@@ -822,16 +829,23 @@ let KMCAL={}, MYPTS=[];
 try{KMCAL=Object.assign({},DEFAULT_KMCAL,JSON.parse(localStorage.getItem(KM_KEY)||"{}"));}catch(e){KMCAL=Object.assign({},DEFAULT_KMCAL);}
 try{MYPTS=JSON.parse(localStorage.getItem(PT_KEY)||"[]");}catch(e){}
 const saveKm=()=>{try{localStorage.setItem(KM_KEY,JSON.stringify(KMCAL));}catch(e){toast('บันทึกไม่สำเร็จ');}};
-// คำนวณระยะตามแนวเส้นใหม่จากพิกัดที่เคยปักไว้ (ถ้าเส้นกึ่งกลางถูกปรับปรุง ค่าจะยังตรง)
+// แปลงรูปแบบเดิม (2 จุด) เป็น pts[] และคำนวณระยะตามแนวเส้นใหม่จากพิกัดที่ปักไว้
 function remapKmCal(){
-  let legacy=0;
   for(const [name,c] of Object.entries(KMCAL)){
-    if(!c.p0||!c.p1){legacy++;continue;}
-    const ls=routeLines(name); const L0=ls[c.li]; if(!L0)continue;
-    c.d0=projectLine(L0,L.latLng(c.p0.lat,c.p0.lng)).d;
-    c.d1=projectLine(L0,L.latLng(c.p1.lat,c.p1.lng)).d;
+    if(!c.pts&&c.p0&&c.p1)
+      c.pts=[{lat:c.p0.lat,lng:c.p0.lng,km:c.km0},{lat:c.p1.lat,lng:c.p1.lng,km:c.km1}];
+    if(!c.pts||c.pts.length<2){delete KMCAL[name];continue;}
+    const ls=routeLines(name); const L0=ls[c.li||0]; if(!L0)continue;
+    for(const p of c.pts) p.d=projectLine(L0,L.latLng(p.lat,p.lng)).d;
+    c.pts.sort((a,b)=>a.d-b.d);
+    c.li=c.li||0;
   }
-  if(legacy) setTimeout(()=>toast(`มีสายทาง ${legacy} สายที่ตั้ง กม. ไว้ก่อนการปรับเส้นกึ่งกลาง — แนะนำกด "ตั้งใหม่" เพื่อความแม่นยำ`,6000),1200);
+}
+function kmPts(name){const c=KMCAL[name];return (c&&c.pts&&c.pts.length>=2)?c.pts:null;}
+function kmRange(name){
+  const p=kmPts(name); if(!p)return null;
+  const ks=p.map(x=>x.km);
+  return [Math.min(...ks),Math.max(...ks)];
 }
 const savePts=()=>{try{localStorage.setItem(PT_KEY,JSON.stringify(MYPTS));}catch(e){toast('บันทึกไม่สำเร็จ');}};
 
@@ -871,13 +885,25 @@ function nearestRoute(ll){
   }
   return best;
 }
-// แปลงระยะตามแนวเส้น -> กม. จริง (ต้อง calibrate ก่อน)
+// ระยะตามแนวเส้น -> กม. จริง (เทียบทีละช่วงระหว่างจุดอ้างอิง = piecewise)
 function kmFromD(name,li,d){
-  const c=KMCAL[name];
-  if(!c||c.li!==li)return null;
-  const span=c.d1-c.d0;
-  if(!span)return null;
-  return c.km0+(d-c.d0)*(c.km1-c.km0)/span;
+  const pts=kmPts(name); if(!pts)return null;
+  const c=KMCAL[name]; if((c.li||0)!==li)return null;
+  const seg=(a,b)=>(b.d===a.d)?a.km:a.km+(d-a.d)*(b.km-a.km)/(b.d-a.d);
+  if(d<=pts[0].d) return seg(pts[0],pts[1]);
+  for(let i=0;i<pts.length-1;i++) if(d<=pts[i+1].d) return seg(pts[i],pts[i+1]);
+  return seg(pts[pts.length-2],pts[pts.length-1]);
+}
+// กม. จริง -> ระยะตามแนวเส้น (เฉพาะในช่วงที่เทียบไว้)
+function dFromKm(name,km){
+  const pts=kmPts(name); if(!pts)return null;
+  for(let i=0;i<pts.length-1;i++){
+    const a=pts[i],b=pts[i+1];
+    const lo=Math.min(a.km,b.km), hi=Math.max(a.km,b.km);
+    if(km>=lo&&km<=hi&&b.km!==a.km)
+      return a.d+(km-a.km)*(b.d-a.d)/(b.km-a.km);
+  }
+  return null;
 }
 function kmAt(ll){
   const n=nearestRoute(ll);
@@ -898,8 +924,8 @@ function refreshTicks(){
   let n=0;
   for(const name of Object.keys(BUILTIN)){
     if(!groups[name]||!map.hasLayer(groups[name]))continue;
-    const c=KMCAL[name]; if(!c)continue;
-    const ls=routeLines(name); const L0=ls[c.li]; if(!L0)continue;
+    const c=KMCAL[name]; if(!kmPts(name))continue;
+    const ls=routeLines(name); const L0=ls[c.li||0]; if(!L0)continue;
     // หาช่วง chainage ที่อยู่ในจอ
     let d0=Infinity,d1=-Infinity;
     for(let i=0;i<L0.pts.length;i++){
@@ -909,14 +935,14 @@ function refreshTicks(){
       }
     }
     if(d0>d1)continue;
-    const kmDir=(c.km1-c.km0)/(c.d1-c.d0);           // ม.กม. ต่อ ม.เส้น (อาจติดลบ = ทิศกลับ)
-    // ไล่ทีละ 10 ม. ตามค่า กม. จริง
-    const kmA=kmFromD(name,c.li,d0), kmB=kmFromD(name,c.li,d1);
+    const kmA=kmFromD(name,c.li||0,d0), kmB=kmFromD(name,c.li||0,d1);
     if(kmA==null||kmB==null)continue;
-    let lo=Math.min(kmA,kmB), hi=Math.max(kmA,kmB);
+    const rg=kmRange(name);
+    let lo=Math.max(Math.min(kmA,kmB),rg[0]), hi=Math.min(Math.max(kmA,kmB),rg[1]);
     let k=Math.ceil(lo/STEP)*STEP;
     for(;k<=hi&&n<TICK_MAX;k+=STEP){
-      const d=c.d0+(k-c.km0)/kmDir;
+      const d=dFromKm(name,k);
+      if(d==null)continue;
       const ll=interpLine(L0,d);
       if(!b.contains(ll))continue;
       const kr=Math.round(k);
@@ -1069,8 +1095,19 @@ ${pm}</Document></kml>`,'application/vnd.google-earth.kml+xml');
   toast('ส่งออก KML แล้ว');
 }
 
-/* ---------- calibrate กม. ---------- */
-let calState=null; // {name, li, d0, km0}
+/* ---------- calibrate กม. (ปักได้หลายจุด → เทียบทีละช่วง) ---------- */
+let calState=null; // {name, li, pts:[{lat,lng,km,d}]}
+function calBar(){
+  const bar=document.getElementById('calbar');
+  if(!calState){bar.style.display='none';return;}
+  bar.style.display='flex';
+  bar.style.top=(document.querySelector('.topbar').offsetHeight+8)+'px';
+  document.getElementById('calTitle').textContent='📏 ตั้ง กม. '+calState.name;
+  const n=calState.pts.length;
+  document.getElementById('calInfo').textContent = n===0
+    ? 'แตะจุดอ้างอิงจุดแรกบนแผนที่ (เช่นหลัก กม. หรือปลายสายทาง)'
+    : `ปักแล้ว ${n} จุด: ${calState.pts.map(p=>fmtKm(p.km)).join(' · ')}${n<2?' — ต้องมีอย่างน้อย 2 จุด':' — ปักเพิ่มได้ หรือกด ✓ เสร็จ'}`;
+}
 function kmPrompt(title,def){
   return new Promise(res=>{
     const m=document.getElementById('kmModal');
@@ -1089,38 +1126,41 @@ function kmPrompt(title,def){
 function startCal(name){
   const ls=routeLines(name);
   if(!ls.length){toast('สายทางนี้ไม่มีเส้นแนวถนน ตั้ง กม. ไม่ได้');return;}
-  calState={name,step:1};
-  closeAllPanels();
-  toast(`ตั้ง กม. ${name} — แตะจุด "กม.เริ่มต้น" บนแผนที่`,5000);
+  calState={name,li:0,pts:[]};
+  closeAllPanels(); calBar();
+  toast(`ตั้ง กม. ${name} — แตะจุดอ้างอิงบนแผนที่ทีละจุด (ปักกี่จุดก็ได้ ยิ่งมากยิ่งแม่น)`,5600);
 }
+function endCal(save){
+  if(!save||!calState){calState=null;calBar();toast('ยกเลิกการตั้ง กม.');return;}
+  if(calState.pts.length<2){toast('ต้องปักอย่างน้อย 2 จุด');return;}
+  const pts=calState.pts.slice().sort((a,b)=>a.d-b.d);
+  const name=calState.name;
+  KMCAL[name]={li:0,pts};
+  saveKm(); calState=null; calBar(); renderKmList(); refreshTicks();
+  const rs=[];
+  for(let i=0;i<pts.length-1;i++){
+    const dd=Math.abs(pts[i+1].d-pts[i].d), dk=Math.abs(pts[i+1].km-pts[i].km);
+    if(dd>1) rs.push(dk/dd);
+  }
+  const bad=rs.filter(r=>Math.abs(r-1)>0.05).length;
+  toast(`ตั้ง กม. ${name} สำเร็จ · ${pts.length} จุด · อัตราส่วน ${rs.map(r=>r.toFixed(3)).join(', ')}`
+    +(bad?` ⚠ มี ${bad} ช่วงคลาดเคลื่อนเกิน 5%`:' (ควรใกล้ 1.000)'),6000);
+}
+document.getElementById('calDone').onclick=()=>endCal(true);
+document.getElementById('calCancel').onclick=()=>endCal(false);
 async function calClick(ll){
   const name=calState.name;
-  const ls=routeLines(name);
-  let best=null;
-  for(let i=0;i<ls.length;i++){
-    const pr=projectLine(ls[i],ll);
-    if(!best||pr.off<best.off) best={li:i,...pr};
-  }
-  if(best.off>500){toast('แตะให้ใกล้แนวสายทางมากกว่านี้ (ห่าง '+Math.round(best.off)+' ม.)',3200);return;}
-  if(calState.step===1){
-    const raw=await kmPrompt(`กม.เริ่มต้น ของ ${name} ที่จุดนี้`,'0+000');
-    const v=parseKm(raw);
-    if(v==null){toast(raw==null?'ยกเลิก':'รูปแบบ กม. ไม่ถูกต้อง');calState=null;return;}
-    calState={name,step:2,li:best.li,d0:best.d,km0:v,p0:{lat:ll.lat,lng:ll.lng}};
-    toast('บันทึกจุดเริ่มแล้ว — แตะจุด "กม.สิ้นสุด" บนแผนที่',5000);
-  }else{
-    if(best.li!==calState.li){toast('จุดสิ้นสุดต้องอยู่บนแนวเส้นเดียวกับจุดเริ่ม',3600);return;}
-    const raw=await kmPrompt(`กม.สิ้นสุด ของ ${name} ที่จุดนี้`,'');
-    const v=parseKm(raw);
-    if(v==null){toast(raw==null?'ยกเลิก':'รูปแบบ กม. ไม่ถูกต้อง');calState=null;return;}
-    if(Math.abs(best.d-calState.d0)<50){toast('สองจุดใกล้กันเกินไป ลองใหม่');calState=null;return;}
-    KMCAL[name]={li:calState.li,d0:calState.d0,km0:calState.km0,d1:best.d,km1:v,
-                 p0:calState.p0,p1:{lat:ll.lat,lng:ll.lng}};
-    saveKm();
-    const scale=Math.abs((v-calState.km0)/(best.d-calState.d0));
-    calState=null; renderKmList(); refreshTicks();
-    toast(`ตั้ง กม. ${name} สำเร็จ · อัตราส่วน ${scale.toFixed(3)} (ควรใกล้ 1.000)`,5200);
-  }
+  const L0=routeLines(name)[0];
+  const pr=projectLine(L0,ll);
+  if(pr.off>500){toast('แตะให้ใกล้แนวสายทางมากกว่านี้ (ห่าง '+Math.round(pr.off)+' ม.)',3200);return;}
+  const n=calState.pts.length;
+  const raw=await kmPrompt(`จุดอ้างอิงที่ ${n+1} ของ ${name} — ค่า กม. ที่จุดนี้`, n?'':'0+000');
+  const v=parseKm(raw);
+  if(v==null){ if(raw!=null) toast('รูปแบบ กม. ไม่ถูกต้อง'); calBar(); return; }
+  if(calState.pts.some(p=>Math.abs(p.d-pr.d)<30)){toast('จุดนี้ใกล้จุดเดิมเกินไป');calBar();return;}
+  calState.pts.push({lat:ll.lat,lng:ll.lng,km:v,d:pr.d});
+  calBar();
+  toast(`เพิ่มจุด กม.${fmtKm(v)} แล้ว — ปักเพิ่มได้ หรือกด ✓ เสร็จ`,3200);
 }
 
 /* ---------- แผงและปุ่ม ---------- */
@@ -1138,13 +1178,15 @@ function renderKmList(){
   for(const name of Object.keys(BUILTIN)){
     const c=KMCAL[name];
     const d=document.createElement('div'); d.className='krow';
+    // (rg คำนวณด้านล่าง)
+    const rg=kmRange(name);
     d.innerHTML=`<span class="kn">${name}</span>`+
-      (c?`<span class="kv">${fmtKm(Math.min(c.km0,c.km1))} – ${fmtKm(Math.max(c.km0,c.km1))}${(!c.p0?' ⚠':'')}</span>`
+      (rg?`<span class="kv">${fmtKm(rg[0])} – ${fmtKm(rg[1])} <span style="color:rgba(255,255,255,.5);font-weight:400">(${c.pts.length} จุด)</span></span>`
         :`<span class="kv" style="color:rgba(255,255,255,.4)">ยังไม่ตั้ง</span>`);
     const b1=document.createElement('button'); b1.textContent=c?'ตั้งใหม่':'ตั้ง กม.';
     b1.onclick=()=>startCal(name);
     d.appendChild(b1);
-    if(c){const b2=document.createElement('button');b2.textContent='✕';b2.style.color='#ff8a80';
+    if(rg){const b2=document.createElement('button');b2.textContent='✕';b2.style.color='#ff8a80';
       b2.onclick=()=>{if(confirm(`ลบค่า กม. ของ ${name}?`)){delete KMCAL[name];saveKm();renderKmList();refreshTicks();}};
       d.appendChild(b2);}
     el.appendChild(d);
@@ -1201,7 +1243,7 @@ document.getElementById('shApply').onclick=()=>{
     if(typeof o!=='object'||!o)throw new Error('รูปแบบไม่ถูกต้อง');
     let n=0;
     for(const [k,v] of Object.entries(o)){
-      if(v&&v.km0!=null&&v.km1!=null){KMCAL[k]=v;n++;}
+      if(v&&((v.pts&&v.pts.length>=2)||(v.km0!=null&&v.km1!=null))){KMCAL[k]=v;n++;}
     }
     saveKm(); remapKmCal(); renderKmList(); refreshTicks();
     document.getElementById('shareModal').classList.remove('show');
