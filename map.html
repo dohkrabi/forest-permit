@@ -197,6 +197,18 @@ html,body{height:100%;font-family:'Segoe UI',Tahoma,'Leelawadee UI',sans-serif}
 <input type="file" id="filein" multiple accept=".zip,.shp,.dbf,.prj,.cpg,.shx" style="display:none">
 <div class="toast" id="toast"></div>
 
+<div class="modal" id="kmModal">
+  <div class="mbox">
+    <h3 id="kmmTitle">ใส่ค่า กม.</h3>
+    <label>ค่า กม. — พิมพ์ได้ทั้ง 12+345 · 12.345 · 12</label>
+    <input id="kmmVal" type="text" inputmode="decimal" placeholder="0+000" autocomplete="off">
+    <div class="mact">
+      <button id="kmmCancel">ยกเลิก</button>
+      <button id="kmmOk" class="pri">ตกลง</button>
+    </div>
+  </div>
+</div>
+
 <div class="modal" id="ptModal">
   <div class="mbox">
     <h3 id="pmTitle">ปักจุดใหม่</h3>
@@ -363,6 +375,7 @@ function addGeojsonRoute(name,gj,color,save){
     }
   }
   g.addTo(map); groups[name]=g;
+  if(window._hookGroup) window._hookGroup(g);
   routeMeta[name]={color,ptCount:ptN,
     infoText:(ptN?`หมุด ${ptN} จุด`:"ข้อมูลรูปแปลง/เส้นทาง")+" · นำเข้าเอง",imported:true};
   addChip(name,color); rebuildSheet();
@@ -978,6 +991,21 @@ ${pm}</Document></kml>`,'application/vnd.google-earth.kml+xml');
 
 /* ---------- calibrate กม. ---------- */
 let calState=null; // {name, li, d0, km0}
+function kmPrompt(title,def){
+  return new Promise(res=>{
+    const m=document.getElementById('kmModal');
+    document.getElementById('kmmTitle').textContent=title;
+    const i=document.getElementById('kmmVal');
+    i.value=def||'';
+    m.classList.add('show');
+    setTimeout(()=>{try{i.focus();i.select();}catch(e){}},60);
+    const ok=document.getElementById('kmmOk'), cc=document.getElementById('kmmCancel');
+    const done=v=>{m.classList.remove('show');ok.onclick=null;cc.onclick=null;i.onkeydown=null;res(v);};
+    ok.onclick=()=>done(i.value);
+    cc.onclick=()=>done(null);
+    i.onkeydown=e=>{if(e.key==='Enter'){e.preventDefault();done(i.value);}};
+  });
+}
 function startCal(name){
   const ls=routeLines(name);
   if(!ls.length){toast('สายทางนี้ไม่มีเส้นแนวถนน ตั้ง กม. ไม่ได้');return;}
@@ -985,7 +1013,7 @@ function startCal(name){
   closeAllPanels();
   toast(`ตั้ง กม. ${name} — แตะจุด "กม.เริ่มต้น" บนแผนที่`,5000);
 }
-function calClick(ll){
+async function calClick(ll){
   const name=calState.name;
   const ls=routeLines(name);
   let best=null;
@@ -995,14 +1023,16 @@ function calClick(ll){
   }
   if(best.off>500){toast('แตะให้ใกล้แนวสายทางมากกว่านี้ (ห่าง '+Math.round(best.off)+' ม.)',3200);return;}
   if(calState.step===1){
-    const v=parseKm(prompt(`กม.เริ่มต้น ของ ${name} ที่จุดนี้\n(เช่น 0+000 หรือ 12+345)`,'0+000'));
-    if(v==null){toast('ยกเลิก');calState=null;return;}
+    const raw=await kmPrompt(`กม.เริ่มต้น ของ ${name} ที่จุดนี้`,'0+000');
+    const v=parseKm(raw);
+    if(v==null){toast(raw==null?'ยกเลิก':'รูปแบบ กม. ไม่ถูกต้อง');calState=null;return;}
     calState={name,step:2,li:best.li,d0:best.d,km0:v};
-    toast('บันทึกจุดเริ่มแล้ว — แตะจุด "กม.สิ้นสุด"',5000);
+    toast('บันทึกจุดเริ่มแล้ว — แตะจุด "กม.สิ้นสุด" บนแผนที่',5000);
   }else{
     if(best.li!==calState.li){toast('จุดสิ้นสุดต้องอยู่บนแนวเส้นเดียวกับจุดเริ่ม',3600);return;}
-    const v=parseKm(prompt(`กม.สิ้นสุด ของ ${name} ที่จุดนี้`,''));
-    if(v==null){toast('ยกเลิก');calState=null;return;}
+    const raw=await kmPrompt(`กม.สิ้นสุด ของ ${name} ที่จุดนี้`,'');
+    const v=parseKm(raw);
+    if(v==null){toast(raw==null?'ยกเลิก':'รูปแบบ กม. ไม่ถูกต้อง');calState=null;return;}
     if(Math.abs(best.d-calState.d0)<50){toast('สองจุดใกล้กันเกินไป ลองใหม่');calState=null;return;}
     KMCAL[name]={li:calState.li,d0:calState.d0,km0:calState.km0,d1:best.d,km1:v};
     saveKm();
@@ -1085,13 +1115,22 @@ document.getElementById('tbAddGps').onclick=()=>{
     if(!watching)gpsBtn.click(); return;}
   openModal(meMarker.getLatLng(),null);
 };
-// คลิกแผนที่: calibrate > ปักจุด > ปิดแผง
-map.on('click',(e)=>{
-  if(calState){calClick(e.latlng);return;}
-  if(addMode){addMode=false;
+// คลิกแผนที่/เลเยอร์: calibrate > ปักจุด
+function modeClick(e){
+  if(calState){L.DomEvent.stop(e);map.closePopup();calClick(e.latlng);return true;}
+  if(addMode){L.DomEvent.stop(e);map.closePopup();addMode=false;
     const b=document.getElementById('tbAdd'); if(b)b.classList.remove('on');
-    openModal(e.latlng,null); return;}
-});
+    openModal(e.latlng,null); return true;}
+  return false;
+}
+map.on('click',modeClick);
+// เส้นเขตทาง/หมุด เป็นเลเยอร์ที่ "กลืน" การแตะ ต้องดักที่ตัวมันด้วย ไม่งั้นจะเด้งป๊อปอัพแทน
+function hookGroup(g){ if(g&&g.on) g.on('click',modeClick); }
+for(const g of Object.values(groups)) hookGroup(g);
+hookGroup(ptLayer);
+window._hookGroup=hookGroup;   // ให้สายทางที่นำเข้าใหม่ผูกด้วย
+// กันป๊อปอัพเด้งระหว่างอยู่ในโหมด
+map.on('popupopen',()=>{ if(calState||addMode) map.closePopup(); });
 drawPts(); renderKmList(); renderPtList();
 
 /* ---------- สีตามสถานะคำขอป่าไม้ (อ่านจาก IndexedDB ของแอพคำขอ) ---------- */
