@@ -965,6 +965,7 @@ function refreshTicks(){
       const rn=routeNo(name), kk=kr, la=ll.lat, lo2=ll.lng;
       const mk=L.circleMarker(ll,{radius:R,color:ring,weight:isKm?2:1,
         fillColor:col,fillOpacity:1,interactive:true,bubblingMouseEvents:false}).addTo(tickLayer);
+      const fullName=name;
       mk.bindPopup(()=>{
         const u=utmOf(la,lo2);
         return `<div class="pp"><b>ทล.${rn} — กม.${fmtKm(kk)}</b><table>
@@ -972,8 +973,9 @@ function refreshTicks(){
         <tr><td>Lon</td><td>${lo2.toFixed(7)}</td></tr>
         ${u?`<tr><td>X (UTM47N)</td><td>${u.x.toFixed(3)}</td></tr><tr><td>Y (UTM47N)</td><td>${u.y.toFixed(3)}</td></tr>`:''}
         </table>
-        <a class="nav" target="_blank" href="https://www.google.com/maps?q=${la},${lo2}">นำทาง Google</a>
+        <a class="nav" href="#" onclick='startNav(${la},${lo2},"ทล.${rn} กม.${fmtKm(kk)}",${JSON.stringify(fullName)});return false'>🧭 นำทางออฟไลน์</a>
         <a class="nav" style="background:#37474f;margin-left:6px" href="#" onclick='openModal(L.latLng(${la},${lo2}),null);return false'>📍 ปักจุด</a>
+        <br><a class="nav" style="background:#1a73e8;margin-top:6px" target="_blank" href="https://www.google.com/maps?q=${la},${lo2}">นำทาง Google (ออนไลน์)</a>
         </div>`;
       });
       if(lcls) tickLayer.addLayer(L.marker(ll,{interactive:false,

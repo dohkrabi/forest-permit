@@ -1,5 +1,5 @@
 /* Service Worker — คำขอใช้พื้นที่ป่า ขท.กระบี่ */
-const CACHE = 'forest-app-v31';
+const CACHE = 'forest-app-v32';
 const ASSETS = ['./', './index.html', './map.html', './manifest.json', './icon-192.png', './icon-512.png', './apple-touch-icon.png'];
 
 // CDN ของหน้าแผนที่ (Leaflet / proj4 / shpjs) — cache-first เพื่อให้เปิดออฟไลน์ได้
