@@ -153,6 +153,7 @@ nav button.on{color:var(--green);font-weight:600}
       <input id="qReq" type="search" placeholder="ค้นหา: สายทาง เลขคำขอ หมายเหตุ" oninput="renderReq()">
     </div>
     <div class="chips" id="fType" style="margin-bottom:8px"></div>
+    <div class="chips" id="fArea" style="margin-bottom:8px"></div>
     <div class="chips" id="fStatus" style="margin-bottom:12px"></div>
     <div class="subhd"><h2 id="reqCount"></h2><button class="linkbtn" onclick="openEdit('DB_Requests',null)">+ เพิ่มคำขอ</button></div>
     <div id="reqList"></div>
@@ -210,7 +211,7 @@ let state = {
   tab: 'home',
   data: { requests: [], council: [], routes: [] },
   queue: [],
-  fType: '', fStatus: ''
+  fType: '', fStatus: '', fArea: ''
 };
 
 /* ---------- IndexedDB ---------- */
@@ -375,18 +376,24 @@ function renderHome() {
     '<dt>ส่งมติแล้ว</dt><dd>' + C.filter((c) => c.status === 'ส่งแล้ว').length + ' รายการ</dd>' +
     '<dt>จำนวน อปท.</dt><dd>' + uniq + ' แห่ง</dd>';
 }
-function filterJump(t, s) { state.fType = t; state.fStatus = s; go('req'); renderReq(); }
-function filterJumpT(i) { filterJump(FTYPES[i], ''); }
+function filterJump(t, s) { state.fType = t; state.fStatus = s; state.fArea = ''; go('req'); renderReq(); }
+function filterJumpT(i) { state.fType = FTYPES[i]; state.fStatus = ''; state.fArea = ''; go('req'); renderReq(); }
 function toggleFType(i) { state.fType = state.fType === FTYPES[i] ? '' : FTYPES[i]; renderReq(); }
 function toggleFStatus(i) { state.fStatus = state.fStatus === STATUSES[i] ? '' : STATUSES[i]; renderReq(); }
+const AREAS = ['สจป.12 (กระบี่)', 'สจป.12 (นครฯ)'];
+const AREA_PROV = {'สจป.12 (กระบี่)': 'กระบี่', 'สจป.12 (นครฯ)': 'นครศรีธรรมราช'};
+function toggleFArea(i) { state.fArea = state.fArea === AREAS[i] ? '' : AREAS[i]; renderReq(); }
 function renderReq() {
   const q = ($('#qReq').value || '').trim().toLowerCase();
   $('#fType').innerHTML = FTYPES.map((t, i) =>
     '<button class="chip' + (state.fType === t ? ' sel' : '') + '" onclick="toggleFType(' + i + ')">' + esc(t) + '</button>').join('');
+  $('#fArea').innerHTML = AREAS.map((a, i) =>
+    '<button class="chip' + (state.fArea === a ? ' sel' : '') + '" onclick="toggleFArea(' + i + ')">' + esc(a) + '</button>').join('');
   $('#fStatus').innerHTML = STATUSES.map((s, i) =>
     '<button class="chip' + (state.fStatus === s ? ' sel' : '') + '" onclick="toggleFStatus(' + i + ')">' + esc(s) + '</button>').join('');
   let rows = state.data.requests.filter((r) =>
     (!state.fType || r.forest_type === state.fType) &&
+    (!state.fArea || (r.province_area === AREA_PROV[state.fArea] && r.forest_type !== 'ป่าชายเลน')) &&
     (!state.fStatus || matchStatus(r, state.fStatus)) &&
     (!q || (r.route_no + ' ' + r.request_no + ' ' + (r.remark || '') + ' ' + (r.province_area || '')).toLowerCase().includes(q)));
   rows = rows.slice().sort((a, b) =>
