@@ -588,7 +588,7 @@ function generateReport(type) {
     byStatus: 'รายงานสรุปคำขอตามสถานะ',
     byAgency: 'รายงานสรุปคำขอตามหน่วยที่ยื่น'
   };
-  var ORIENT = { overview:'landscape', byRoute:'portrait', byRequest:'landscape', byStatus:'portrait', byAgency:'portrait' };
+  var ORIENT = { overview:'landscape', byRoute:'portrait', byRequest:'landscape', byStatus:'landscape', byAgency:'portrait' };
   var css = [
     '@page{size:A4 ' + ORIENT[type] + ';margin:2cm 1.5cm}',
     '*{box-sizing:border-box;margin:0;padding:0}',
@@ -609,7 +609,7 @@ function generateReport(type) {
     '.ft{margin-top:24px;padding-top:10px;border-top:1px solid #ccc;font-size:11pt;color:#888;text-align:right}',
     '.nb{page-break-inside:avoid}',
     '@media screen{body{background:#eee;padding:20px}}',
-    '@media screen{.pg{background:#fff;max-width:960px;margin:0 auto;padding:36px;box-shadow:0 0 24px rgba(0,0,0,.12)}}'
+    '@media screen{.pg{background:#fff;max-width:960px;margin:0 auto;padding:36px;box-shadow:0 0 24px rgba(0,0,0,.12)}}thead{display:table-header-group}tbody{display:table-row-group}.nextstep{font-size:12pt;color:#14532D;margin:-2px 0 8px 0;padding:4px 10px;background:#E4EFE6;border-radius:4px;display:inline-block}'
   ].join('');
   function hdr() {
     return '<div class="hdr"><div class="org">แขวงทางหลวงกระบี่&nbsp;&nbsp;กรมทางหลวง</div>' +
@@ -682,18 +682,30 @@ function generateReport(type) {
     sortR(R).forEach(function(r,i){body+=rowTR(r,i);});
     body += '</table>';
   } else if (type === 'byStatus') {
+    var NEXT_STEP = {
+      '\u0e22\u0e37\u0e48\u0e19\u0e41\u0e25\u0e49\u0e27': '\u0e23\u0e2d\u0e21\u0e15\u0e34\u0e2a\u0e20\u0e32 \u0e2d\u0e1b\u0e17.',
+      '\u0e23\u0e2d\u0e21\u0e15\u0e34\u0e2a\u0e20\u0e32': '\u0e23\u0e2d\u0e2b\u0e19\u0e31\u0e07\u0e2a\u0e37\u0e2d\u0e41\u0e08\u0e49\u0e07\u0e15\u0e23\u0e27\u0e08\u0e1b\u0e48\u0e32\u0e08\u0e32\u0e01 \u0e2a\u0e08\u0e1b.',
+      '\u0e41\u0e08\u0e49\u0e07\u0e15\u0e23\u0e27\u0e08\u0e1b\u0e48\u0e32\u0e41\u0e25\u0e49\u0e27': '\u0e23\u0e2d\u0e19\u0e31\u0e14\u0e27\u0e31\u0e19\u0e25\u0e07\u0e15\u0e23\u0e27\u0e08\u0e1b\u0e48\u0e32',
+      '\u0e23\u0e2d\u0e25\u0e07\u0e15\u0e23\u0e27\u0e08\u0e1b\u0e48\u0e32': '\u0e23\u0e2d\u0e27\u0e31\u0e19\u0e25\u0e07\u0e15\u0e23\u0e27\u0e08\u0e1b\u0e48\u0e32\u0e15\u0e32\u0e21\u0e01\u0e33\u0e2b\u0e19\u0e14',
+      '\u0e25\u0e07\u0e15\u0e23\u0e27\u0e08\u0e41\u0e25\u0e49\u0e27': '\u0e23\u0e2d\u0e40\u0e0b\u0e47\u0e19\u0e23\u0e32\u0e22\u0e07\u0e32\u0e19\u0e15\u0e23\u0e27\u0e08\u0e1b\u0e48\u0e32',
+      '\u0e40\u0e0b\u0e47\u0e19\u0e23\u0e32\u0e22\u0e07\u0e32\u0e19\u0e41\u0e25\u0e49\u0e27': '\u0e23\u0e2d\u0e43\u0e1a\u0e2d\u0e19\u0e38\u0e0d\u0e32\u0e15',
+      '\u0e44\u0e14\u0e49\u0e23\u0e31\u0e1a\u0e2d\u0e19\u0e38\u0e0d\u0e32\u0e15': '\u0e40\u0e2a\u0e23\u0e47\u0e08\u0e2a\u0e34\u0e49\u0e19\u0e01\u0e23\u0e30\u0e1a\u0e27\u0e19\u0e01\u0e32\u0e23'
+    };
     STATS.forEach(function(s){
       var rows = R.filter(function(r){return r.status===s;}).slice().sort(function(a,b){var pa=a.province_area||'',pb=b.province_area||'';if(pa!==pb)return pa.localeCompare(pb,'th');return (+a.request_no||0)-(+b.request_no||0);});
       if (!rows.length) return;
       var TH = '<th>สายทาง</th><th>ประเภทป่า</th><th>พื้นที่</th><th>เลขคำขอ</th><th>วันยื่น</th><th>วันแจ้งตรวจ</th><th>วันลงตรวจ</th><th>หมายเหตุ</th>';
-      body += '<div class="nb"><h2>'+s+' ('+rows.length+' คำขอ)</h2><table><tr>'+TH+'</tr>';
+      var nxt = NEXT_STEP[s] ? '&#9658; ขั้นต่อไป: ' + NEXT_STEP[s] : '';
+      body += '<div class="nb"><h2>'+s+' ('+rows.length+' คำขอ)</h2>' +
+        (nxt ? '<div class="nextstep">'+nxt+'</div>' : '') +
+        '<table><thead><tr>'+TH+'</tr></thead><tbody>';
       rows.forEach(function(r){
         body += '<tr><td>ทล.'+r.route_no+'</td><td>'+r.forest_type+'</td><td>'+r.province_area+'</td>' +
           '<td class="num">'+r.request_no+'</td><td>'+isoTH(r.request_date)+'</td>' +
           '<td>'+isoTH(r.inspect_notify_date)+'</td><td>'+isoTH(r.inspect_date)+'</td>' +
           '<td>'+(r.remark||'\u2013')+'</td></tr>';
       });
-      body += '</table></div>';
+      body += '</tbody></table></div>';
     });
   } else if (type === 'byAgency') {
     var agencies = Array.from(new Set(R.map(function(r){return r.agency;}))).filter(Boolean);
