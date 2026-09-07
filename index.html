@@ -160,6 +160,9 @@ nav button.on{color:var(--green);font-weight:700}
     <div class="card"><h2>สถานะคำขอ (แตะเพื่อกรอง · ยื่นแล้ว = ทั้งหมด)</h2><div class="chips" id="homeStatus"></div></div>
     <div class="card"><h2>ประเภทป่า</h2><div class="chips" id="homeType"></div></div>
     <div class="card"><h2>มติสภา อปท.</h2><div id="homeCouncil" class="dl"></div></div>
+    <button class="btn btn-o" style="display:flex;align-items:center;justify-content:center;gap:8px;margin-top:4px" onclick="openReportSheet()">
+      <span style="font-size:1.1rem">📄</span> ออกรายงาน PDF
+    </button>
   </section>
 
   <section id="v-req" class="view">
@@ -541,6 +544,190 @@ function openEdit(table, id) {
     if (!rec.route_no) { toastWarn('กรุณาระบุสายทาง'); return; }
     saveRecord(table, rec);
   });
+}
+
+/* ---------- รายงาน PDF ---------- */
+function openReportSheet() {
+  if (!state.data.requests.length) { toastWarn('ยังไม่มีข้อมูล กรุณา Sync ก่อน'); return; }
+  var types = [
+    { id:'overview',  icon:'📊', label:'ภาพรวม',         desc:'ยอดรวมแยกประเภทป่า × สถานะ + มติสภา' },
+    { id:'byRoute',   icon:'🛣',  label:'รายสายทาง',       desc:'จัดกลุ่มตาม ทล. ทุกสายทาง' },
+    { id:'byRequest', icon:'📋', label:'รายคำขอ',         desc:'ตารางคำขอทุกใบพร้อมทุกช่อง' },
+    { id:'byStatus',  icon:'🔖', label:'ตามสถานะ',        desc:'จัดกลุ่มตามขั้นตอนที่ค้างอยู่' },
+    { id:'byAgency',  icon:'🏢', label:'ตามหน่วยที่ยื่น',  desc:'แยก สนง.ป่าไม้ที่ 12 / ป่าชายเลนที่ 10' },
+  ];
+  openSheet(
+    '<b style="font-size:1.05rem;display:block;margin-bottom:14px">📄 เลือกแบบรายงาน PDF</b>' +
+    types.map(function(t) {
+      return '<button class="item" onclick="generateReport(\'' + t.id + '\');closeSheet()">' +
+        '<div class="r1"><span style="font-size:1.2rem">' + t.icon + '</span>' +
+        '<span class="route">' + t.label + '</span></div>' +
+        '<div class="r2">' + t.desc + '</div></button>';
+    }).join('') +
+    '<div class="btnrow"><button class="btn btn-o" onclick="closeSheet()">ยกเลิก</button></div>'
+  );
+}
+
+function generateReport(type) {
+  var TH_ML = ['มกราคม','กุมภาพันธ์','มีนาคม','เมษายน','พฤษภาคม','มิถุนายน',
+               'กรกฎาคม','สิงหาคม','กันยายน','ตุลาคม','พฤศจิกายน','ธันวาคม'];
+  var now = new Date();
+  var todayTH = now.getDate() + ' ' + TH_ML[now.getMonth()] + ' ' + (now.getFullYear()+543);
+  function isoTH(iso) {
+    if (!iso || !/^\d{4}-\d{2}-\d{2}/.test(iso)) return '\u2013';
+    return (+iso.slice(8,10)) + ' ' + TH_ML[+iso.slice(5,7)-1] + ' ' + (+iso.slice(0,4)+543);
+  }
+  var R = state.data.requests;
+  var C = state.data.council;
+  var STATS = ['ยื่นแล้ว','รอมติสภา','แจ้งตรวจป่าแล้ว','รอลงตรวจป่า','ลงตรวจแล้ว','เซ็นรายงานแล้ว','ได้รับอนุญาต'];
+  var FTYPES = ['ป่าสงวนแห่งชาติ','ป่าถาวร (ม.4(1))','ป่าชายเลน'];
+  var TITLES = {
+    overview: 'รายงานสรุปภาพรวมสถานะคำขอ',
+    byRoute:  'รายงานสรุปคำขอรายสายทาง',
+    byRequest:'รายงานรายละเอียดคำขอทั้งหมด',
+    byStatus: 'รายงานสรุปคำขอตามสถานะ',
+    byAgency: 'รายงานสรุปคำขอตามหน่วยที่ยื่น'
+  };
+  var ORIENT = { overview:'landscape', byRoute:'portrait', byRequest:'landscape', byStatus:'portrait', byAgency:'portrait' };
+  var css = [
+    '@page{size:A4 ' + ORIENT[type] + ';margin:2cm 1.5cm}',
+    '*{box-sizing:border-box;margin:0;padding:0}',
+    "body{font-family:'TH Sarabun New','Sarabun','Noto Sans Thai',sans-serif;font-size:15pt;color:#111;line-height:1.55}",
+    '.hdr{text-align:center;margin-bottom:18px;padding-bottom:10px;border-bottom:2.5px solid #14532D}',
+    '.hdr .org{font-size:15pt;font-weight:bold}',
+    '.hdr .ttl{font-size:17pt;font-weight:bold;color:#14532D;margin:3px 0}',
+    '.hdr .dt{font-size:13pt;color:#555}',
+    'table{width:100%;border-collapse:collapse;margin-bottom:14px;font-size:12pt}',
+    'th{background:#E4EFE6;color:#0A3D1F;font-weight:bold;text-align:center;border:1px solid #666;padding:5px 6px}',
+    'td{border:1px solid #666;padding:4px 6px;vertical-align:top}',
+    'td.num{text-align:center}',
+    'h2{font-size:14pt;font-weight:bold;color:#14532D;margin:18px 0 7px;border-left:4px solid #14532D;padding-left:8px}',
+    '.sums{display:flex;gap:14px;margin-bottom:14px}',
+    '.sb{border:1px solid #ccc;border-radius:8px;padding:8px 14px;text-align:center;flex:1}',
+    '.sb b{font-size:22pt;color:#14532D;display:block}',
+    '.sb small{font-size:12pt;color:#555}',
+    '.ft{margin-top:24px;padding-top:10px;border-top:1px solid #ccc;font-size:11pt;color:#888;text-align:right}',
+    '.nb{page-break-inside:avoid}',
+    '@media screen{body{background:#eee;padding:20px}}',
+    '@media screen{.pg{background:#fff;max-width:960px;margin:0 auto;padding:36px;box-shadow:0 0 24px rgba(0,0,0,.12)}}'
+  ].join('');
+  function hdr() {
+    return '<div class="hdr"><div class="org">แขวงทางหลวงกระบี่&nbsp;&nbsp;กรมทางหลวง</div>' +
+      '<div class="ttl">' + TITLES[type] + '</div>' +
+      '<div class="dt">วันที่พิมพ์: ' + todayTH + '</div></div>';
+  }
+  function rowTR(r, i) {
+    return '<tr>' +
+      (i !== undefined ? '<td class="num">'+(i+1)+'</td>' : '') +
+      '<td>ทล.' + r.route_no + (r.route_extra?' '+r.route_extra:'') + '</td>' +
+      '<td>' + r.forest_type + '</td><td>' + r.province_area + '</td>' +
+      '<td class="num">' + r.request_no + '</td>' +
+      '<td>' + isoTH(r.request_date) + '</td>' +
+      '<td class="num">' + (r.inspect_notify_no||'\u2013') + '</td>' +
+      '<td>' + isoTH(r.inspect_notify_date) + '</td>' +
+      '<td>' + isoTH(r.inspect_date) + '</td>' +
+      '<td>' + r.status + '</td>' +
+      '<td>' + (r.remark||'\u2013') + '</td></tr>';
+  }
+  function sortR(rows) {
+    return rows.slice().sort(function(a,b){
+      return String(a.route_no).localeCompare(String(b.route_no),'th',{numeric:true});
+    });
+  }
+  var body = '';
+  if (type === 'overview') {
+    var cntUp = R.filter(function(r){return ['ลงตรวจแล้ว','เซ็นรายงานแล้ว','ได้รับอนุญาต'].indexOf(r.status)>=0;}).length;
+    var cntOk = R.filter(function(r){return r.status==='ได้รับอนุญาต';}).length;
+    var cntOrg = new Set(C.map(function(c){return c.local_gov;})).size;
+    body += '<div class="sums">' +
+      '<div class="sb"><b>'+R.length+'</b><small>คำขอทั้งหมด</small></div>' +
+      '<div class="sb"><b>'+cntUp+'</b><small>ลงตรวจแล้วขึ้นไป</small></div>' +
+      '<div class="sb"><b>'+cntOk+'</b><small>ได้รับอนุญาต</small></div>' +
+      '<div class="sb"><b>'+cntOrg+'</b><small>อปท. ส่งมติแล้ว</small></div></div>';
+    body += '<h2>สถานะคำขอแยกตามประเภทป่า</h2>';
+    body += '<table><tr><th>ประเภทป่า</th>' + STATS.map(function(s){return '<th>'+s+'</th>';}).join('') + '<th>รวม</th></tr>';
+    var tots = STATS.map(function(){return 0;});
+    FTYPES.forEach(function(ft) {
+      var rows = R.filter(function(r){return r.forest_type===ft;});
+      if (!rows.length) return;
+      body += '<tr><td>'+ft+'</td>';
+      STATS.forEach(function(s,i){var n=rows.filter(function(r){return r.status===s;}).length;tots[i]+=n;body+='<td class="num">'+(n||'\u2013')+'</td>';});
+      body += '<td class="num"><b>'+rows.length+'</b></td></tr>';
+    });
+    body += '<tr><td><b>รวมทั้งหมด</b></td>'+tots.map(function(n){return '<td class="num"><b>'+(n||'\u2013')+'</b></td>';}).join('')+'<td class="num"><b>'+R.length+'</b></td></tr></table>';
+    body += '<h2>สรุปมติสภา อปท.</h2>';
+    var cntSent = C.filter(function(c){return c.status==='ส่งแล้ว';}).length;
+    var cntRte  = new Set(C.map(function(c){return c.route_no;})).size;
+    body += '<div class="sums"><div class="sb"><b>'+cntSent+'</b><small>รายการที่ส่งแล้ว</small></div>' +
+      '<div class="sb"><b>'+cntOrg+'</b><small>จำนวน อปท. (ไม่ซ้ำ)</small></div>' +
+      '<div class="sb"><b>'+cntRte+'</b><small>สายทางที่มีมติสภา</small></div></div>';
+  } else if (type === 'byRoute') {
+    var rnos = Array.from(new Set(R.map(function(r){return r.route_no;}))).sort(function(a,b){return String(a).localeCompare(String(b),'th',{numeric:true});});
+    rnos.forEach(function(rno){
+      var rows = sortR(R.filter(function(r){return r.route_no===rno;}));
+      body += '<div class="nb"><h2>ทางหลวงหมายเลข '+rno+' ('+rows.length+' คำขอ)</h2>' +
+        '<table><tr><th>ประเภทป่า</th><th>พื้นที่</th><th>เลขคำขอ</th><th>วันยื่น</th><th>เลขหนังสือ</th><th>วันแจ้งตรวจ</th><th>วันลงตรวจ</th><th>EC/EAR</th><th>สถานะ</th><th>หมายเหตุ</th></tr>';
+      rows.forEach(function(r){
+        body += '<tr><td>'+r.forest_type+'</td><td>'+r.province_area+'</td>' +
+          '<td class="num">'+r.request_no+'</td><td>'+isoTH(r.request_date)+'</td>' +
+          '<td class="num">'+(r.inspect_notify_no||'\u2013')+'</td><td>'+isoTH(r.inspect_notify_date)+'</td>' +
+          '<td>'+isoTH(r.inspect_date)+'</td><td class="num">'+(r.ec_ear||'\u2013')+'</td>' +
+          '<td>'+r.status+'</td><td>'+(r.remark||'\u2013')+'</td></tr>';
+      });
+      body += '</table></div>';
+    });
+  } else if (type === 'byRequest') {
+    var TH = '<th>#</th><th>สายทาง</th><th>ประเภทป่า</th><th>พื้นที่</th><th>เลขคำขอ</th><th>วันยื่น</th><th>เลขหนังสือ</th><th>วันแจ้งตรวจ</th><th>วันลงตรวจ</th><th>สถานะ</th><th>หมายเหตุ</th>';
+    body += '<table><tr>'+TH+'</tr>';
+    sortR(R).forEach(function(r,i){body+=rowTR(r,i);});
+    body += '</table>';
+  } else if (type === 'byStatus') {
+    STATS.forEach(function(s){
+      var rows = sortR(R.filter(function(r){return r.status===s;}));
+      if (!rows.length) return;
+      var TH = '<th>สายทาง</th><th>ประเภทป่า</th><th>พื้นที่</th><th>เลขคำขอ</th><th>วันยื่น</th><th>วันแจ้งตรวจ</th><th>วันลงตรวจ</th><th>หมายเหตุ</th>';
+      body += '<div class="nb"><h2>'+s+' ('+rows.length+' คำขอ)</h2><table><tr>'+TH+'</tr>';
+      rows.forEach(function(r){
+        body += '<tr><td>ทล.'+r.route_no+'</td><td>'+r.forest_type+'</td><td>'+r.province_area+'</td>' +
+          '<td class="num">'+r.request_no+'</td><td>'+isoTH(r.request_date)+'</td>' +
+          '<td>'+isoTH(r.inspect_notify_date)+'</td><td>'+isoTH(r.inspect_date)+'</td>' +
+          '<td>'+(r.remark||'\u2013')+'</td></tr>';
+      });
+      body += '</table></div>';
+    });
+  } else if (type === 'byAgency') {
+    var agencies = Array.from(new Set(R.map(function(r){return r.agency;}))).filter(Boolean);
+    agencies.forEach(function(ag){
+      var rows = sortR(R.filter(function(r){return r.agency===ag;}));
+      body += '<div class="nb"><h2>'+ag+' ('+rows.length+' คำขอ)</h2>';
+      FTYPES.forEach(function(ft){
+        var sub = sortR(rows.filter(function(r){return r.forest_type===ft;}));
+        if (!sub.length) return;
+        body += '<div style="font-size:13pt;font-weight:bold;margin:8px 0 4px">'+ft+' ('+sub.length+' คำขอ)</div>' +
+          '<table><tr><th>สายทาง</th><th>พื้นที่</th><th>เลขคำขอ</th><th>วันยื่น</th><th>วันแจ้งตรวจ</th><th>วันลงตรวจ</th><th>สถานะ</th><th>หมายเหตุ</th></tr>';
+        sub.forEach(function(r){
+          body += '<tr><td>ทล.'+r.route_no+'</td><td>'+r.province_area+'</td>' +
+            '<td class="num">'+r.request_no+'</td><td>'+isoTH(r.request_date)+'</td>' +
+            '<td>'+isoTH(r.inspect_notify_date)+'</td><td>'+isoTH(r.inspect_date)+'</td>' +
+            '<td>'+r.status+'</td><td>'+(r.remark||'\u2013')+'</td></tr>';
+        });
+        body += '</table>';
+      });
+      body += '</div>';
+    });
+  }
+  var ftLine = '<div class="ft">พิมพ์โดยระบบติดตามคำขอเข้าใช้ประโยชน์ในพื้นที่ป่า — แขวงทางหลวงกระบี่</div>';
+  var html = '<!DOCTYPE html><html lang="th"><head><meta charset="UTF-8">' +
+    '<link href="https://fonts.googleapis.com/css2?family=Sarabun:wght@400;600;700&display=swap" rel="stylesheet">' +
+    '<title>'+TITLES[type]+'</title><style>'+css+'</style></head><body><div class="pg">' +
+    hdr() + body + ftLine + '</div>' +
+    '<script>window.addEventListener("load",function(){setTimeout(function(){window.print();},600);})<\/script>' +
+    '</body></html>';
+  var blob = new Blob([html],{type:'text/html;charset=utf-8'});
+  var url = URL.createObjectURL(blob);
+  var w = window.open(url,'_blank');
+  if (!w) { toastErr('เบราว์เซอร์บล็อก popup — กรุณาอนุญาต popup แล้วลองใหม่'); }
+  setTimeout(function(){URL.revokeObjectURL(url);},60000);
 }
 
 /* ---------- ตั้งค่า ---------- */
