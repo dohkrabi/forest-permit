@@ -546,29 +546,107 @@ function openEdit(table, id) {
   });
 }
 
+var _rf = 'pdf';
+
 /* ---------- รายงาน PDF ---------- */
-function openReportSheet() {
-  if (!state.data.requests.length) { toastWarn('ยังไม่มีข้อมูล กรุณา Sync ก่อน'); return; }
+function openReportSheet(fmt) {
+  if (!state.data.requests.length) { toastWarn('\u0e22\u0e31\u0e07\u0e44\u0e21\u0e48\u0e21\u0e35\u0e02\u0e49\u0e2d\u0e21\u0e39\u0e25 \u0e01\u0e23\u0e38\u0e13\u0e32 Sync \u0e01\u0e48\u0e2d\u0e19'); return; }
+  _rf = fmt || _rf;
   var types = [
-    { id:'overview',  icon:'📊', label:'ภาพรวม',         desc:'ยอดรวมแยกประเภทป่า × สถานะ + มติสภา' },
-    { id:'byRoute',   icon:'🛣',  label:'รายสายทาง',       desc:'จัดกลุ่มตาม ทล. ทุกสายทาง' },
-    { id:'byRequest', icon:'📋', label:'รายคำขอ',         desc:'ตารางคำขอทุกใบพร้อมทุกช่อง' },
-    { id:'byStatus',  icon:'🔖', label:'ตามสถานะ',        desc:'จัดกลุ่มตามขั้นตอนที่ค้างอยู่' },
-    { id:'byAgency',  icon:'🏢', label:'ตามหน่วยที่ยื่น',  desc:'แยก สนง.ป่าไม้ที่ 12 / ป่าชายเลนที่ 10' },
+    { id:'overview',  icon:'\ud83d\udcca', label:'\u0e20\u0e32\u0e1e\u0e23\u0e27\u0e21',       desc:'\u0e22\u0e2d\u0e14\u0e23\u0e27\u0e21\u0e41\u0e22\u0e01\u0e1b\u0e23\u0e30\u0e40\u0e20\u0e17\u0e1b\u0e48\u0e32 \u00d7 \u0e2a\u0e16\u0e32\u0e19\u0e30 + \u0e21\u0e15\u0e34\u0e2a\u0e20\u0e32' },
+    { id:'byRoute',   icon:'\ud83d\udee3\ufe0f',  label:'\u0e23\u0e32\u0e22\u0e2a\u0e32\u0e22\u0e17\u0e32\u0e07',     desc:'\u0e08\u0e31\u0e14\u0e01\u0e25\u0e38\u0e48\u0e21\u0e15\u0e32\u0e21 \u0e17\u0e25. \u0e17\u0e38\u0e01\u0e2a\u0e32\u0e22\u0e17\u0e32\u0e07' },
+    { id:'byRequest', icon:'\ud83d\udccb', label:'\u0e23\u0e32\u0e22\u0e04\u0e33\u0e02\u0e2d',       desc:'\u0e15\u0e32\u0e23\u0e32\u0e07\u0e04\u0e33\u0e02\u0e2d\u0e17\u0e38\u0e01\u0e43\u0e1a\u0e1e\u0e23\u0e49\u0e2d\u0e21\u0e17\u0e38\u0e01\u0e0a\u0e48\u0e2d\u0e07' },
+    { id:'byStatus',  icon:'\ud83d\udd16', label:'\u0e15\u0e32\u0e21\u0e2a\u0e16\u0e32\u0e19\u0e30',      desc:'\u0e40\u0e25\u0e37\u0e2d\u0e01\u0e2a\u0e16\u0e32\u0e19\u0e30\u0e17\u0e35่\u0e15\u0e49\u0e2d\u0e07\u0e01\u0e32\u0e23\u0e1e\u0e34\u0e21\u0e1e\u0e4c' },
+    { id:'byAgency',  icon:'\ud83c\udfe2', label:'\u0e15\u0e32\u0e21\u0e2b\u0e19\u0e48\u0e27\u0e22\u0e17\u0e35\u0e48\u0e22\u0e37่\u0e19',  desc:'\u0e41\u0e22\u0e01 \u0e2a\u0e19\u0e07.\u0e1b\u0e48\u0e32\u0e44\u0e21\u0e49\u0e17\u0e35\u0e48 12 / \u0e1b\u0e48\u0e32\u0e0a\u0e32\u0e22\u0e40\u0e25\u0e19\u0e17\u0e35\u0e48 10' },
   ];
+  var fmtToggle =
+    '<div style="display:flex;gap:8px;margin-bottom:12px">' +
+    '<button class="btn ' + (_rf==='pdf'?'btn-p':'btn-o') + '" data-f="pdf" onclick="_rf=this.dataset.f;openReportSheet()" style="flex:1;display:flex;align-items:center;justify-content:center;gap:6px">\ud83d\udcc4 PDF</button>' +
+    '<button class="btn ' + (_rf==='excel'?'btn-p':'btn-o') + '" data-f="excel" onclick="_rf=this.dataset.f;openReportSheet()" style="flex:1;display:flex;align-items:center;justify-content:center;gap:6px">\ud83d\udcca Excel</button>' +
+    '</div>';
   openSheet(
-    '<b style="font-size:1.05rem;display:block;margin-bottom:14px">📄 เลือกแบบรายงาน PDF</b>' +
+    '<b style="font-size:1.05rem;display:block;margin-bottom:10px">\u0e40\u0e25\u0e37\u0e2d\u0e01\u0e1b\u0e23\u0e30\u0e40\u0e20\u0e17\u0e23\u0e32\u0e22\u0e07\u0e32\u0e19</b>' +
+    fmtToggle +
     types.map(function(t) {
-      return '<button class="item" onclick="generateReport(\'' + t.id + '\');closeSheet()">' +
+      var act = (t.id === 'byStatus')
+        ? 'openStatusSelectSheet()'
+        : 'doReport(this.dataset.tp,_rf,null);closeSheet()';
+      return '<button class="item" data-tp="' + t.id + '" onclick="' + act + '">' +
         '<div class="r1"><span style="font-size:1.2rem">' + t.icon + '</span>' +
         '<span class="route">' + t.label + '</span></div>' +
         '<div class="r2">' + t.desc + '</div></button>';
     }).join('') +
-    '<div class="btnrow"><button class="btn btn-o" onclick="closeSheet()">ยกเลิก</button></div>'
+    '<div class="btnrow"><button class="btn btn-o" onclick="closeSheet()">\u0e22\u0e01\u0e40\u0e25\u0e34\u0e01</button></div>'
   );
 }
 
-function generateReport(type) {
+function openStatusSelectSheet() {
+  var STATS = ['\u0e22\u0e37่\u0e19\u0e41\u0e25\u0e49\u0e27','\u0e23\u0e2d\u0e21\u0e15\u0e34\u0e2a\u0e20\u0e32','\u0e41\u0e08\u0e49\u0e07\u0e15\u0e23\u0e27\u0e08\u0e1b\u0e48\u0e32\u0e41\u0e25\u0e49\u0e27','\u0e23\u0e2d\u0e25\u0e07\u0e15\u0e23\u0e27\u0e08\u0e1b\u0e48\u0e32','\u0e25\u0e07\u0e15\u0e23\u0e27\u0e08\u0e41\u0e25\u0e49\u0e27','\u0e40\u0e0b\u0e47\u0e19\u0e23\u0e32\u0e22\u0e07\u0e32\u0e19\u0e41\u0e25\u0e49\u0e27','\u0e44\u0e14\u0e49\u0e23\u0e31\u0e1a\u0e2d\u0e19\u0e38\u0e0d\u0e32\u0e15'];
+  var R = state.data.requests;
+  var html = '<b style="font-size:1.05rem;display:block;margin-bottom:12px">\u0e40\u0e25\u0e37\u0e2d\u0e01\u0e2a\u0e16\u0e32\u0e19\u0e30\u0e17\u0e35\u0e48\u0e15\u0e49\u0e2d\u0e07\u0e01\u0e32\u0e23</b>';
+  STATS.forEach(function(s, i) {
+    var n = R.filter(function(r) { return r.status === s; }).length;
+    html += '<label style="display:flex;align-items:center;gap:12px;padding:11px 0;border-bottom:1px solid var(--line)">' +
+      '<input type="checkbox" id="ck' + i + '" data-si="' + i + '"' + (n ? ' checked' : ' disabled') +
+      ' style="width:18px;height:18px;accent-color:var(--green)">' +
+      '<span style="flex:1;font-size:.9rem' + (n?'':';color:var(--ink-3)') + '">' + s + '</span>' +
+      '<span style="font-size:.82rem;color:var(--ink-3)">(' + n + ' \u0e04\u0e33\u0e02\u0e2d)</span></label>';
+  });
+  html += '<div class="btnrow" style="margin-top:14px">' +
+    '<button class="btn btn-o" onclick="openReportSheet()">\u25c0 \u0e22\u0e49\u0e2d\u0e19\u0e01\u0e25\u0e31\u0e1a</button>' +
+    '<button class="btn btn-p" onclick="confirmStatusReport()">\u0e2d\u0e2d\u0e01\u0e23\u0e32\u0e22\u0e07\u0e32\u0e19</button>' +
+    '</div>';
+  openSheet(html);
+}
+
+function confirmStatusReport() {
+  var STATS = ['\u0e22\u0e37่\u0e19\u0e41\u0e25\u0e49\u0e27','\u0e23\u0e2d\u0e21\u0e15\u0e34\u0e2a\u0e20\u0e32','\u0e41\u0e08\u0e49\u0e07\u0e15\u0e23\u0e27\u0e08\u0e1b\u0e48\u0e32\u0e41\u0e25\u0e49\u0e27','\u0e23\u0e2d\u0e25\u0e07\u0e15\u0e23\u0e27\u0e08\u0e1b\u0e48\u0e32','\u0e25\u0e07\u0e15\u0e23\u0e27\u0e08\u0e41\u0e25\u0e49\u0e27','\u0e40\u0e0b\u0e47\u0e19\u0e23\u0e32\u0e22\u0e07\u0e32\u0e19\u0e41\u0e25\u0e49\u0e27','\u0e44\u0e14\u0e49\u0e23\u0e31\u0e1a\u0e2d\u0e19\u0e38\u0e0d\u0e32\u0e15'];
+  var sel = [];
+  document.querySelectorAll('[data-si]:checked').forEach(function(cb) { sel.push(STATS[+cb.dataset.si]); });
+  if (!sel.length) { toastWarn('\u0e01\u0e23\u0e38\u0e13\u0e32\u0e40\u0e25\u0e37\u0e2d\u0e01\u0e2d\u0e22\u0e48\u0e32\u0e07\u0e19\u0e49\u0e2d\u0e22 1 \u0e2a\u0e16\u0e32\u0e19\u0e30'); return; }
+  closeSheet();
+  doReport('byStatus', _rf, sel);
+}
+
+function doReport(type, fmt, sel) {
+  if (fmt === 'excel') generateExcelReport(type, sel);
+  else generateReport(type, sel);
+}
+
+function openStatusSelectSheet() {
+  var STATS = ['ยื่นแล้ว','รอมติสภา','แจ้งตรวจป่าแล้ว','รอลงตรวจป่า','ลงตรวจแล้ว','เซ็นรายงานแล้ว','ได้รับอนุญาต'];
+  var R = state.data.requests;
+  var html = '<b style="font-size:1.05rem;display:block;margin-bottom:12px">เลือกสถานะที่ต้องการ</b>';
+  STATS.forEach(function(s, i) {
+    var n = R.filter(function(r) { return r.status === s; }).length;
+    html += '<label style="display:flex;align-items:center;gap:12px;padding:11px 0;border-bottom:1px solid var(--line)">' +
+      '<input type="checkbox" id="ck' + i + '" data-si="' + i + '"' + (n ? ' checked' : ' disabled') +
+      ' style="width:18px;height:18px;accent-color:var(--green)">' +
+      '<span style="flex:1;font-size:.9rem' + (n?'':';color:var(--ink-3)') + '">' + s + '</span>' +
+      '<span style="font-size:.82rem;color:var(--ink-3)">(' + n + ' คำขอ)</span></label>';
+  });
+  html += '<div class="btnrow" style="margin-top:14px">' +
+    '<button class="btn btn-o" onclick="openReportSheet()">\u25c0 \u0e22\u0e49\u0e2d\u0e19\u0e01\u0e25\u0e31\u0e1a</button>' +
+    '<button class="btn btn-p" onclick="confirmStatusReport()">\u0e2d\u0e2d\u0e01\u0e23\u0e32\u0e22\u0e07\u0e32\u0e19</button>' +
+    '</div>';
+  openSheet(html);
+}
+
+function confirmStatusReport() {
+  var STATS = ['ยื่นแล้ว','รอมติสภา','แจ้งตรวจป่าแล้ว','รอลงตรวจป่า','ลงตรวจแล้ว','เซ็นรายงานแล้ว','ได้รับอนุญาต'];
+  var sel = [];
+  document.querySelectorAll('[data-si]:checked').forEach(function(cb) { sel.push(STATS[+cb.dataset.si]); });
+  if (!sel.length) { toastWarn('กรุณาเลือกอย่างน้อย 1 สถานะ'); return; }
+  closeSheet();
+  doReport('byStatus', fmt, sel);
+}
+
+function doReport(type, fmt, sel) {
+  if (fmt === 'excel') generateExcelReport(type, sel);
+  else generateReport(type, sel);
+}
+
+function generateReport(type, selectedStatuses) {
   var TH_ML = ['มกราคม','กุมภาพันธ์','มีนาคม','เมษายน','พฤษภาคม','มิถุนายน',
                'กรกฎาคม','สิงหาคม','กันยายน','ตุลาคม','พฤศจิกายน','ธันวาคม'];
   var now = new Date();
@@ -607,7 +685,7 @@ function generateReport(type) {
     '.sb b{font-size:22pt;color:#14532D;display:block}',
     '.sb small{font-size:12pt;color:#555}',
     '.ft{margin-top:24px;padding-top:10px;border-top:1px solid #ccc;font-size:11pt;color:#888;text-align:right}',
-    '.nb{page-break-inside:avoid}',
+    'tr{page-break-inside:avoid}','h2{page-break-after:avoid}','.nextstep{page-break-after:avoid}',
     '@media screen{body{background:#eee;padding:20px}}',
     '@media screen{.pg{background:#fff;max-width:960px;margin:0 auto;padding:36px;box-shadow:0 0 24px rgba(0,0,0,.12)}}thead{display:table-header-group}tbody{display:table-row-group}.nextstep{font-size:12pt;color:#14532D;margin:-2px 0 8px 0;padding:4px 10px;background:#E4EFE6;border-radius:4px;display:inline-block}'
   ].join('');
@@ -691,7 +769,8 @@ function generateReport(type) {
       '\u0e40\u0e0b\u0e47\u0e19\u0e23\u0e32\u0e22\u0e07\u0e32\u0e19\u0e41\u0e25\u0e49\u0e27': '\u0e23\u0e2d\u0e43\u0e1a\u0e2d\u0e19\u0e38\u0e0d\u0e32\u0e15',
       '\u0e44\u0e14\u0e49\u0e23\u0e31\u0e1a\u0e2d\u0e19\u0e38\u0e0d\u0e32\u0e15': '\u0e40\u0e2a\u0e23\u0e47\u0e08\u0e2a\u0e34\u0e49\u0e19\u0e01\u0e23\u0e30\u0e1a\u0e27\u0e19\u0e01\u0e32\u0e23'
     };
-    STATS.forEach(function(s){
+    var statsToShow = selectedStatuses || STATS;
+    statsToShow.forEach(function(s){
       var rows = R.filter(function(r){return r.status===s;}).slice().sort(function(a,b){var pa=a.province_area||'',pb=b.province_area||'';if(pa!==pb)return pa.localeCompare(pb,'th');return (+a.request_no||0)-(+b.request_no||0);});
       if (!rows.length) return;
       var TH = '<th>สายทาง</th><th>ประเภทป่า</th><th>พื้นที่</th><th>เลขคำขอ</th><th>วันยื่น</th><th>วันแจ้งตรวจ</th><th>วันลงตรวจ</th><th>หมายเหตุ</th>';
@@ -740,6 +819,91 @@ function generateReport(type) {
   var w = window.open(url,'_blank');
   if (!w) { toastErr('เบราว์เซอร์บล็อก popup — กรุณาอนุญาต popup แล้วลองใหม่'); }
   setTimeout(function(){URL.revokeObjectURL(url);},60000);
+}
+
+/* ---------- รายงาน Excel ---------- */
+function generateExcelReport(type, selectedStatuses) {
+  if (!window.XLSX) {
+    var s = document.createElement('script');
+    s.src = 'https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js';
+    s.onload = function() { _doExcel(type, selectedStatuses); };
+    s.onerror = function() { toastErr('โหลด Excel engine ไม่สำเร็จ — ต้องการอินเทอร์เน็ต'); };
+    document.head.appendChild(s);
+    toast('กำลังเตรียม Excel engine...', 2500, 'info');
+    return;
+  }
+  _doExcel(type, selectedStatuses);
+}
+
+function _doExcel(type, selectedStatuses) {
+  var TH_ML = ['\u0e21\u0e01\u0e23\u0e32\u0e04\u0e21','\u0e01\u0e38\u0e21\u0e20\u0e32\u0e1e\u0e31\u0e19\u0e18\u0e4c','\u0e21\u0e35\u0e19\u0e32\u0e04\u0e21','\u0e40\u0e21\u0e29\u0e32\u0e22\u0e19','\u0e1e\u0e24\u0e29\u0e20\u0e32\u0e04\u0e21','\u0e21\u0e34\u0e16\u0e38\u0e19\u0e32\u0e22\u0e19',
+               '\u0e01\u0e23\u0e01\u0e0e\u0e32\u0e04\u0e21','\u0e2a\u0e34\u0e07\u0e2b\u0e32\u0e04\u0e21','\u0e01\u0e31\u0e19\u0e22\u0e32\u0e22\u0e19','\u0e15\u0e38\u0e25\u0e32\u0e04\u0e21','\u0e1e\u0e24\u0e28\u0e08\u0e34\u0e01\u0e32\u0e22\u0e19','\u0e18\u0e31\u0e19\u0e27\u0e32\u0e04\u0e21'];
+  var now = new Date();
+  var todayTH = now.getDate() + ' ' + TH_ML[now.getMonth()] + ' ' + (now.getFullYear()+543);
+  function isoTH(iso) {
+    if (!iso || !/^\d{4}-\d{2}-\d{2}/.test(iso)) return '\u2013';
+    return (+iso.slice(8,10)) + ' ' + TH_ML[+iso.slice(5,7)-1] + ' ' + (+iso.slice(0,4)+543);
+  }
+  var R = state.data.requests, C = state.data.council;
+  var STATS  = ['\u0e22\u0e37\u0e48\u0e19\u0e41\u0e25\u0e49\u0e27','\u0e23\u0e2d\u0e21\u0e15\u0e34\u0e2a\u0e20\u0e32','\u0e41\u0e08\u0e49\u0e07\u0e15\u0e23\u0e27\u0e08\u0e1b\u0e48\u0e32\u0e41\u0e25\u0e49\u0e27','\u0e23\u0e2d\u0e25\u0e07\u0e15\u0e23\u0e27\u0e08\u0e1b\u0e48\u0e32','\u0e25\u0e07\u0e15\u0e23\u0e27\u0e08\u0e41\u0e25\u0e49\u0e27','\u0e40\u0e0b\u0e47\u0e19\u0e23\u0e32\u0e22\u0e07\u0e32\u0e19\u0e41\u0e25\u0e49\u0e27','\u0e44\u0e14\u0e49\u0e23\u0e31\u0e1a\u0e2d\u0e19\u0e38\u0e0d\u0e32\u0e15'];
+  var FTYPES = ['\u0e1b\u0e48\u0e32\u0e2a\u0e07\u0e27\u0e19\u0e41\u0e2b\u0e48\u0e07\u0e0a\u0e32\u0e15\u0e34','\u0e1b\u0e48\u0e32\u0e16\u0e32\u0e27\u0e23 (\u0e21.4(1))','\u0e1b\u0e48\u0e32\u0e0a\u0e32\u0e22\u0e40\u0e25\u0e19'];
+  var NEXT_STEP = {};
+  NEXT_STEP[STATS[0]] = '\u0e23\u0e2d\u0e21\u0e15\u0e34\u0e2a\u0e20\u0e32 \u0e2d\u0e1b\u0e17.';
+  NEXT_STEP[STATS[1]] = '\u0e23\u0e2d\u0e2b\u0e19\u0e31\u0e07\u0e2a\u0e37\u0e2d\u0e41\u0e08\u0e49\u0e07\u0e15\u0e23\u0e27\u0e08\u0e1b\u0e48\u0e32\u0e08\u0e32\u0e01 \u0e2a\u0e08\u0e1b.';
+  NEXT_STEP[STATS[2]] = '\u0e23\u0e2d\u0e19\u0e31\u0e14\u0e27\u0e31\u0e19\u0e25\u0e07\u0e15\u0e23\u0e27\u0e08\u0e1b\u0e48\u0e32';
+  NEXT_STEP[STATS[3]] = '\u0e23\u0e2d\u0e27\u0e31\u0e19\u0e25\u0e07\u0e15\u0e23\u0e27\u0e08\u0e1b\u0e48\u0e32\u0e15\u0e32\u0e21\u0e01\u0e33\u0e2b\u0e19\u0e14';
+  NEXT_STEP[STATS[4]] = '\u0e23\u0e2d\u0e40\u0e0b\u0e47\u0e19\u0e23\u0e32\u0e22\u0e07\u0e32\u0e19\u0e15\u0e23\u0e27\u0e08\u0e1b\u0e48\u0e32';
+  NEXT_STEP[STATS[5]] = '\u0e23\u0e2d\u0e43\u0e1a\u0e2d\u0e19\u0e38\u0e0d\u0e32\u0e15';
+  NEXT_STEP[STATS[6]] = '\u0e40\u0e2a\u0e23\u0e47\u0e08\u0e2a\u0e34\u0e49\u0e19\u0e01\u0e23\u0e30\u0e1a\u0e27\u0e19\u0e01\u0e32\u0e23';
+  var TITLES = { overview:'\u0e20\u0e32\u0e1e\u0e23\u0e27\u0e21\u0e2a\u0e16\u0e32\u0e19\u0e30\u0e04\u0e33\u0e02\u0e2d', byRoute:'\u0e04\u0e33\u0e02\u0e2d\u0e23\u0e32\u0e22\u0e2a\u0e32\u0e22\u0e17\u0e32\u0e07', byRequest:'\u0e23\u0e32\u0e22\u0e25\u0e30\u0e40\u0e2d\u0e35\u0e22\u0e14\u0e04\u0e33\u0e02\u0e2d\u0e17\u0e31\u0e49\u0e07\u0e2b\u0e21\u0e14', byStatus:'\u0e04\u0e33\u0e02\u0e2d\u0e15\u0e32\u0e21\u0e2a\u0e16\u0e32\u0e19\u0e30', byAgency:'\u0e04\u0e33\u0e02\u0e2d\u0e15\u0e32\u0e21\u0e2b\u0e19\u0e48\u0e27\u0e22\u0e17\u0e35\u0e48\u0e22\u0e37\u0e48\u0e19' };
+  function sortR(rows) { return rows.slice().sort(function(a,b){ return String(a.route_no).localeCompare(String(b.route_no),'th',{numeric:true}); }); }
+  function sortByArea(rows) { return rows.slice().sort(function(a,b){ var pa=a.province_area||'',pb=b.province_area||'';return pa!==pb?pa.localeCompare(pb,'th'):(+a.request_no||0)-(+b.request_no||0); }); }
+  var ORG = ['\u0e41\u0e02\u0e27\u0e07\u0e17\u0e32\u0e07\u0e2b\u0e25\u0e27\u0e07\u0e01\u0e23\u0e30\u0e1a\u0e35\u0e48\u00a0\u00a0\u0e01\u0e23\u0e21\u0e17\u0e32\u0e07\u0e2b\u0e25\u0e27\u0e07'];
+  var TT = ['\u0e23\u0e32\u0e22\u0e07\u0e32\u0e19' + TITLES[type]];
+  var DT = ['\u0e27\u0e31\u0e19\u0e17\u0e35\u0e48\u0e1e\u0e34\u0e21\u0e1e\u0e4c: ' + todayTH];
+  var aoa, ws;
+  if (type === 'overview') {
+    aoa = [ORG, TT, DT, []];
+    var colHov = ['\u0e1b\u0e23\u0e30\u0e40\u0e20\u0e17\u0e1b\u0e48\u0e32'].concat(STATS).concat(['\u0e23\u0e27\u0e21']);
+    aoa.push(['\u0e2a\u0e16\u0e32\u0e19\u0e30\u0e04\u0e33\u0e02\u0e2d\u0e41\u0e22\u0e01\u0e15\u0e32\u0e21\u0e1b\u0e23\u0e30\u0e40\u0e20\u0e17\u0e1b\u0e48\u0e32']); aoa.push(colHov);
+    var tots = STATS.map(function(){return 0;});
+    FTYPES.forEach(function(ft){ var rows=R.filter(function(r){return r.forest_type===ft;}); if(!rows.length)return; var row=[ft]; STATS.forEach(function(s,i){var n=rows.filter(function(r){return r.status===s;}).length;tots[i]+=n;row.push(n);}); row.push(rows.length); aoa.push(row); });
+    aoa.push(['\u0e23\u0e27\u0e21\u0e17\u0e31\u0e49\u0e07\u0e2b\u0e21\u0e14'].concat(tots).concat([R.length]));
+    aoa.push([]); aoa.push(['\u0e2a\u0e23\u0e38\u0e1b\u0e21\u0e15\u0e34\u0e2a\u0e20\u0e32 \u0e2d\u0e1b\u0e17.']);
+    aoa.push(['\u0e23\u0e32\u0e22\u0e01\u0e32\u0e23\u0e17\u0e35\u0e48\u0e2a\u0e48\u0e07\u0e41\u0e25\u0e49\u0e27', C.filter(function(c){return c.status==='\u0e2a\u0e48\u0e07\u0e41\u0e25\u0e49\u0e27';}).length + ' \u0e23\u0e32\u0e22\u0e01\u0e32\u0e23']);
+    aoa.push(['\u0e08\u0e33\u0e19\u0e27\u0e19 \u0e2d\u0e1b\u0e17. (\u0e44\u0e21\u0e48\u0e0b\u0e49\u0e33)', new Set(C.map(function(c){return c.local_gov;})).size + ' \u0e41\u0e2b\u0e48\u0e07']);
+    aoa.push(['\u0e2a\u0e32\u0e22\u0e17\u0e32\u0e07\u0e17\u0e35\u0e48\u0e21\u0e35\u0e21\u0e15\u0e34\u0e2a\u0e20\u0e32', new Set(C.map(function(c){return c.route_no;})).size + ' \u0e2a\u0e32\u0e22\u0e17\u0e32\u0e07']);
+    ws = XLSX.utils.aoa_to_sheet(aoa); ws['!cols']=[15,10,10,14,12,12,14,14,12].map(function(w){return{wch:w};});
+  } else if (type === 'byRoute') {
+    var colHrt = ['\u0e2a\u0e32\u0e22\u0e17\u0e32\u0e07','\u0e1b\u0e23\u0e30\u0e40\u0e20\u0e17\u0e1b\u0e48\u0e32','\u0e1e\u0e37\u0e49\u0e19\u0e17\u0e35\u0e48','\u0e40\u0e25\u0e02\u0e04\u0e33\u0e02\u0e2d','\u0e27\u0e31\u0e19\u0e22\u0e37\u0e48\u0e19','\u0e40\u0e25\u0e02\u0e2b\u0e19\u0e31\u0e07\u0e2a\u0e37\u0e2d','\u0e27\u0e31\u0e19\u0e41\u0e08\u0e49\u0e07\u0e15\u0e23\u0e27\u0e08','\u0e27\u0e31\u0e19\u0e25\u0e07\u0e15\u0e23\u0e27\u0e08','EC/EAR','\u0e2a\u0e16\u0e32\u0e19\u0e30','\u0e2b\u0e21\u0e32\u0e22\u0e40\u0e2b\u0e15\u0e38'];
+    aoa = [ORG, TT, DT, []];
+    var rnos = Array.from(new Set(R.map(function(r){return r.route_no;}))).sort(function(a,b){return String(a).localeCompare(String(b),'th',{numeric:true});});
+    rnos.forEach(function(rno){ var rows=sortR(R.filter(function(r){return r.route_no===rno;})); aoa.push(['\u0e17\u0e32\u0e07\u0e2b\u0e25\u0e27\u0e07\u0e2b\u0e21\u0e32\u0e22\u0e40\u0e25\u0e02 '+rno+' ('+rows.length+' \u0e04\u0e33\u0e02\u0e2d)']); aoa.push(colHrt); rows.forEach(function(r){aoa.push(['\u0e17\u0e25.'+r.route_no+(r.route_extra?' '+r.route_extra:''),r.forest_type,r.province_area,r.request_no,isoTH(r.request_date),r.inspect_notify_no||'\u2013',isoTH(r.inspect_notify_date),isoTH(r.inspect_date),r.ec_ear||'\u2013',r.status,r.remark||'\u2013']);}); aoa.push([]); });
+    ws = XLSX.utils.aoa_to_sheet(aoa); ws['!cols']=[12,18,16,10,14,14,14,14,7,14,24].map(function(w){return{wch:w};});
+  } else if (type === 'byRequest') {
+    var colHrq = ['#','\u0e2a\u0e32\u0e22\u0e17\u0e32\u0e07','\u0e1b\u0e23\u0e30\u0e40\u0e20\u0e17\u0e1b\u0e48\u0e32','\u0e1e\u0e37\u0e49\u0e19\u0e17\u0e35\u0e48','\u0e40\u0e25\u0e02\u0e04\u0e33\u0e02\u0e2d','\u0e27\u0e31\u0e19\u0e22\u0e37\u0e48\u0e19','\u0e40\u0e25\u0e02\u0e2b\u0e19\u0e31\u0e07\u0e2a\u0e37\u0e2d','\u0e27\u0e31\u0e19\u0e41\u0e08\u0e49\u0e07\u0e15\u0e23\u0e27\u0e08','\u0e27\u0e31\u0e19\u0e25\u0e07\u0e15\u0e23\u0e27\u0e08','EC/EAR','\u0e2a\u0e16\u0e32\u0e19\u0e30','\u0e2b\u0e21\u0e32\u0e22\u0e40\u0e2b\u0e15\u0e38'];
+    aoa=[ORG,TT,DT,[]]; aoa.push(colHrq);
+    sortR(R).forEach(function(r,i){aoa.push([i+1,'\u0e17\u0e25.'+r.route_no+(r.route_extra?' '+r.route_extra:''),r.forest_type,r.province_area,r.request_no,isoTH(r.request_date),r.inspect_notify_no||'\u2013',isoTH(r.inspect_notify_date),isoTH(r.inspect_date),r.ec_ear||'\u2013',r.status,r.remark||'\u2013']);});
+    ws = XLSX.utils.aoa_to_sheet(aoa); ws['!cols']=[4,12,18,16,10,14,14,14,14,7,14,24].map(function(w){return{wch:w};});
+  } else if (type === 'byStatus') {
+    var colHst = ['\u0e2a\u0e32\u0e22\u0e17\u0e32\u0e07','\u0e1b\u0e23\u0e30\u0e40\u0e20\u0e17\u0e1b\u0e48\u0e32','\u0e1e\u0e37\u0e49\u0e19\u0e17\u0e35\u0e48','\u0e40\u0e25\u0e02\u0e04\u0e33\u0e02\u0e2d','\u0e27\u0e31\u0e19\u0e22\u0e37\u0e48\u0e19','\u0e27\u0e31\u0e19\u0e41\u0e08\u0e49\u0e07\u0e15\u0e23\u0e27\u0e08','\u0e27\u0e31\u0e19\u0e25\u0e07\u0e15\u0e23\u0e27\u0e08','\u0e2b\u0e21\u0e32\u0e22\u0e40\u0e2b\u0e15\u0e38'];
+    aoa=[ORG,TT,DT,[]];
+    var statsShow = selectedStatuses || STATS;
+    statsShow.forEach(function(s){ var rows=sortByArea(R.filter(function(r){return r.status===s;})); if(!rows.length)return; var nxt=NEXT_STEP[s]?'  \u25ba \u0e02\u0e31\u0e49\u0e19\u0e15\u0e48\u0e2d\u0e44\u0e1b: '+NEXT_STEP[s]:''; aoa.push([s+' ('+rows.length+' \u0e04\u0e33\u0e02\u0e2d)'+nxt]); aoa.push(colHst); rows.forEach(function(r){aoa.push(['\u0e17\u0e25.'+r.route_no,r.forest_type,r.province_area,r.request_no,isoTH(r.request_date),isoTH(r.inspect_notify_date),isoTH(r.inspect_date),r.remark||'\u2013']);}); aoa.push([]); });
+    ws = XLSX.utils.aoa_to_sheet(aoa); ws['!cols']=[12,18,16,10,14,16,14,24].map(function(w){return{wch:w};});
+  } else if (type === 'byAgency') {
+    var colHag = ['\u0e2a\u0e32\u0e22\u0e17\u0e32\u0e07','\u0e1e\u0e37\u0e49\u0e19\u0e17\u0e35\u0e48','\u0e40\u0e25\u0e02\u0e04\u0e33\u0e02\u0e2d','\u0e27\u0e31\u0e19\u0e22\u0e37\u0e48\u0e19','\u0e27\u0e31\u0e19\u0e41\u0e08\u0e49\u0e07\u0e15\u0e23\u0e27\u0e08','\u0e27\u0e31\u0e19\u0e25\u0e07\u0e15\u0e23\u0e27\u0e08','\u0e2a\u0e16\u0e32\u0e19\u0e30','\u0e2b\u0e21\u0e32\u0e22\u0e40\u0e2b\u0e15\u0e38'];
+    aoa=[ORG,TT,DT,[]];
+    var agencies=Array.from(new Set(R.map(function(r){return r.agency;}))).filter(Boolean);
+    agencies.forEach(function(ag){ var rows=sortR(R.filter(function(r){return r.agency===ag;})); aoa.push([ag+' ('+rows.length+' \u0e04\u0e33\u0e02\u0e2d)']); FTYPES.forEach(function(ft){ var sub=sortR(rows.filter(function(r){return r.forest_type===ft;})); if(!sub.length)return; aoa.push([ft+' ('+sub.length+' \u0e04\u0e33\u0e02\u0e2d)']); aoa.push(colHag); sub.forEach(function(r){aoa.push(['\u0e17\u0e25.'+r.route_no,r.province_area,r.request_no,isoTH(r.request_date),isoTH(r.inspect_notify_date),isoTH(r.inspect_date),r.status,r.remark||'\u2013']);}); aoa.push([]); }); aoa.push([]); });
+    ws = XLSX.utils.aoa_to_sheet(aoa); ws['!cols']=[12,16,10,14,14,14,14,24].map(function(w){return{wch:w};});
+  }
+  var wb = XLSX.utils.book_new();
+  XLSX.utils.book_append_sheet(wb, ws, TITLES[type].slice(0,31));
+  var fname = '\u0e23\u0e32\u0e22\u0e07\u0e32\u0e19_' + TITLES[type] + '_' +
+    now.getFullYear() + ('0'+(now.getMonth()+1)).slice(-2) + ('0'+now.getDate()).slice(-2) + '.xlsx';
+  try { XLSX.writeFile(wb, fname); toastOk('\u0e14\u0e32\u0e27\u0e19\u0e4c\u0e42\u0e2b\u0e25\u0e14 Excel \u0e2a\u0e33\u0e40\u0e23\u0e47\u0e08: ' + fname); }
+  catch(e) { toastErr('\u0e2a\u0e23\u0e49\u0e32\u0e07 Excel \u0e44\u0e21\u0e48\u0e2a\u0e33\u0e40\u0e23\u0e47\u0e08: ' + e.message); }
 }
 
 /* ---------- ตั้งค่า ---------- */
