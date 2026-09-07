@@ -160,7 +160,7 @@ nav button.on{color:var(--green);font-weight:700}
     <div class="card"><h2>สถานะคำขอ (แตะเพื่อกรอง · ยื่นแล้ว = ทั้งหมด)</h2><div class="chips" id="homeStatus"></div></div>
     <div class="card"><h2>ประเภทป่า</h2><div class="chips" id="homeType"></div></div>
     <div class="card"><h2>มติสภา อปท.</h2><div id="homeCouncil" class="dl"></div></div>
-    <button class="btn btn-o" style="display:flex;align-items:center;justify-content:center;gap:8px;margin-top:4px" onclick="openReportSheet()">
+    <button class="btn btn-o" style="display:flex;align-items:center;justify-content:center;gap:8px;margin-top:4px" onclick="openReportSheet('pdf')">
       <span style="font-size:1.1rem">📄</span> ออกรายงาน PDF
     </button>
   </section>
@@ -604,8 +604,9 @@ function confirmStatusReport() {
   var sel = [];
   document.querySelectorAll('[data-si]:checked').forEach(function(cb) { sel.push(STATS[+cb.dataset.si]); });
   if (!sel.length) { toastWarn('\u0e01\u0e23\u0e38\u0e13\u0e32\u0e40\u0e25\u0e37\u0e2d\u0e01\u0e2d\u0e22\u0e48\u0e32\u0e07\u0e19\u0e49\u0e2d\u0e22 1 \u0e2a\u0e16\u0e32\u0e19\u0e30'); return; }
-  closeSheet();
+  toast((_rf==='excel'?'กำลังสร้าง Excel...':'กำลังเปิดรายงาน PDF...'), 2000, _rf==='excel'?'success':'info');
   doReport('byStatus', _rf, sel);
+  closeSheet();
 }
 
 function doReport(type, fmt, sel) {
@@ -816,9 +817,11 @@ function generateReport(type, selectedStatuses) {
     '</body></html>';
   var blob = new Blob([html],{type:'text/html;charset=utf-8'});
   var url = URL.createObjectURL(blob);
-  var w = window.open(url,'_blank');
-  if (!w) { toastErr('เบราว์เซอร์บล็อก popup — กรุณาอนุญาต popup แล้วลองใหม่'); }
-  setTimeout(function(){URL.revokeObjectURL(url);},60000);
+  var _oa = document.createElement('a');
+  _oa.href = url; _oa.target = '_blank'; _oa.rel = 'noopener';
+  _oa.style.display = 'none'; document.body.appendChild(_oa); _oa.click();
+  setTimeout(function(){if(_oa.parentNode)document.body.removeChild(_oa);URL.revokeObjectURL(url);},60000);
+  toast('กำลังเปิดรายงาน... ถ้าไม่แสดงกรุณาอนุญาต Popup แล้วกดใหม่',3000,'info');
 }
 
 /* ---------- รายงาน Excel ---------- */
