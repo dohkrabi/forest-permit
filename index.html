@@ -683,7 +683,7 @@ function generateReport(type) {
     body += '</table>';
   } else if (type === 'byStatus') {
     STATS.forEach(function(s){
-      var rows = sortR(R.filter(function(r){return r.status===s;}));
+      var rows = R.filter(function(r){return r.status===s;}).slice().sort(function(a,b){var pa=a.province_area||'',pb=b.province_area||'';if(pa!==pb)return pa.localeCompare(pb,'th');return (+a.request_no||0)-(+b.request_no||0);});
       if (!rows.length) return;
       var TH = '<th>สายทาง</th><th>ประเภทป่า</th><th>พื้นที่</th><th>เลขคำขอ</th><th>วันยื่น</th><th>วันแจ้งตรวจ</th><th>วันลงตรวจ</th><th>หมายเหตุ</th>';
       body += '<div class="nb"><h2>'+s+' ('+rows.length+' คำขอ)</h2><table><tr>'+TH+'</tr>';
