@@ -559,6 +559,7 @@ function openReportSheet(fmt) {
     { id:'byRequest', icon:'\ud83d\udccb', label:'\u0e23\u0e32\u0e22\u0e04\u0e33\u0e02\u0e2d',       desc:'\u0e15\u0e32\u0e23\u0e32\u0e07\u0e04\u0e33\u0e02\u0e2d\u0e17\u0e38\u0e01\u0e43\u0e1a\u0e1e\u0e23\u0e49\u0e2d\u0e21\u0e17\u0e38\u0e01\u0e0a\u0e48\u0e2d\u0e07' },
     { id:'byStatus',  icon:'\ud83d\udd16', label:'\u0e15\u0e32\u0e21\u0e2a\u0e16\u0e32\u0e19\u0e30',      desc:'\u0e40\u0e25\u0e37\u0e2d\u0e01\u0e2a\u0e16\u0e32\u0e19\u0e30\u0e17\u0e35่\u0e15\u0e49\u0e2d\u0e07\u0e01\u0e32\u0e23\u0e1e\u0e34\u0e21\u0e1e\u0e4c' },
     { id:'byAgency',  icon:'\ud83c\udfe2', label:'\u0e15\u0e32\u0e21\u0e2b\u0e19\u0e48\u0e27\u0e22\u0e17\u0e35\u0e48\u0e22\u0e37่\u0e19',  desc:'\u0e41\u0e22\u0e01 \u0e2a\u0e19\u0e07.\u0e1b\u0e48\u0e32\u0e44\u0e21\u0e49\u0e17\u0e35\u0e48 12 / \u0e1b\u0e48\u0e32\u0e0a\u0e32\u0e22\u0e40\u0e25\u0e19\u0e17\u0e35\u0e48 10' },
+    { id:'byTimeline', icon:'\ud83d\udcc5', label:'\u0e04\u0e27\u0e32\u0e21\u0e04\u0e37\u0e1a\u0e2b\u0e19\u0e49\u0e32', desc:'\u0e15\u0e32\u0e23\u0e32\u0e07\u0e27\u0e31\u0e19\u0e17\u0e35\u0e48\u0e41\u0e15\u0e48\u0e25\u0e30\u0e02\u0e31\u0e49\u0e19 \u0e2a\u0e35\u0e40\u0e2b\u0e25\u0e37\u0e2d\u0e07=\u0e01\u0e23\u0e21\u0e17\u0e32\u0e07\u0e2b\u0e25\u0e27\u0e07 \u0e2a\u0e35\u0e40\u0e02\u0e35\u0e22\u0e27=\u0e01\u0e23\u0e21\u0e1b\u0e48\u0e32\u0e44\u0e21\u0e49' },
   ];
   var fmtToggle =
     '<div style="display:flex;gap:8px;margin-bottom:12px">' +
@@ -658,9 +659,10 @@ function generateReport(type, selectedStatuses) {
     byRoute:  'รายงานสรุปคำขอรายสายทาง',
     byRequest:'รายงานรายละเอียดคำขอทั้งหมด',
     byStatus: 'รายงานสรุปคำขอตามสถานะ',
-    byAgency: 'รายงานสรุปคำขอตามหน่วยที่ยื่น'
+    byAgency: 'รายงานสรุปคำขอตามหน่วยที่ยื่น',
+    byTimeline:'รายงานความคืบหน้าคำขอเข้าใช้ประโยชน์พื้นที่ป่า'
   };
-  var ORIENT = { overview:'landscape', byRoute:'portrait', byRequest:'landscape', byStatus:'landscape', byAgency:'portrait' };
+  var ORIENT = { overview:'landscape', byRoute:'portrait', byRequest:'landscape', byStatus:'landscape', byAgency:'portrait', byTimeline:'landscape' };
   var css = [
     '@page{size:A4 ' + ORIENT[type] + ';margin:2cm 1.5cm}',
     '*{box-sizing:border-box;margin:0;padding:0}',
@@ -681,7 +683,7 @@ function generateReport(type, selectedStatuses) {
     '.ft{margin-top:24px;padding-top:10px;border-top:1px solid #ccc;font-size:11pt;color:#888;text-align:right}',
     'tr{page-break-inside:avoid}','h2{page-break-after:avoid}','.nextstep{page-break-after:avoid}',
     '@media screen{body{background:#eee;padding:20px}}',
-    '@media screen{.pg{background:#fff;max-width:960px;margin:0 auto;padding:36px;box-shadow:0 0 24px rgba(0,0,0,.12)}}thead{display:table-header-group}tbody{display:table-row-group}.nextstep{font-size:12pt;color:#14532D;margin:-2px 0 8px 0;padding:4px 10px;background:#E4EFE6;border-radius:4px;display:inline-block}'
+    '@media screen{.pg{background:#fff;max-width:960px;margin:0 auto;padding:36px;box-shadow:0 0 24px rgba(0,0,0,.12)}}.hb{background:#E5E7EB;text-align:center;border:1px solid #666;padding:5px 6px;vertical-align:middle}.hd{background:#FDE68A;color:#78350F;text-align:center;border:1px solid #666;padding:5px;font-weight:bold;vertical-align:middle}.hs{background:#FEF3C7;color:#92400E;text-align:center;border:1px solid #666;padding:4px 5px;font-size:11pt;vertical-align:middle}.hr{background:#34D399;color:#022C22;text-align:center;border:1px solid #666;padding:5px;font-weight:bold;vertical-align:middle}.hg{background:#D1FAE5;color:#065F46;text-align:center;border:1px solid #666;padding:4px 5px;font-size:11pt;vertical-align:middle}.cd{background:#FFFDF0;border:1px solid #D1D5DB;padding:4px 5px;text-align:center;font-size:11pt}.cg{background:#F0FDF4;border:1px solid #D1D5DB;padding:4px 5px;text-align:center;font-size:11pt}.sh{background:#1F2937;color:#fff;font-weight:bold;padding:5px 8px;border:1px solid #555;font-size:12pt}.cs{border:1px solid #D1D5DB;padding:4px 5px;font-size:10pt;text-align:center}thead{display:table-header-group}tbody{display:table-row-group}.nextstep{font-size:12pt;color:#14532D;margin:-2px 0 8px 0;padding:4px 10px;background:#E4EFE6;border-radius:4px;display:inline-block}'
   ].join('');
   function hdr() {
     return '<div class="hdr"><div class="org">แขวงทางหลวงกระบี่&nbsp;&nbsp;กรมทางหลวง</div>' +
@@ -801,6 +803,45 @@ function generateReport(type, selectedStatuses) {
       });
       body += '</div>';
     });
+  } else if (type === 'byTimeline') {
+    var cmap = {};
+    C.forEach(function(c){if(c.status==='ส่งแล้ว'&&c.sent_date){if(!cmap[c.route_no])cmap[c.route_no]={n:0,last:''};cmap[c.route_no].n++;if(!cmap[c.route_no].last||c.sent_date>cmap[c.route_no].last)cmap[c.route_no].last=c.sent_date;}});
+    var sorted=sortByArea(R); var seq=0;
+    body+='<table style="font-size:11pt;width:100%"><thead><tr>';
+    body+='<th class="hb" rowspan="2">#</th><th class="hb" rowspan="2">สายทาง</th><th class="hb" rowspan="2">ประเภทป่า</th><th class="hb" rowspan="2">พื้นที่</th><th class="hb" rowspan="2">เลขคำขอ</th>';
+    body+='<th class="hd" colspan="2">กรมทางหลวง</th><th class="hr" colspan="3">กรมป่าไม้</th><th class="hb" rowspan="2">สถานะ</th>';
+    body+='</tr><tr>';
+    body+='<th class="hs">วันยื่นคำขอ</th>';
+    body+='<th class="hs">มติสภา อปท.<br><span style="font-size:9pt;font-weight:normal">(วันล่าสุด / จำนวน)</span></th>';
+    body+='<th class="hg">หนังสือแจ้งตรวจป่า<br><span style="font-size:9pt;font-weight:normal">(เลขที่ / วันที่)</span></th>';
+    body+='<th class="hg">วันลงตรวจป่า</th>';
+    body+='<th class="hg">ลงนามรายงาน<br>ตรวจสอบสภาพป่า</th>';
+    body+='</tr></thead><tbody>';
+    FTYPES.forEach(function(ft){
+      var rows=sorted.filter(function(r){return r.forest_type===ft;});
+      if(!rows.length) return;
+      body+='<tr><td colspan="11" class="sh">'+ft+'&nbsp;&nbsp;('+rows.length+' คำขอ)</td></tr>';
+      rows.forEach(function(r){
+        seq++;
+        var cm=cmap[r.route_no]||{n:0,last:''};
+        var mitC=cm.last?isoTH(cm.last)+'<br><span style="font-size:9pt">('+cm.n+' อปท.)</span>':'–';
+        var ntfC=r.inspect_notify_no?'ที่ '+r.inspect_notify_no+'<br>'+isoTH(r.inspect_notify_date):'–';
+        var sgn=(r.status==='เซ็นรายงานแล้ว'||r.status==='ได้รับอนุญาต');
+        body+='<tr><td style="border:1px solid #D1D5DB;text-align:center;padding:4px">'+seq+'</td>';
+        body+='<td style="border:1px solid #D1D5DB;padding:4px 6px">ทล.'+r.route_no+(r.route_extra?' '+r.route_extra:'')+'</td>';
+        body+='<td style="border:1px solid #D1D5DB;padding:3px 5px;font-size:10pt">'+r.forest_type+'</td>';
+        body+='<td style="border:1px solid #D1D5DB;padding:4px 6px">'+r.province_area+'</td>';
+        body+='<td style="border:1px solid #D1D5DB;text-align:center;padding:4px">'+r.request_no+'</td>';
+        body+='<td class="cd">'+isoTH(r.request_date)+'</td><td class="cd">'+mitC+'</td>';
+        body+='<td class="cg">'+ntfC+'</td><td class="cg">'+isoTH(r.inspect_date)+'</td>';
+        body+='<td class="cg" style="font-size:14pt">'+(sgn?'✓':'–')+'</td>';
+        body+='<td class="cs">'+r.status+'</td></tr>';
+      });
+    });
+    var nInsp=R.filter(function(r){return r.inspect_date;}).length;
+    body+='<tr><td colspan="5" style="text-align:right;font-weight:bold;border:1px solid #777;padding:5px 8px;background:#F9FAFB">รวมทั้งหมด</td>';
+    body+='<td colspan="6" style="border:1px solid #777;padding:5px 8px;font-weight:bold;background:#F9FAFB">'+R.length+' คำขอ &nbsp;&nbsp; ลงตรวจแล้ว '+nInsp+' คำขอ</td></tr>';
+    body+='</tbody></table>';
   }
   var ftLine = '<div class="ft">พิมพ์โดยระบบติดตามคำขอเข้าใช้ประโยชน์ในพื้นที่ป่า — แขวงทางหลวงกระบี่</div>';
   var html = '<!DOCTYPE html><html lang="th"><head><meta charset="UTF-8">' +
@@ -845,7 +886,7 @@ function _doExcel(type, selectedStatuses) {
   NEXT_STEP[STATS[5]] = '\u0e23\u0e2d\u0e40\u0e0b\u0e47\u0e19\u0e23\u0e32\u0e22\u0e07\u0e32\u0e19\u0e15\u0e23\u0e27\u0e08\u0e1b\u0e48\u0e32';
   NEXT_STEP[STATS[6]] = '\u0e23\u0e2d\u0e43\u0e1a\u0e2d\u0e19\u0e38\u0e0d\u0e32\u0e15';
   NEXT_STEP[STATS[7]] = '\u0e40\u0e2a\u0e23\u0e47\u0e08\u0e2a\u0e34\u0e49\u0e19\u0e01\u0e23\u0e30\u0e1a\u0e27\u0e19\u0e01\u0e32\u0e23';
-  var TITLES = { overview:'\u0e20\u0e32\u0e1e\u0e23\u0e27\u0e21\u0e2a\u0e16\u0e32\u0e19\u0e30\u0e04\u0e33\u0e02\u0e2d', byRoute:'\u0e04\u0e33\u0e02\u0e2d\u0e23\u0e32\u0e22\u0e2a\u0e32\u0e22\u0e17\u0e32\u0e07', byRequest:'\u0e23\u0e32\u0e22\u0e25\u0e30\u0e40\u0e2d\u0e35\u0e22\u0e14\u0e04\u0e33\u0e02\u0e2d\u0e17\u0e31\u0e49\u0e07\u0e2b\u0e21\u0e14', byStatus:'\u0e04\u0e33\u0e02\u0e2d\u0e15\u0e32\u0e21\u0e2a\u0e16\u0e32\u0e19\u0e30', byAgency:'\u0e04\u0e33\u0e02\u0e2d\u0e15\u0e32\u0e21\u0e2b\u0e19\u0e48\u0e27\u0e22\u0e17\u0e35\u0e48\u0e22\u0e37\u0e48\u0e19' };
+  var TITLES = { overview:'\u0e20\u0e32\u0e1e\u0e23\u0e27\u0e21\u0e2a\u0e16\u0e32\u0e19\u0e30\u0e04\u0e33\u0e02\u0e2d', byRoute:'\u0e04\u0e33\u0e02\u0e2d\u0e23\u0e32\u0e22\u0e2a\u0e32\u0e22\u0e17\u0e32\u0e07', byRequest:'\u0e23\u0e32\u0e22\u0e25\u0e30\u0e40\u0e2d\u0e35\u0e22\u0e14\u0e04\u0e33\u0e02\u0e2d\u0e17\u0e31\u0e49\u0e07\u0e2b\u0e21\u0e14', byStatus:'\u0e04\u0e33\u0e02\u0e2d\u0e15\u0e32\u0e21\u0e2a\u0e16\u0e32\u0e19\u0e30', byAgency:'\u0e04\u0e33\u0e02\u0e2d\u0e15\u0e32\u0e21\u0e2b\u0e19\u0e48\u0e27\u0e22\u0e17\u0e35\u0e48\u0e22\u0e37\u0e48\u0e19', byTimeline:'\u0e04\u0e27\u0e32\u0e21\u0e04\u0e37\u0e1a\u0e2b\u0e19\u0e49\u0e32\u0e04\u0e33\u0e02\u0e2d' };
   function sortR(rows) { return rows.slice().sort(function(a,b){ return String(a.route_no).localeCompare(String(b.route_no),'th',{numeric:true}); }); }
   function sortByArea(rows) { return rows.slice().sort(function(a,b){ var pa=a.province_area||'',pb=b.province_area||''; return pa!==pb?pa.localeCompare(pb,'th'):(+a.request_no||0)-(+b.request_no||0); }); }
   function sortByArea(rows) { return rows.slice().sort(function(a,b){ var pa=a.province_area||'',pb=b.province_area||'';return pa!==pb?pa.localeCompare(pb,'th'):(+a.request_no||0)-(+b.request_no||0); }); }
@@ -888,6 +929,28 @@ function _doExcel(type, selectedStatuses) {
     var agencies=Array.from(new Set(R.map(function(r){return r.agency;}))).filter(Boolean);
     agencies.forEach(function(ag){ var rows=sortByArea(R.filter(function(r){return r.agency===ag;})); aoa.push([ag+' ('+rows.length+' \u0e04\u0e33\u0e02\u0e2d)']); FTYPES.forEach(function(ft){ var sub=sortByArea(rows.filter(function(r){return r.forest_type===ft;})); if(!sub.length)return; aoa.push([ft+' ('+sub.length+' \u0e04\u0e33\u0e02\u0e2d)']); aoa.push(colHag); sub.forEach(function(r){aoa.push(['\u0e17\u0e25.'+r.route_no,r.province_area,r.request_no,isoTH(r.request_date),isoTH(r.inspect_notify_date),isoTH(r.inspect_date),r.status,r.remark||'\u2013']);}); aoa.push([]); }); aoa.push([]); });
     ws = XLSX.utils.aoa_to_sheet(aoa); ws['!cols']=[12,16,10,14,14,14,14,24].map(function(w){return{wch:w};});
+  } else if (type === 'byTimeline') {
+    var cmapX={};
+    C.forEach(function(c){if(c.status==='ส่งแล้ว'&&c.sent_date){if(!cmapX[c.route_no])cmapX[c.route_no]={n:0,last:''};cmapX[c.route_no].n++;if(!cmapX[c.route_no].last||c.sent_date>cmapX[c.route_no].last)cmapX[c.route_no].last=c.sent_date;}});
+    var colHtl=['ลำดับ','สายทาง','ประเภทป่า','พื้นที่','เลขคำขอ','วันยื่นคำขอ (กรมทางหลวง)','มติสภา อปท. วันล่าสุด (กรมทางหลวง)','จำนวน อปท.','เลขหนังสือ (กรมป่าไม้)','วันแจ้งตรวจป่า (กรมป่าไม้)','วันลงตรวจป่า (กรมป่าไม้)','ลงนามรายงาน','สถานะปัจจุบัน'];
+    aoa=[ORG,TT,DT,[]]; aoa.push(colHtl);
+    var seqX=0;
+    FTYPES.forEach(function(ft){
+      var rows=sortByArea(R.filter(function(r){return r.forest_type===ft;}));
+      if(!rows.length)return;
+      aoa.push([ft+' ('+rows.length+' คำขอ)']);
+      rows.forEach(function(r){
+        seqX++;
+        var cm=cmapX[r.route_no]||{n:0,last:''};
+        var sgn=(r.status==='เซ็นรายงานแล้ว'||r.status==='ได้รับอนุญาต')?'✓':'–';
+        aoa.push([seqX,'ทล.'+r.route_no+(r.route_extra?' '+r.route_extra:''),r.forest_type,r.province_area,r.request_no,
+          isoTH(r.request_date),cm.last?isoTH(cm.last):'–',cm.n||0,
+          r.inspect_notify_no||'–',isoTH(r.inspect_notify_date),isoTH(r.inspect_date),sgn,r.status]);
+      });
+      aoa.push([]);
+    });
+    ws=XLSX.utils.aoa_to_sheet(aoa);
+    ws['!cols']=[4,12,16,14,8,16,14,7,14,14,14,9,14].map(function(w){return{wch:w};});
   }
   var wb = XLSX.utils.book_new();
   XLSX.utils.book_append_sheet(wb, ws, TITLES[type].slice(0,31));
