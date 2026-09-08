@@ -96,6 +96,7 @@ input:focus,select:focus,textarea:focus,button:focus-visible{
 .b-green {background:#D1FAE5;color:#065F46}
 .b-purple{background:#EDE9FE;color:#4C1D95}
 .b-indigo{background:#E0E7FF;color:#3730A3}
+.b-orange{background:#FFEDD5;color:#C2410C}
 .b-teal  {background:#CCFBF1;color:#134E4A}
 .b-red   {background:#FEE2E2;color:#991B1B}
 .pend{font-size:.72rem;color:#D97706;font-weight:600;white-space:nowrap}
@@ -214,8 +215,8 @@ nav button.on{color:var(--green);font-weight:700}
 
 <script>
 'use strict';
-const STATUSES = ['ยื่นแล้ว','รอมติสภา','แจ้งตรวจป่าแล้ว','รอลงตรวจป่า','ลงตรวจแล้ว','เซ็นรายงานแล้ว','ได้รับอนุญาต'];
-const STCLS = {'ยื่นแล้ว':'b-gray','รอมติสภา':'b-purple','แจ้งตรวจป่าแล้ว':'b-blue','รอลงตรวจป่า':'b-amber','ลงตรวจแล้ว':'b-green','เซ็นรายงานแล้ว':'b-indigo','ได้รับอนุญาต':'b-teal'};
+const STATUSES = ['ยื่นแล้ว','รอมติสภา','แจ้งตรวจป่าแล้ว','รอลงตรวจป่า','ลงตรวจแล้ว','เซ็นรายงานแล้ว','รอแต่งตั้งคำสั่ง','ได้รับอนุญาต'];
+const STCLS = {'ยื่นแล้ว':'b-gray','รอมติสภา':'b-purple','แจ้งตรวจป่าแล้ว':'b-blue','รอลงตรวจป่า':'b-amber','ลงตรวจแล้ว':'b-green','เซ็นรายงานแล้ว':'b-indigo','รอแต่งตั้งคำสั่ง':'b-orange','ได้รับอนุญาต':'b-teal'};
 const FTYPES = ['ป่าสงวนแห่งชาติ','ป่าถาวร (ม.4(1))','ป่าชายเลน'];
 const AGENCIES = ['สนง.ป่าไม้ที่ 12','สนง.ป่าชายเลนที่ 10'];
 const PROVS = ['กระบี่','นครศรีธรรมราช'];
@@ -581,7 +582,7 @@ function openReportSheet(fmt) {
 }
 
 function openStatusSelectSheet() {
-  var STATS = ['\u0e22\u0e37่\u0e19\u0e41\u0e25\u0e49\u0e27','\u0e23\u0e2d\u0e21\u0e15\u0e34\u0e2a\u0e20\u0e32','\u0e41\u0e08\u0e49\u0e07\u0e15\u0e23\u0e27\u0e08\u0e1b\u0e48\u0e32\u0e41\u0e25\u0e49\u0e27','\u0e23\u0e2d\u0e25\u0e07\u0e15\u0e23\u0e27\u0e08\u0e1b\u0e48\u0e32','\u0e25\u0e07\u0e15\u0e23\u0e27\u0e08\u0e41\u0e25\u0e49\u0e27','\u0e40\u0e0b\u0e47\u0e19\u0e23\u0e32\u0e22\u0e07\u0e32\u0e19\u0e41\u0e25\u0e49\u0e27','\u0e44\u0e14\u0e49\u0e23\u0e31\u0e1a\u0e2d\u0e19\u0e38\u0e0d\u0e32\u0e15'];
+  var STATS = ['\u0e22\u0e37่\u0e19\u0e41\u0e25\u0e49\u0e27','\u0e23\u0e2d\u0e21\u0e15\u0e34\u0e2a\u0e20\u0e32','\u0e41\u0e08\u0e49\u0e07\u0e15\u0e23\u0e27\u0e08\u0e1b\u0e48\u0e32\u0e41\u0e25\u0e49\u0e27','\u0e23\u0e2d\u0e25\u0e07\u0e15\u0e23\u0e27\u0e08\u0e1b\u0e48\u0e32','\u0e25\u0e07\u0e15\u0e23\u0e27\u0e08\u0e41\u0e25\u0e49\u0e27','\u0e40\u0e0b\u0e47\u0e19\u0e23\u0e32\u0e22\u0e07\u0e32\u0e19\u0e41\u0e25\u0e49\u0e27','\u0e23\u0e2d\u0e41\u0e15\u0e48\u0e07\u0e15\u0e31\u0e49\u0e07\u0e04\u0e33\u0e2a\u0e31\u0e48\u0e07','\u0e44\u0e14\u0e49\u0e23\u0e31\u0e1a\u0e2d\u0e19\u0e38\u0e0d\u0e32\u0e15'];
   var R = state.data.requests;
   var html = '<b style="font-size:1.05rem;display:block;margin-bottom:12px">\u0e40\u0e25\u0e37\u0e2d\u0e01\u0e2a\u0e16\u0e32\u0e19\u0e30\u0e17\u0e35\u0e48\u0e15\u0e49\u0e2d\u0e07\u0e01\u0e32\u0e23</b>';
   STATS.forEach(function(s, i) {
@@ -600,7 +601,7 @@ function openStatusSelectSheet() {
 }
 
 function confirmStatusReport() {
-  var STATS = ['\u0e22\u0e37่\u0e19\u0e41\u0e25\u0e49\u0e27','\u0e23\u0e2d\u0e21\u0e15\u0e34\u0e2a\u0e20\u0e32','\u0e41\u0e08\u0e49\u0e07\u0e15\u0e23\u0e27\u0e08\u0e1b\u0e48\u0e32\u0e41\u0e25\u0e49\u0e27','\u0e23\u0e2d\u0e25\u0e07\u0e15\u0e23\u0e27\u0e08\u0e1b\u0e48\u0e32','\u0e25\u0e07\u0e15\u0e23\u0e27\u0e08\u0e41\u0e25\u0e49\u0e27','\u0e40\u0e0b\u0e47\u0e19\u0e23\u0e32\u0e22\u0e07\u0e32\u0e19\u0e41\u0e25\u0e49\u0e27','\u0e44\u0e14\u0e49\u0e23\u0e31\u0e1a\u0e2d\u0e19\u0e38\u0e0d\u0e32\u0e15'];
+  var STATS = ['\u0e22\u0e37่\u0e19\u0e41\u0e25\u0e49\u0e27','\u0e23\u0e2d\u0e21\u0e15\u0e34\u0e2a\u0e20\u0e32','\u0e41\u0e08\u0e49\u0e07\u0e15\u0e23\u0e27\u0e08\u0e1b\u0e48\u0e32\u0e41\u0e25\u0e49\u0e27','\u0e23\u0e2d\u0e25\u0e07\u0e15\u0e23\u0e27\u0e08\u0e1b\u0e48\u0e32','\u0e25\u0e07\u0e15\u0e23\u0e27\u0e08\u0e41\u0e25\u0e49\u0e27','\u0e40\u0e0b\u0e47\u0e19\u0e23\u0e32\u0e22\u0e07\u0e32\u0e19\u0e41\u0e25\u0e49\u0e27','\u0e23\u0e2d\u0e41\u0e15\u0e48\u0e07\u0e15\u0e31\u0e49\u0e07\u0e04\u0e33\u0e2a\u0e31\u0e48\u0e07','\u0e44\u0e14\u0e49\u0e23\u0e31\u0e1a\u0e2d\u0e19\u0e38\u0e0d\u0e32\u0e15'];
   var sel = [];
   document.querySelectorAll('[data-si]:checked').forEach(function(cb) { sel.push(STATS[+cb.dataset.si]); });
   if (!sel.length) { toastWarn('\u0e01\u0e23\u0e38\u0e13\u0e32\u0e40\u0e25\u0e37\u0e2d\u0e01\u0e2d\u0e22\u0e48\u0e32\u0e07\u0e19\u0e49\u0e2d\u0e22 1 \u0e2a\u0e16\u0e32\u0e19\u0e30'); return; }
@@ -650,7 +651,7 @@ function generateReport(type, selectedStatuses) {
   }
   var R = state.data.requests;
   var C = state.data.council;
-  var STATS = ['ยื่นแล้ว','รอมติสภา','แจ้งตรวจป่าแล้ว','รอลงตรวจป่า','ลงตรวจแล้ว','เซ็นรายงานแล้ว','ได้รับอนุญาต'];
+  var STATS = ['ยื่นแล้ว','รอมติสภา','แจ้งตรวจป่าแล้ว','รอลงตรวจป่า','ลงตรวจแล้ว','เซ็นรายงานแล้ว','รอแต่งตั้งคำสั่ง','ได้รับอนุญาต'];
   var FTYPES = ['ป่าสงวนแห่งชาติ','ป่าถาวร (ม.4(1))','ป่าชายเลน'];
   var TITLES = {
     overview: 'รายงานสรุปภาพรวมสถานะคำขอ',
@@ -705,6 +706,7 @@ function generateReport(type, selectedStatuses) {
       return String(a.route_no).localeCompare(String(b.route_no),'th',{numeric:true});
     });
   }
+  function sortByArea(rows) { return rows.slice().sort(function(a,b){ var pa=a.province_area||'',pb=b.province_area||''; return pa!==pb?pa.localeCompare(pb,'th'):(+a.request_no||0)-(+b.request_no||0); }); }
   var body = '';
   if (type === 'overview') {
     var cntUp = R.filter(function(r){return ['ลงตรวจแล้ว','เซ็นรายงานแล้ว','ได้รับอนุญาต'].indexOf(r.status)>=0;}).length;
@@ -722,7 +724,7 @@ function generateReport(type, selectedStatuses) {
       var rows = R.filter(function(r){return r.forest_type===ft;});
       if (!rows.length) return;
       body += '<tr><td>'+ft+'</td>';
-      STATS.forEach(function(s,i){var n=rows.filter(function(r){return r.status===s;}).length;tots[i]+=n;body+='<td class="num">'+(n||'\u2013')+'</td>';});
+      STATS.forEach(function(s,i){var n=(s==='ยื่นแล้ว'?rows.length:rows.filter(function(r){return r.status===s;}).length);tots[i]+=n;body+='<td class="num">'+(n||'\u2013')+'</td>';});
       body += '<td class="num"><b>'+rows.length+'</b></td></tr>';
     });
     body += '<tr><td><b>รวมทั้งหมด</b></td>'+tots.map(function(n){return '<td class="num"><b>'+(n||'\u2013')+'</b></td>';}).join('')+'<td class="num"><b>'+R.length+'</b></td></tr></table>';
@@ -754,17 +756,17 @@ function generateReport(type, selectedStatuses) {
     body += '</table>';
   } else if (type === 'byStatus') {
     var NEXT_STEP = {
-      '\u0e22\u0e37\u0e48\u0e19\u0e41\u0e25\u0e49\u0e27': '\u0e23\u0e2d\u0e21\u0e15\u0e34\u0e2a\u0e20\u0e32 \u0e2d\u0e1b\u0e17.',
       '\u0e23\u0e2d\u0e21\u0e15\u0e34\u0e2a\u0e20\u0e32': '\u0e23\u0e2d\u0e2b\u0e19\u0e31\u0e07\u0e2a\u0e37\u0e2d\u0e41\u0e08\u0e49\u0e07\u0e15\u0e23\u0e27\u0e08\u0e1b\u0e48\u0e32\u0e08\u0e32\u0e01 \u0e2a\u0e08\u0e1b.',
       '\u0e41\u0e08\u0e49\u0e07\u0e15\u0e23\u0e27\u0e08\u0e1b\u0e48\u0e32\u0e41\u0e25\u0e49\u0e27': '\u0e23\u0e2d\u0e19\u0e31\u0e14\u0e27\u0e31\u0e19\u0e25\u0e07\u0e15\u0e23\u0e27\u0e08\u0e1b\u0e48\u0e32',
       '\u0e23\u0e2d\u0e25\u0e07\u0e15\u0e23\u0e27\u0e08\u0e1b\u0e48\u0e32': '\u0e23\u0e2d\u0e27\u0e31\u0e19\u0e25\u0e07\u0e15\u0e23\u0e27\u0e08\u0e1b\u0e48\u0e32\u0e15\u0e32\u0e21\u0e01\u0e33\u0e2b\u0e19\u0e14',
       '\u0e25\u0e07\u0e15\u0e23\u0e27\u0e08\u0e41\u0e25\u0e49\u0e27': '\u0e23\u0e2d\u0e40\u0e0b\u0e47\u0e19\u0e23\u0e32\u0e22\u0e07\u0e32\u0e19\u0e15\u0e23\u0e27\u0e08\u0e1b\u0e48\u0e32',
-      '\u0e40\u0e0b\u0e47\u0e19\u0e23\u0e32\u0e22\u0e07\u0e32\u0e19\u0e41\u0e25\u0e49\u0e27': '\u0e23\u0e2d\u0e43\u0e1a\u0e2d\u0e19\u0e38\u0e0d\u0e32\u0e15',
+      '\u0e40\u0e0b\u0e47\u0e19\u0e23\u0e32\u0e22\u0e07\u0e32\u0e19\u0e41\u0e25\u0e49\u0e27': 'รอแต่งตั้งคำสั่ง',
+      'รอแต่งตั้งคำสั่ง': '\u0e23\u0e2d\u0e43\u0e1a\u0e2d\u0e19\u0e38\u0e0d\u0e32\u0e15',
       '\u0e44\u0e14\u0e49\u0e23\u0e31\u0e1a\u0e2d\u0e19\u0e38\u0e0d\u0e32\u0e15': '\u0e40\u0e2a\u0e23\u0e47\u0e08\u0e2a\u0e34\u0e49\u0e19\u0e01\u0e23\u0e30\u0e1a\u0e27\u0e19\u0e01\u0e32\u0e23'
     };
     var statsToShow = selectedStatuses || STATS;
     statsToShow.forEach(function(s){
-      var rows = R.filter(function(r){return r.status===s;}).slice().sort(function(a,b){var pa=a.province_area||'',pb=b.province_area||'';if(pa!==pb)return pa.localeCompare(pb,'th');return (+a.request_no||0)-(+b.request_no||0);});
+      var rows = (s==='ยื่นแล้ว') ? sortByArea(R) : sortByArea(R.filter(function(r){return r.status===s;}));
       if (!rows.length) return;
       var TH = '<th>สายทาง</th><th>ประเภทป่า</th><th>พื้นที่</th><th>เลขคำขอ</th><th>วันยื่น</th><th>วันแจ้งตรวจ</th><th>วันลงตรวจ</th><th>หมายเหตุ</th>';
       var nxt = NEXT_STEP[s] ? '&#9658; ขั้นต่อไป: ' + NEXT_STEP[s] : '';
@@ -833,16 +835,16 @@ function _doExcel(type, selectedStatuses) {
     return (+iso.slice(8,10)) + ' ' + TH_ML[+iso.slice(5,7)-1] + ' ' + (+iso.slice(0,4)+543);
   }
   var R = state.data.requests, C = state.data.council;
-  var STATS  = ['\u0e22\u0e37\u0e48\u0e19\u0e41\u0e25\u0e49\u0e27','\u0e23\u0e2d\u0e21\u0e15\u0e34\u0e2a\u0e20\u0e32','\u0e41\u0e08\u0e49\u0e07\u0e15\u0e23\u0e27\u0e08\u0e1b\u0e48\u0e32\u0e41\u0e25\u0e49\u0e27','\u0e23\u0e2d\u0e25\u0e07\u0e15\u0e23\u0e27\u0e08\u0e1b\u0e48\u0e32','\u0e25\u0e07\u0e15\u0e23\u0e27\u0e08\u0e41\u0e25\u0e49\u0e27','\u0e40\u0e0b\u0e47\u0e19\u0e23\u0e32\u0e22\u0e07\u0e32\u0e19\u0e41\u0e25\u0e49\u0e27','\u0e44\u0e14\u0e49\u0e23\u0e31\u0e1a\u0e2d\u0e19\u0e38\u0e0d\u0e32\u0e15'];
+  var STATS  = ['\u0e22\u0e37\u0e48\u0e19\u0e41\u0e25\u0e49\u0e27','\u0e23\u0e2d\u0e21\u0e15\u0e34\u0e2a\u0e20\u0e32','\u0e41\u0e08\u0e49\u0e07\u0e15\u0e23\u0e27\u0e08\u0e1b\u0e48\u0e32\u0e41\u0e25\u0e49\u0e27','\u0e23\u0e2d\u0e25\u0e07\u0e15\u0e23\u0e27\u0e08\u0e1b\u0e48\u0e32','\u0e25\u0e07\u0e15\u0e23\u0e27\u0e08\u0e41\u0e25\u0e49\u0e27','\u0e40\u0e0b\u0e47\u0e19\u0e23\u0e32\u0e22\u0e07\u0e32\u0e19\u0e41\u0e25\u0e49\u0e27','\u0e23\u0e2d\u0e41\u0e15\u0e48\u0e07\u0e15\u0e31\u0e49\u0e07\u0e04\u0e33\u0e2a\u0e31\u0e48\u0e07','\u0e44\u0e14\u0e49\u0e23\u0e31\u0e1a\u0e2d\u0e19\u0e38\u0e0d\u0e32\u0e15'];
   var FTYPES = ['\u0e1b\u0e48\u0e32\u0e2a\u0e07\u0e27\u0e19\u0e41\u0e2b\u0e48\u0e07\u0e0a\u0e32\u0e15\u0e34','\u0e1b\u0e48\u0e32\u0e16\u0e32\u0e27\u0e23 (\u0e21.4(1))','\u0e1b\u0e48\u0e32\u0e0a\u0e32\u0e22\u0e40\u0e25\u0e19'];
   var NEXT_STEP = {};
-  NEXT_STEP[STATS[0]] = '\u0e23\u0e2d\u0e21\u0e15\u0e34\u0e2a\u0e20\u0e32 \u0e2d\u0e1b\u0e17.';
   NEXT_STEP[STATS[1]] = '\u0e23\u0e2d\u0e2b\u0e19\u0e31\u0e07\u0e2a\u0e37\u0e2d\u0e41\u0e08\u0e49\u0e07\u0e15\u0e23\u0e27\u0e08\u0e1b\u0e48\u0e32\u0e08\u0e32\u0e01 \u0e2a\u0e08\u0e1b.';
   NEXT_STEP[STATS[2]] = '\u0e23\u0e2d\u0e19\u0e31\u0e14\u0e27\u0e31\u0e19\u0e25\u0e07\u0e15\u0e23\u0e27\u0e08\u0e1b\u0e48\u0e32';
   NEXT_STEP[STATS[3]] = '\u0e23\u0e2d\u0e27\u0e31\u0e19\u0e25\u0e07\u0e15\u0e23\u0e27\u0e08\u0e1b\u0e48\u0e32\u0e15\u0e32\u0e21\u0e01\u0e33\u0e2b\u0e19\u0e14';
   NEXT_STEP[STATS[4]] = '\u0e23\u0e2d\u0e40\u0e0b\u0e47\u0e19\u0e23\u0e32\u0e22\u0e07\u0e32\u0e19\u0e15\u0e23\u0e27\u0e08\u0e1b\u0e48\u0e32';
-  NEXT_STEP[STATS[5]] = '\u0e23\u0e2d\u0e43\u0e1a\u0e2d\u0e19\u0e38\u0e0d\u0e32\u0e15';
-  NEXT_STEP[STATS[6]] = '\u0e40\u0e2a\u0e23\u0e47\u0e08\u0e2a\u0e34\u0e49\u0e19\u0e01\u0e23\u0e30\u0e1a\u0e27\u0e19\u0e01\u0e32\u0e23';
+  NEXT_STEP[STATS[5]] = 'รอแต่งตั้งคำสั่ง';
+  NEXT_STEP[STATS[6]] = '\u0e23\u0e2d\u0e43\u0e1a\u0e2d\u0e19\u0e38\u0e0d\u0e32\u0e15';
+  NEXT_STEP[STATS[7]] = '\u0e40\u0e2a\u0e23\u0e47\u0e08\u0e2a\u0e34\u0e49\u0e19\u0e01\u0e23\u0e30\u0e1a\u0e27\u0e19\u0e01\u0e32\u0e23';
   var TITLES = { overview:'\u0e20\u0e32\u0e1e\u0e23\u0e27\u0e21\u0e2a\u0e16\u0e32\u0e19\u0e30\u0e04\u0e33\u0e02\u0e2d', byRoute:'\u0e04\u0e33\u0e02\u0e2d\u0e23\u0e32\u0e22\u0e2a\u0e32\u0e22\u0e17\u0e32\u0e07', byRequest:'\u0e23\u0e32\u0e22\u0e25\u0e30\u0e40\u0e2d\u0e35\u0e22\u0e14\u0e04\u0e33\u0e02\u0e2d\u0e17\u0e31\u0e49\u0e07\u0e2b\u0e21\u0e14', byStatus:'\u0e04\u0e33\u0e02\u0e2d\u0e15\u0e32\u0e21\u0e2a\u0e16\u0e32\u0e19\u0e30', byAgency:'\u0e04\u0e33\u0e02\u0e2d\u0e15\u0e32\u0e21\u0e2b\u0e19\u0e48\u0e27\u0e22\u0e17\u0e35\u0e48\u0e22\u0e37\u0e48\u0e19' };
   function sortR(rows) { return rows.slice().sort(function(a,b){ return String(a.route_no).localeCompare(String(b.route_no),'th',{numeric:true}); }); }
   function sortByArea(rows) { return rows.slice().sort(function(a,b){ var pa=a.province_area||'',pb=b.province_area||''; return pa!==pb?pa.localeCompare(pb,'th'):(+a.request_no||0)-(+b.request_no||0); }); }
@@ -856,7 +858,7 @@ function _doExcel(type, selectedStatuses) {
     var colHov = ['\u0e1b\u0e23\u0e30\u0e40\u0e20\u0e17\u0e1b\u0e48\u0e32'].concat(STATS).concat(['\u0e23\u0e27\u0e21']);
     aoa.push(['\u0e2a\u0e16\u0e32\u0e19\u0e30\u0e04\u0e33\u0e02\u0e2d\u0e41\u0e22\u0e01\u0e15\u0e32\u0e21\u0e1b\u0e23\u0e30\u0e40\u0e20\u0e17\u0e1b\u0e48\u0e32']); aoa.push(colHov);
     var tots = STATS.map(function(){return 0;});
-    FTYPES.forEach(function(ft){ var rows=R.filter(function(r){return r.forest_type===ft;}); if(!rows.length)return; var row=[ft]; STATS.forEach(function(s,i){var n=rows.filter(function(r){return r.status===s;}).length;tots[i]+=n;row.push(n);}); row.push(rows.length); aoa.push(row); });
+    FTYPES.forEach(function(ft){ var rows=R.filter(function(r){return r.forest_type===ft;}); if(!rows.length)return; var row=[ft]; STATS.forEach(function(s,i){var n=(i===0?rows.length:rows.filter(function(r){return r.status===s;}).length);tots[i]+=n;row.push(n);}); row.push(rows.length); aoa.push(row); });
     aoa.push(['\u0e23\u0e27\u0e21\u0e17\u0e31\u0e49\u0e07\u0e2b\u0e21\u0e14'].concat(tots).concat([R.length]));
     aoa.push([]); aoa.push(['\u0e2a\u0e23\u0e38\u0e1b\u0e21\u0e15\u0e34\u0e2a\u0e20\u0e32 \u0e2d\u0e1b\u0e17.']);
     aoa.push(['\u0e23\u0e32\u0e22\u0e01\u0e32\u0e23\u0e17\u0e35\u0e48\u0e2a\u0e48\u0e07\u0e41\u0e25\u0e49\u0e27', C.filter(function(c){return c.status==='\u0e2a\u0e48\u0e07\u0e41\u0e25\u0e49\u0e27';}).length + ' \u0e23\u0e32\u0e22\u0e01\u0e32\u0e23']);
@@ -878,7 +880,7 @@ function _doExcel(type, selectedStatuses) {
     var colHst = ['\u0e2a\u0e32\u0e22\u0e17\u0e32\u0e07','\u0e1b\u0e23\u0e30\u0e40\u0e20\u0e17\u0e1b\u0e48\u0e32','\u0e1e\u0e37\u0e49\u0e19\u0e17\u0e35\u0e48','\u0e40\u0e25\u0e02\u0e04\u0e33\u0e02\u0e2d','\u0e27\u0e31\u0e19\u0e22\u0e37\u0e48\u0e19','\u0e27\u0e31\u0e19\u0e41\u0e08\u0e49\u0e07\u0e15\u0e23\u0e27\u0e08','\u0e27\u0e31\u0e19\u0e25\u0e07\u0e15\u0e23\u0e27\u0e08','\u0e2b\u0e21\u0e32\u0e22\u0e40\u0e2b\u0e15\u0e38'];
     aoa=[ORG,TT,DT,[]];
     var statsShow = selectedStatuses || STATS;
-    statsShow.forEach(function(s){ var rows=sortByArea(R.filter(function(r){return r.status===s;})); if(!rows.length)return; var nxt=NEXT_STEP[s]?'  \u25ba \u0e02\u0e31\u0e49\u0e19\u0e15\u0e48\u0e2d\u0e44\u0e1b: '+NEXT_STEP[s]:''; aoa.push([s+' ('+rows.length+' \u0e04\u0e33\u0e02\u0e2d)'+nxt]); aoa.push(colHst); rows.forEach(function(r){aoa.push(['\u0e17\u0e25.'+r.route_no,r.forest_type,r.province_area,r.request_no,isoTH(r.request_date),isoTH(r.inspect_notify_date),isoTH(r.inspect_date),r.remark||'\u2013']);}); aoa.push([]); });
+    statsShow.forEach(function(s){ var rows=(i===0?sortByArea(R):sortByArea(R.filter(function(r){return r.status===s;}))); if(!rows.length)return; var nxt=NEXT_STEP[s]?'  \u25ba \u0e02\u0e31\u0e49\u0e19\u0e15\u0e48\u0e2d\u0e44\u0e1b: '+NEXT_STEP[s]:''; aoa.push([s+' ('+rows.length+' \u0e04\u0e33\u0e02\u0e2d)'+nxt]); aoa.push(colHst); rows.forEach(function(r){aoa.push(['\u0e17\u0e25.'+r.route_no,r.forest_type,r.province_area,r.request_no,isoTH(r.request_date),isoTH(r.inspect_notify_date),isoTH(r.inspect_date),r.remark||'\u2013']);}); aoa.push([]); });
     ws = XLSX.utils.aoa_to_sheet(aoa); ws['!cols']=[12,18,16,10,14,16,14,24].map(function(w){return{wch:w};});
   } else if (type === 'byAgency') {
     var colHag = ['\u0e2a\u0e32\u0e22\u0e17\u0e32\u0e07','\u0e1e\u0e37\u0e49\u0e19\u0e17\u0e35\u0e48','\u0e40\u0e25\u0e02\u0e04\u0e33\u0e02\u0e2d','\u0e27\u0e31\u0e19\u0e22\u0e37\u0e48\u0e19','\u0e27\u0e31\u0e19\u0e41\u0e08\u0e49\u0e07\u0e15\u0e23\u0e27\u0e08','\u0e27\u0e31\u0e19\u0e25\u0e07\u0e15\u0e23\u0e27\u0e08','\u0e2a\u0e16\u0e32\u0e19\u0e30','\u0e2b\u0e21\u0e32\u0e22\u0e40\u0e2b\u0e15\u0e38'];
