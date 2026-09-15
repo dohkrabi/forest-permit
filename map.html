@@ -1315,7 +1315,7 @@ const C_DONE="#ffffff", C_NOREQ="#8a8a8a";
 // override สถานะสายทาง (แก้/ถอนได้ที่นี่) — 'noreq'=บังคับเทา, 'done'=บังคับขาว
 // 'noreq'=บังคับเทา(ไม่มีคำขอ) · 'done'=บังคับขาว(ลงตรวจแล้ว) · 'hasreq'=บังคับสีปกติ(มีคำขอ รอดำเนินการ)
 const STATUS_OVERRIDE={"ทล.4156 นครฯ":"noreq","ทล.4046":"hasreq"};
-const ST_DONE=['ลงตรวจแล้ว','รอมติสภา','ได้รับอนุญาต'];
+const ST_DONE=['ลงตรวจแล้ว','เซ็นรายงานแล้ว','ได้รับอนุญาต'];
 function recolorGroup(name,color,ring){
   const g=groups[name]; if(!g) return;
   g.eachLayer(l=>{
@@ -1341,14 +1341,14 @@ function applyStatusColors(){
   let opened=false;
   const fallback=setTimeout(()=>{if(!opened){opened=true;paintNoData();}},2500); // กันเปิด DB ค้าง
   try{
-    const req=indexedDB.open('forestdb'); // เปิด read-only ไม่ระบุ version → ไม่ยุ่งกับ schema ของแอพ
+    const req=indexedDB.open('forest_krabi_db'); // ระบบใหม่ React — store 'requests' โดยตรง
     req.onerror=()=>{clearTimeout(fallback);if(!opened){opened=true;paintNoData();}};
     req.onblocked=()=>{};
     req.onsuccess=()=>{
       const d=req.result;
       try{
-        if(!d.objectStoreNames.contains('tables')){d.close();clearTimeout(fallback);if(!opened){opened=true;paintNoData();}return;}
-        const t=d.transaction('tables','readonly').objectStore('tables').get('requests');
+        if(!d.objectStoreNames.contains('requests')){d.close();clearTimeout(fallback);if(!opened){opened=true;paintNoData();}return;}
+        const t=d.transaction('requests','readonly').objectStore('requests').getAll();
         t.onsuccess=()=>{
           opened=true;clearTimeout(fallback);
           const rows=t.result||[]; d.close();

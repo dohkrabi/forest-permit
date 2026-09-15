@@ -1,15 +1,22 @@
-/* Service Worker — คำขอใช้พื้นที่ป่า ขท.กระบี่ */
-const CACHE = 'forest-app-v36';
-const ASSETS = ['./', './index.html', './map.html', './manifest.json', './icon-192.png', './icon-512.png', './apple-touch-icon.png'];
+/* Service Worker — คำขอใช้พื้นที่ป่า ขท.กระบี่ (React v1 / v37) */
+const CACHE = 'forest-app-v43';
+const BASE = '/forest-permit/';
 
-// CDN ของหน้าแผนที่ (Leaflet / proj4 / shpjs) — cache-first เพื่อให้เปิดออฟไลน์ได้
-const CDN_HOSTS = ['cdnjs.cloudflare.com', 'unpkg.com', 'cdn.jsdelivr.net'];
+/* ไฟล์หลักที่ต้อง precache (Vite hash ใน /assets/ จัดการโดย fetch handler) */
+const ASSETS = [
+  BASE,
+  BASE + 'index.html',
+  BASE + 'map.html',
+  BASE + 'manifest.json',
+  BASE + 'icon-192.png',
+  BASE + 'icon-512.png',
+  BASE + 'apple-touch-icon.png',
+];
 
-// tile แผนที่พื้นหลัง — cache-first เก็บถาวรเพื่อใช้ออฟไลน์ (แคชแยกไม่ถูกล้างตอนอัปเวอร์ชัน)
+const CDN_HOSTS = ['cdnjs.cloudflare.com', 'unpkg.com', 'cdn.jsdelivr.net', 'fonts.googleapis.com', 'fonts.gstatic.com'];
 const TILE_HOSTS = ['mt1.google.com', 'tile.openstreetmap.org'];
 const TILE_CACHE = 'tiles-v1';
 
-// ไลบรารีที่ map.html ต้องใช้ — precache ตั้งแต่ติดตั้ง ให้เปิดแผนที่ออฟไลน์ได้แม้ไม่เคยเปิดมาก่อน
 const CDN_ASSETS = [
   'https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.css',
   'https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.js',
@@ -22,11 +29,16 @@ const CDN_ASSETS = [
 self.addEventListener('install', (e) => {
   e.waitUntil(
     caches.open(CACHE)
-      // cache:'reload' = ข้าม HTTP cache ดึงไฟล์สดจากเซิร์ฟเวอร์เสมอ ป้องกันได้ไฟล์เก่าตอนอัปเดตเวอร์ชัน
-      .then((c) => c.addAll(ASSETS.map((u) => new Request(u, { cache: 'reload' })))
-        .then(() => Promise.allSettled(   // CDN พลาดบางไฟล์ได้โดยไม่ทำให้ติดตั้งล้ม
-          CDN_ASSETS.map((u) => fetch(new Request(u, { mode: 'no-cors' })).then((r) => c.put(u, r)))
-        )))
+      .then((c) =>
+        c.addAll(ASSETS.map((u) => new Request(u, { cache: 'reload' })))
+          .then(() =>
+            Promise.allSettled(
+              CDN_ASSETS.map((u) =>
+                fetch(new Request(u, { mode: 'no-cors' })).then((r) => c.put(u, r))
+              )
+            )
+          )
+      )
       .then(() => self.skipWaiting())
   );
 });
@@ -34,15 +46,18 @@ self.addEventListener('install', (e) => {
 self.addEventListener('activate', (e) => {
   e.waitUntil(
     caches.keys()
-      .then((keys) => Promise.all(keys.filter((k) => k !== CACHE && k !== TILE_CACHE).map((k) => caches.delete(k))))
+      .then((keys) =>
+        Promise.all(keys.filter((k) => k !== CACHE && k !== TILE_CACHE).map((k) => caches.delete(k)))
+      )
       .then(() => self.clients.claim())
   );
 });
 
 self.addEventListener('fetch', (e) => {
-  const url = new URL(e.request.url);
   if (e.request.method !== 'GET') return;
-  // tile แผนที่: cache-first → ออฟไลน์ใช้แผ่นที่เคยโหลด/ดาวน์โหลดไว้
+  const url = new URL(e.request.url);
+
+  /* tile แผนที่ — cache-first ถาวร */
   if (TILE_HOSTS.includes(url.hostname)) {
     e.respondWith(
       caches.open(TILE_CACHE).then(async (c) => {
@@ -52,35 +67,48 @@ self.addEventListener('fetch', (e) => {
           const res = await fetch(e.request);
           if (res && (res.ok || res.type === 'opaque')) c.put(e.request, res.clone());
           return res;
-        } catch (_) {
-          return new Response('', { status: 504 });
-        }
+        } catch (_) { return new Response('', { status: 504 }); }
       })
     );
     return;
   }
-  // ไลบรารีแผนที่จาก CDN: cache-first (tile ภาพแผนที่จาก google/osm ไม่เข้าเงื่อนไขนี้ ผ่านตรงตามเดิม)
+
+  /* CDN ไลบรารี — cache-first */
   if (CDN_HOSTS.includes(url.hostname)) {
     e.respondWith(
-      caches.match(e.request).then((cached) => cached ||
-        fetch(e.request).then((res) => {
-          const copy = res.clone();
-          caches.open(CACHE).then((c) => c.put(e.request, copy));
-          return res;
-        }))
+      caches.match(e.request).then(
+        (cached) => cached ||
+          fetch(e.request).then((res) => {
+            caches.open(CACHE).then((c) => c.put(e.request, res.clone()));
+            return res;
+          })
+      )
     );
     return;
   }
+
   if (url.origin !== self.location.origin) return;
-  // same-origin: cache-first แล้วอัปเดตเงียบๆ (บังคับ revalidate กับเซิร์ฟเวอร์ ไม่พึ่ง HTTP cache)
+
+  /* Vite /assets/ (hash filenames) — cache-first เพราะชื่อไฟล์ไม่ซ้ำกัน */
+  if (url.pathname.startsWith(BASE + 'assets/')) {
+    e.respondWith(
+      caches.match(e.request).then(
+        (cached) => cached ||
+          fetch(e.request).then((res) => {
+            if (res && res.ok) caches.open(CACHE).then((c) => c.put(e.request, res.clone()));
+            return res;
+          })
+      )
+    );
+    return;
+  }
+
+  /* same-origin อื่น — stale-while-revalidate */
   e.respondWith(
     caches.match(e.request).then((cached) => {
       const fresh = fetch(e.request, { cache: 'no-cache' })
         .then((res) => {
-          if (res && res.ok) {
-            const copy = res.clone();
-            caches.open(CACHE).then((c) => c.put(e.request, copy));
-          }
+          if (res && res.ok) caches.open(CACHE).then((c) => c.put(e.request, res.clone()));
           return res;
         })
         .catch(() => cached);
