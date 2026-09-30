@@ -138,6 +138,14 @@ html,body{height:100%;font-family:'Segoe UI',Tahoma,'Leelawadee UI',sans-serif}
 .leaflet-popup-content{margin:10px 14px;max-height:46vh;overflow-y:auto}
 .f-nrf{fill:url(#pat-nrf) !important}
 .f-perm{fill:url(#pat-perm) !important}
+.fxmk{background:transparent;border:none}
+.fxmk div{width:14px;height:14px;transform:translate(-50%,-50%) rotate(45deg);background:#fff;
+  border:3px solid #00b8d4;box-shadow:0 0 0 1.5px #1a1c1e,0 1px 5px rgba(0,0,0,.55);cursor:pointer}
+.fxmk.perm div{border-color:#d500f9}
+.pickmk{background:transparent;border:none;pointer-events:none}
+.pickmk div{width:30px;height:30px;transform:translate(-50%,-50%);border:2.5px solid #ff1744;border-radius:50%;
+  background:linear-gradient(#ff1744,#ff1744) center/2px 100% no-repeat,linear-gradient(#ff1744,#ff1744) center/100% 2px no-repeat;
+  box-shadow:0 0 0 1.5px #fff}
 .ptlabel{background:transparent;border:none;box-shadow:none}
 .ptlabel div{transform:translate(-50%,-130%);background:rgba(26,28,30,.85);color:#fff;
   font-size:10px;font-weight:700;padding:1px 5px;border-radius:6px;white-space:nowrap;
@@ -154,6 +162,9 @@ html,body{height:100%;font-family:'Segoe UI',Tahoma,'Leelawadee UI',sans-serif}
   <div class="chips" id="chipsRoutes"></div>
   <div class="rpanel" id="toolPanel" style="display:none">
     <div class="tools">
+      <button id="tbPick">🎯 จับพิกัด — แตะจุดใดก็ได้ (ดูดเข้าจุดตัด/แนวเขตอัตโนมัติ)</button>
+      <button id="tbFx" class="on">◆ แสดงจุดตัดแนวเขตป่า × เขตทาง</button>
+      <button id="tbFxCsv">⤓ ส่งออกจุดตัดแนวเขตป่าทั้งหมด (CSV)</button>
       <button id="tbKm">📏 ตั้งค่า กม. สายทาง (ปักจุดเริ่ม–สิ้นสุด)</button>
       <button id="tbTick">📐 เปิดขีดย่อย 10 ม. / 1 ม. (ซูมเข้าใกล้)</button>
   <button id="tbTickOff" class="on">👁 แสดงขีด กม. (กม.เต็ม + 100 ม.)</button>
@@ -200,6 +211,12 @@ html,body{height:100%;font-family:'Segoe UI',Tahoma,'Leelawadee UI',sans-serif}
   <div class="nt"><b id="calTitle">—</b><span id="calInfo" style="color:#5d4037">—</span></div>
   <button id="calDone" style="background:#1a1c1e;color:#fff;font-weight:700">✓ เสร็จ</button>
   <button id="calCancel" style="background:rgba(0,0,0,.15);color:#1a1c1e">✕</button>
+</div>
+
+<div class="navbar" id="pickbar" style="background:rgba(0,105,92,.96)">
+  <span class="arr">🎯</span>
+  <div class="nt"><b>โหมดจับพิกัด</b><span style="color:#b2dfdb;font-weight:500">แตะจุดบนแผนที่ · ใกล้ ◆ หรือเส้นแนวเขตจะดูดเข้าพอดี</span></div>
+  <button id="pickOff" style="background:#fff;color:#00695c;font-weight:700">✕ ปิด</button>
 </div>
 
 <div class="navbar" id="navbar">
@@ -371,7 +388,7 @@ for(const [name,e] of Object.entries(BUILTIN)){
     const i=e.info||{};
     const hasInfo=i.rai!=null;
     L.polygon(rings,{color:col,weight:3,fillColor:col,fillOpacity:.12}).addTo(g)
-      .bindPopup(`<div class="pp"><b>เขตทาง ${name}</b>${hasInfo?`<br>เนื้อที่ ${i.rai.toFixed(0)} ไร่ ${i.ngan.toFixed(0)} งาน ${i.wa.toFixed(0)} ตร.วา<br><span style="color:#777">(${Math.round(i.area_m2).toLocaleString()} ตร.ม.)</span>`:""}</div>`);
+      .bindPopup(`<div class="pp"><b>เขตทาง ${name}</b>${hasInfo?`<br>เนื้อที่ ${i.rai.toFixed(0)} ไร่ ${i.ngan.toFixed(0)} งาน ${i.wa.toFixed(0)} ตร.วา<br><span style="color:#777">(${Math.round(i.area_m2).toLocaleString()} ตร.ม.)</span>`:""}<br><a class="nav" href="#" onclick="pickAt(lastTapLL);return false">🎯 ดูพิกัดตรงนี้</a></div>`);
   }
   if(e.lines&&e.lines.length){
     for(const ln of e.lines)
@@ -529,6 +546,7 @@ function forestChip(label,color,layer){
   c.onclick=()=>{
     if(map.hasLayer(layer)){map.removeLayer(layer);c.classList.remove('on');}
     else{map.addLayer(layer);c.classList.add('on');setTimeout(ensurePatterns,0);}
+    if(typeof refreshFx==='function')refreshFx();
   };
   chipsL.appendChild(c);
 }
@@ -924,6 +942,7 @@ function kmAt(ll){
 let tickOn=true;   // ขีด กม. หลัก (กม.เต็ม + 100 ม.) แสดงตลอด
 const tickLayer=L.featureGroup().addTo(map);
 function refreshTicks(){
+  if(typeof refreshFx==='function')refreshFx();
   tickLayer.clearLayers();
   const z=map.getZoom();
   const STEP=tickStep(z);
@@ -1232,7 +1251,9 @@ toolBtn.onclick=()=>{
   if(show){toolPanel.style.display='block';
     document.getElementById('tbTick').classList.toggle('on',fineOn);
     document.getElementById('tbTickOff').classList.toggle('on',tickOn);
-    document.getElementById('tbAdd').classList.toggle('on',addMode);}
+    document.getElementById('tbAdd').classList.toggle('on',addMode);
+    document.getElementById('tbPick').classList.toggle('on',pickMode);
+    document.getElementById('tbFx').classList.toggle('on',fxOn);}
 };
 rowR.appendChild(toolBtn);
 
@@ -1281,7 +1302,7 @@ document.getElementById('tbTickOff').onclick=(e)=>{
 };
 document.getElementById('tbAdd').onclick=(e)=>{
   addMode=!addMode; e.target.classList.toggle('on',addMode);
-  if(addMode){closeAllPanels();toast('แตะตำแหน่งบนแผนที่เพื่อปักจุด',4000);}
+  if(addMode){if(pickMode)setPick(false);closeAllPanels();toast('แตะตำแหน่งบนแผนที่เพื่อปักจุด',4000);}
 };
 document.getElementById('tbAddGps').onclick=()=>{
   closeAllPanels();
@@ -1291,10 +1312,12 @@ document.getElementById('tbAddGps').onclick=()=>{
 };
 // คลิกแผนที่/เลเยอร์: calibrate > ปักจุด
 function modeClick(e){
+  if(e&&e.latlng) lastTapLL=e.latlng;
   if(calState){L.DomEvent.stop(e);map.closePopup();calClick(e.latlng);return true;}
   if(addMode){L.DomEvent.stop(e);map.closePopup();addMode=false;
     const b=document.getElementById('tbAdd'); if(b)b.classList.remove('on');
     openModal(e.latlng,null); return true;}
+  if(pickMode){L.DomEvent.stop(e);map.closePopup();pickAt(e.latlng);return true;}
   return false;
 }
 map.on('click',modeClick);
@@ -1309,6 +1332,286 @@ map.on('popupopen',()=>{ if(calState||addMode) map.closePopup(); });
 remapKmCal(); drawPts(); renderKmList(); renderPtList();
 if(!Object.keys(KMCAL).length)
   setTimeout(()=>toast('เครื่องนี้ยังไม่มีค่า กม. — ขีด กม. จะยังไม่แสดง · ไปที่ 🛠 เครื่องมือ → ตั้งค่า กม. หรือ 🔗 วางค่าจากเครื่องอื่น',6000),1500);
+
+
+/* ================= 🎯 จับพิกัด + ◆ จุดตัดแนวเขตป่า × เขตทาง ================= */
+// ใช้ var (ไม่ใช่ let/const) เพราะ refreshTicks() ที่ประกาศไว้ก่อนหน้าเรียก refreshFx() ได้ทุกเมื่อ
+var FX_KIND={nrf:{n:'ป่าสงวนแห่งชาติ',c:'#00b8d4',layer:gNRF},perm:{n:'ป่าไม้ถาวร',c:'#d500f9',layer:gPERM}};
+var FX_ZOOM=14;            // แสดงหมุดจุดตัดตั้งแต่ซูมระดับนี้
+var FX=[], fxReady=false, fxOn=true;
+var pickMode=false, pickMk=null, pickPopup=null, lastTapLL=null, PK=null;
+var fxLayer=L.featureGroup().addTo(map);
+
+function ringBox(r){let a=Infinity,b=Infinity,c=-Infinity,d=-Infinity;
+  for(const p of r){if(p[0]<a)a=p[0];if(p[1]<b)b=p[1];if(p[0]>c)c=p[0];if(p[1]>d)d=p[1];}return [a,b,c,d];}
+function boxHit(p,q){return !(p[2]<q[0]||q[2]<p[0]||p[3]<q[1]||q[3]<p[1]);}
+// ดัชนีกรอบสี่เหลี่ยมของทุกรูปแปลง (คำนวณครั้งเดียว)
+var FPOLY=[], FRINGS=[], RPOLY=[], RRINGS=[];
+for(const kind of ['nrf','perm']) FOREST[kind].forEach((poly,pi)=>{
+  FPOLY.push({kind,pi,rings:poly,box:ringBox(poly[0])});
+  poly.forEach(ring=>FRINGS.push({kind,pi,ring,box:ringBox(ring)}));
+});
+for(const [name,e] of Object.entries(BUILTIN)){
+  const rings=e.polygon||[]; if(!rings.length)continue;
+  const bs=rings.map(ringBox);
+  RPOLY.push({name,rings,box:[Math.min(...bs.map(b=>b[0])),Math.min(...bs.map(b=>b[1])),Math.max(...bs.map(b=>b[2])),Math.max(...bs.map(b=>b[3]))]});
+  rings.forEach((ring,i)=>RRINGS.push({name,ring,box:bs[i]}));
+}
+
+/* ---- จุดตัดของเส้นตรง 2 เส้น (lon,lat) ---- */
+function segX(a,b,c,d){
+  const rx=b[0]-a[0],ry=b[1]-a[1],sx=d[0]-c[0],sy=d[1]-c[1];
+  const den=rx*sy-ry*sx; if(!den)return null;
+  const qx=c[0]-a[0],qy=c[1]-a[1];
+  const t=(qx*sy-qy*sx)/den,u=(qx*ry-qy*rx)/den;
+  return (t>=0&&t<=1&&u>=0&&u<=1)?[a[0]+t*rx,a[1]+t*ry]:null;
+}
+/* ---- คำนวณจุดตัดแนวเขตป่า × แนวเขตทาง ทั้งหมด (แบ่งทำทีละช่วง ไม่ให้หน้าค้าง) ---- */
+function computeFx(){
+  const out=[]; let k=0;
+  const step=()=>{
+    const t0=performance.now();
+    while(k<FRINGS.length&&performance.now()-t0<25){
+      const F0=FRINGS[k++], fr=F0.ring, fb=F0.box;
+      for(const R of RRINGS){
+        if(!boxHit(fb,R.box))continue;
+        const rr=R.ring;
+        for(let i=0;i<rr.length-1;i++){
+          const a=rr[i],b=rr[i+1];
+          const x0=Math.min(a[0],b[0]),x1=Math.max(a[0],b[0]),y0=Math.min(a[1],b[1]),y1=Math.max(a[1],b[1]);
+          if(x1<fb[0]||x0>fb[2]||y1<fb[1]||y0>fb[3])continue;
+          for(let j=0;j<fr.length-1;j++){
+            const c=fr[j],d=fr[j+1];
+            if((c[0]<x0&&d[0]<x0)||(c[0]>x1&&d[0]>x1)||(c[1]<y0&&d[1]<y0)||(c[1]>y1&&d[1]>y1))continue;
+            const p=segX(a,b,c,d);
+            if(p) out.push({kind:F0.kind,pi:F0.pi,route:R.name,lat:p[1],lon:p[0]});
+          }
+        }
+      }
+    }
+    if(k<FRINGS.length){setTimeout(step,0);return;}
+    const res=[];   // ตัดจุดซ้ำ (ห่างกัน < ~0.5 ม.)
+    for(const p of out)
+      if(!res.some(q=>q.route===p.route&&q.kind===p.kind&&Math.abs(q.lat-p.lat)<5e-6&&Math.abs(q.lon-p.lon)<5e-6)) res.push(p);
+    FX=res; fxReady=true; refreshFx();
+  };
+  step();
+}
+
+/* ---- แสดงหมุด ◆ เฉพาะที่อยู่ในจอ + ชั้นป่า/สายทางที่เปิดอยู่ ---- */
+function refreshFx(){
+  if(!fxLayer)return;
+  fxLayer.clearLayers();
+  if(!fxOn||!fxReady||map.getZoom()<FX_ZOOM)return;
+  const b=map.getBounds().pad(0.1);
+  for(const p of FX){
+    if(!map.hasLayer(FX_KIND[p.kind].layer))continue;
+    if(!groups[p.route]||!map.hasLayer(groups[p.route]))continue;
+    if(!b.contains([p.lat,p.lon]))continue;
+    L.marker([p.lat,p.lon],{icon:L.divIcon({className:'fxmk '+p.kind,html:'<div></div>',iconSize:[0,0]}),
+      bubblingMouseEvents:false,zIndexOffset:500}).addTo(fxLayer);
+  }
+}
+fxLayer.on('click',e=>{ if(calState||addMode||pickMode)return; L.DomEvent.stop(e); pickAt(e.latlng); });
+
+/* ---- จุดอยู่ในรูปแปลงหรือไม่ (even-odd รองรับรูเจาะ) ---- */
+function pip(ring,x,y){let ins=false;
+  for(let i=0,j=ring.length-1;i<ring.length;j=i++){
+    const xi=ring[i][0],yi=ring[i][1],xj=ring[j][0],yj=ring[j][1];
+    if(((yi>y)!==(yj>y))&&(x<(xj-xi)*(y-yi)/(yj-yi)+xi))ins=!ins;}
+  return ins;}
+function inRings(rings,x,y){let c=false;for(const r of rings)if(pip(r,x,y))c=!c;return c;}
+function forestAt(ll){
+  const out=new Set();
+  for(const P of FPOLY){
+    const b=P.box; if(ll.lng<b[0]||ll.lng>b[2]||ll.lat<b[1]||ll.lat>b[3])continue;
+    if(inRings(P.rings,ll.lng,ll.lat)) out.add(P.kind);
+  }
+  return [...out];
+}
+function rowAt(ll){
+  const out=[];
+  for(const P of RPOLY){
+    const b=P.box; if(ll.lng<b[0]||ll.lng>b[2]||ll.lat<b[1]||ll.lat>b[3])continue;
+    if(inRings(P.rings,ll.lng,ll.lat)) out.push(P.name);
+  }
+  return out;
+}
+
+/* ---- ข้อมูลสายทาง ณ จุด: กม. / ห่างกึ่งกลาง / ด้านซ้าย-ขวา (ตามทิศ กม. เพิ่มขึ้น) ---- */
+function routeInfo(name,ll){
+  const ls=routeLines(name); let best=null;
+  ls.forEach((L0,li)=>{const pr=projectLine(L0,ll);if(pr&&(!best||pr.off<best.pr.off))best={li,L0,pr};});
+  if(!best)return null;
+  const km=kmFromD(name,best.li,best.pr.d);
+  let side=null;
+  const pts=kmPts(name,best.li);
+  if(pts&&best.pr.off>0.5){
+    const L0=best.L0,d=best.pr.d;
+    const A=interpLine(L0,Math.max(0,d-3)),B=interpLine(L0,Math.min(L0.len,d+3));
+    const kx=Math.cos(A.lat*Math.PI/180);
+    const cr=(B.lng-A.lng)*kx*(ll.lat-A.lat)-(B.lat-A.lat)*(ll.lng-A.lng)*kx;
+    let left=cr>0;
+    if(pts[pts.length-1].km<pts[0].km) left=!left;   // กม. ลดลงตามทิศเส้น → กลับด้าน
+    side=left?'ซ้ายทาง (LT)':'ขวาทาง (RT)';
+  }
+  return {route:name,li:best.li,off:best.pr.off,d:best.pr.d,km,side};
+}
+
+/* ---- ดูดจุดที่แตะเข้าหา: จุดตัด ◆ > มุมแนวเขต > บนเส้นแนวเขต ---- */
+function snapPick(ll){
+  const P=map.latLngToContainerPoint(ll);
+  const px=(lat,lon)=>P.distanceTo(map.latLngToContainerPoint([lat,lon]));
+  let best=null;
+  for(const p of FX){
+    if(!map.hasLayer(FX_KIND[p.kind].layer))continue;
+    const d=px(p.lat,p.lon);
+    if(d<=24&&(!best||d<best.d)) best={d,type:'fx',kind:p.kind,route:p.route,ll:L.latLng(p.lat,p.lon)};
+  }
+  if(best)return best;
+  const T=14, m0=map.containerPointToLatLng(P.subtract([T,T])), m1=map.containerPointToLatLng(P.add([T,T]));
+  const qb=[Math.min(m0.lng,m1.lng),Math.min(m0.lat,m1.lat),Math.max(m0.lng,m1.lng),Math.max(m0.lat,m1.lat)];
+  const cands=[];
+  for(const F0 of FRINGS) if(map.hasLayer(FX_KIND[F0.kind].layer)&&boxHit(F0.box,qb)) cands.push({ring:F0.ring,f:true,kind:F0.kind});
+  for(const R of RRINGS) if(groups[R.name]&&map.hasLayer(groups[R.name])&&boxHit(R.box,qb)) cands.push({ring:R.ring,f:false,route:R.name});
+  // มุม (ภายใน 12 px)
+  for(const c of cands) for(const v of c.ring){
+    if(v[0]<qb[0]||v[0]>qb[2]||v[1]<qb[1]||v[1]>qb[3])continue;
+    const d=px(v[1],v[0]);
+    if(d<=12&&(!best||d<best.d)) best={d,type:c.f?'fvert':'rvert',kind:c.kind,route:c.route,ll:L.latLng(v[1],v[0])};
+  }
+  if(best)return best;
+  // บนเส้น (ภายใน 10 px)
+  for(const c of cands){
+    const r=c.ring;
+    for(let i=0;i<r.length-1;i++){
+      const a=r[i],b=r[i+1];
+      if(Math.max(a[0],b[0])<qb[0]||Math.min(a[0],b[0])>qb[2]||Math.max(a[1],b[1])<qb[1]||Math.min(a[1],b[1])>qb[3])continue;
+      const A=map.latLngToContainerPoint([a[1],a[0]]),B=map.latLngToContainerPoint([b[1],b[0]]);
+      const vx=B.x-A.x,vy=B.y-A.y,l2=vx*vx+vy*vy;
+      let t=l2?((P.x-A.x)*vx+(P.y-A.y)*vy)/l2:0; t=Math.max(0,Math.min(1,t));
+      const d=Math.hypot(P.x-(A.x+vx*t),P.y-(A.y+vy*t));
+      if(d<=10&&(!best||d<best.d))
+        best={d,type:c.f?'fedge':'redge',kind:c.kind,route:c.route,ll:L.latLng(a[1]+(b[1]-a[1])*t,a[0]+(b[0]-a[0])*t)};
+    }
+  }
+  return best;
+}
+
+/* ---- แสดงพิกัดของจุด ---- */
+function pickAt(ll){
+  if(!ll)return;
+  const s=snapPick(ll)||{type:'raw',ll};
+  const p=s.ll, lat=p.lat, lon=p.lng, u=utmOf(lat,lon);
+  const kn=s.kind?FX_KIND[s.kind].n:'';
+  const TITLE={fx:`◆ จุดตัดแนว${kn} × เขตทาง`,fvert:`◇ มุมแนวเขต${kn}`,fedge:`〰 บนแนวเขต${kn}`,
+               rvert:`▣ มุม/หมุดเขตทาง`,redge:`〰 บนแนวเขตทาง`,raw:`📍 พิกัดจุดที่เลือก`}[s.type];
+  // สายทาง: ใช้สายของเส้นที่ดูดเข้า ไม่งั้นหาสายที่ใกล้สุด (ไม่เกิน 300 ม.)
+  let ri=null;
+  if(s.route) ri=routeInfo(s.route,p);
+  else{const n=nearestRoute(p); if(n&&n.off<=300) ri=routeInfo(n.name,p);}
+  const onLine=s.type!=='raw';
+  const fz=forestAt(p).map(k=>FX_KIND[k].n), rw=rowAt(p);
+  const zoneTxt=s.type==='fx'?`อยู่บนแนวเขต${kn} และแนวเขตทางพอดี`
+    :(s.type==='fvert'||s.type==='fedge')?`อยู่บนแนวเขต${kn}`
+    :(fz.length?'ในเขต'+fz.join(' + '):'นอกเขตป่า (ตามชั้นข้อมูล)');
+  const rowTxt=(s.type==='rvert'||s.type==='redge'||s.type==='fx')?'บนแนวเขตทาง':(rw.length?'ในเขตทาง':'นอกเขตทาง');
+  const kmTxt=ri?(ri.km!=null?'กม. '+fmtKm(Math.round(ri.km)):'ยังไม่ได้ตั้ง กม.'):'';
+  const offTxt=ri?`${ri.off.toFixed(1)} ม.${ri.side?' · '+ri.side:''}`:'';
+  PK={lat,lon,title:TITLE,route:ri?ri.route:'',
+    text:[TITLE+(ri?' '+ri.route:''),
+      `Lat, Lon: ${lat.toFixed(7)}, ${lon.toFixed(7)}`,
+      u?`UTM 47N: X ${u.x.toFixed(3)}  Y ${u.y.toFixed(3)}`:'',
+      ri?`${ri.route} ${kmTxt} · ห่างกึ่งกลางถนน ${offTxt}`:'',
+      `${zoneTxt} · ${rowTxt}`,
+      `https://www.google.com/maps?q=${lat.toFixed(7)},${lon.toFixed(7)}`].filter(Boolean).join('\n')};
+  const html=`<div class="pp"><b>${TITLE}</b>${ri?`<div style="color:#1565c0;font-weight:600">${ri.route}${ri.km!=null?' · '+kmTxt:''}</div>`:''}
+    <table>
+    <tr><td>Lat</td><td><b>${lat.toFixed(7)}</b></td></tr>
+    <tr><td>Lon</td><td><b>${lon.toFixed(7)}</b></td></tr>
+    ${u?`<tr><td>X (UTM47N)</td><td><b>${u.x.toFixed(3)}</b></td></tr><tr><td>Y (UTM47N)</td><td><b>${u.y.toFixed(3)}</b></td></tr>`:''}
+    ${ri?`<tr><td>กม.</td><td>${ri.km!=null?fmtKm(Math.round(ri.km)):'— (ยังไม่ได้ตั้ง กม. สายนี้)'}</td></tr>
+         <tr><td>ห่างกึ่งกลาง</td><td>${offTxt}</td></tr>`:''}
+    <tr><td>เขตป่า</td><td>${zoneTxt}</td></tr>
+    <tr><td>เขตทาง</td><td>${rowTxt}${!onLine&&rw.length?' '+rw.join(', '):''}</td></tr>
+    </table>
+    ${s.type==='raw'?'<div style="color:#8a8f96;font-size:11px;margin-top:3px">แตะใกล้เส้นแนวเขตหรือ ◆ เพื่อดูดเข้าจุดพอดี</div>':''}
+    <a class="nav" href="#" onclick="copyText(PK.text);return false">📋 คัดลอก</a>
+    <a class="nav" style="background:#2e7d32;margin-left:4px" href="#" onclick="map.closePopup();openModal(L.latLng(PK.lat,PK.lon),null);return false">📍 ปักจุด</a>
+    <a class="nav" style="background:#37474f;margin-left:4px" href="#" onclick="startNav(PK.lat,PK.lon,PK.title,PK.route);return false">🧭 ไปที่นี่</a>
+    </div>`;
+  if(pickMk)map.removeLayer(pickMk);
+  pickMk=L.marker(p,{icon:L.divIcon({className:'pickmk',html:'<div></div>',iconSize:[0,0]}),interactive:false,zIndexOffset:900}).addTo(map);
+  const top=document.querySelector('.topbar').offsetHeight;
+  pickPopup=L.popup({maxWidth:300,autoPanPaddingTopLeft:[10,top+84],autoPanPaddingBottomRight:[10,70]})
+    .setLatLng(p).setContent(html).openOn(map);
+}
+map.on('popupclose',e=>{
+  if(e.popup===pickPopup&&!pickMode&&pickMk){map.removeLayer(pickMk);pickMk=null;}
+});
+
+/* ---- คัดลอก (รองรับเครื่องที่ไม่มี clipboard API) ---- */
+function copyText(t){
+  const fb=()=>{const a=document.createElement('textarea');a.value=t;a.setAttribute('readonly','');
+    a.style.cssText='position:fixed;top:0;left:0;opacity:0';document.body.appendChild(a);a.select();a.setSelectionRange(0,99999);
+    let ok=false;try{ok=document.execCommand('copy');}catch(e){}a.remove();
+    toast(ok?'คัดลอกแล้ว':'คัดลอกไม่สำเร็จ',2000);};
+  if(navigator.clipboard&&window.isSecureContext) navigator.clipboard.writeText(t).then(()=>toast('คัดลอกแล้ว',2000),fb);
+  else fb();
+}
+
+/* ---- โหมดจับพิกัด ---- */
+function pickBar(){
+  const bar=document.getElementById('pickbar');
+  if(!pickMode){bar.style.display='none';return;}
+  bar.style.display='flex';
+  const nb=document.getElementById('navbar');
+  bar.style.top=(document.querySelector('.topbar').offsetHeight+8+(nb.style.display==='flex'?nb.offsetHeight+8:0))+'px';
+}
+function setPick(on){
+  pickMode=on;
+  document.getElementById('tbPick').classList.toggle('on',on);
+  if(on){
+    addMode=false; const b=document.getElementById('tbAdd'); if(b)b.classList.remove('on');
+    closeAllPanels();
+    toast('แตะจุดบนแผนที่เพื่อดูพิกัด — แตะใกล้ ◆ หรือเส้นแนวเขต จะดูดเข้าจุดพอดี',4200);
+  }else{
+    map.closePopup(); if(pickMk){map.removeLayer(pickMk);pickMk=null;}
+  }
+  pickBar();
+}
+document.getElementById('tbPick').onclick=()=>setPick(!pickMode);
+document.getElementById('pickOff').onclick=()=>setPick(false);
+document.getElementById('tbFx').onclick=(e)=>{
+  fxOn=!fxOn; e.target.classList.toggle('on',fxOn); refreshFx();
+  if(fxOn&&map.getZoom()<FX_ZOOM) toast(`แสดงจุดตัด ◆ เมื่อซูมเข้าถึงระดับ ${FX_ZOOM} ขึ้นไป`,3000);
+  else toast(fxOn?'แสดงจุดตัดแนวเขตป่า':'ซ่อนจุดตัดแนวเขตป่า',2200);
+};
+document.getElementById('tbFxCsv').onclick=exportFx;
+// กดค้าง (มือถือ) / คลิกขวา (คอม) ที่ใดก็ได้ = ดูพิกัดทันที ไม่ต้องเปิดโหมด
+map.on('contextmenu',e=>{ if(calState||addMode)return; pickAt(e.latlng); });
+
+/* ---- ส่งออกจุดตัดแนวเขตป่าทั้งหมดเป็น CSV (เรียงตามสายทาง → กม.) ---- */
+function exportFx(){
+  if(!fxReady){toast('กำลังคำนวณจุดตัด… ลองใหม่อีกครู่',2600);return;}
+  if(!FX.length){toast('ไม่พบจุดตัดแนวเขตป่า');return;}
+  const list=FX.map(p=>({p,ri:routeInfo(p.route,L.latLng(p.lat,p.lon))}));
+  list.sort((a,b)=>a.p.route.localeCompare(b.p.route,'th')
+    ||((a.ri?a.ri.li:0)-(b.ri?b.ri.li:0))||((a.ri?a.ri.d:0)-(b.ri?b.ri.d:0)));
+  const rows=[['ลำดับ','สายทาง','ชั้นเขตป่า','กม.','ด้าน','ห่างกึ่งกลางถนน (ม.)','Lat','Lon','X_UTM47N','Y_UTM47N']];
+  let prev=null,no=0;
+  for(const {p,ri} of list){
+    if(p.route!==prev){prev=p.route;no=0;}
+    const u=utmOf(p.lat,p.lon);
+    rows.push([++no,p.route,FX_KIND[p.kind].n,(ri&&ri.km!=null)?fmtKm(Math.round(ri.km)):'',
+      (ri&&ri.side)||'',ri?ri.off.toFixed(1):'',p.lat.toFixed(7),p.lon.toFixed(7),
+      u?u.x.toFixed(3):'',u?u.y.toFixed(3):'']);
+  }
+  dl('จุดตัดแนวเขตป่า-เขตทาง.csv',rows.map(r=>r.map(v=>'"'+String(v).replace(/"/g,'""')+'"').join(',')).join('\n'),'text/csv;charset=utf-8');
+  toast(`ส่งออกจุดตัด ${FX.length} จุด แล้ว`,2600);
+}
+hookGroup(fxLayer);
+setTimeout(computeFx,300);
 
 /* ---------- สีตามสถานะคำขอป่าไม้ (อ่านจาก IndexedDB ของแอพคำขอ) ---------- */
 const C_DONE="#ffffff", C_NOREQ="#8a8a8a";
