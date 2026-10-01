@@ -186,6 +186,32 @@ html,body{height:100%;font-family:'Segoe UI',Tahoma,'Leelawadee UI',sans-serif}
 .arwait{color:rgba(255,255,255,.7);font-size:12.5px;padding:6px 2px}
 .arsum{color:#fff;font-size:12.5px;line-height:1.6;padding:8px 10px;border-radius:8px;background:rgba(245,180,0,.18);
   border:1px solid rgba(245,180,0,.5)}
+.arcard{position:absolute;left:8px;bottom:66px;z-index:1010;width:min(360px,calc(100vw - 76px));
+  background:rgba(26,28,30,.94);color:#fff;border-radius:12px;box-shadow:0 3px 14px rgba(0,0,0,.4);
+  border:1px solid rgba(255,234,0,.45);font-size:12.5px;overflow:hidden;backdrop-filter:blur(4px)}
+.accard .leaflet-control-zoom{display:none}
+.accard .toast{bottom:auto;top:130px}
+.arcard .ach{display:flex;align-items:center;gap:6px;padding:8px 10px 6px}
+.arcard .ach b{font-size:13.5px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.arcard .ach span{flex:1;color:rgba(255,255,255,.6);font-size:11.5px;white-space:nowrap}
+.arcard .ach button{border:none;background:rgba(255,255,255,.14);color:#fff;border-radius:6px;padding:3px 8px;
+  font-size:12px;cursor:pointer;font-family:inherit}
+.arcard .acsum{padding:0 10px 8px;display:grid;gap:5px}
+.arcard .acr{border-radius:8px;padding:6px 9px;background:rgba(255,255,255,.06);border-left:4px solid #ffea00}
+.arcard .acr.perm{border-left-color:#ff6d00}.arcard .acr.any{border-left-color:#fff;background:rgba(255,234,0,.12)}
+.arcard .acr span{display:block;font-size:11px;color:rgba(255,255,255,.65)}
+.arcard .acr b{display:block;font-size:15px;color:#ffea00;letter-spacing:.2px}
+.arcard .acr.perm b{color:#ffab40}.arcard .acr.any b{color:#fff}
+.arcard .acr small{display:block;font-size:10.5px;color:rgba(255,255,255,.55)}
+.arcard .aclist{max-height:24vh;overflow-y:auto;border-top:1px solid rgba(255,255,255,.12);-webkit-overflow-scrolling:touch}
+.arcard .aci{display:flex;align-items:center;gap:8px;padding:6px 10px;border-bottom:1px solid rgba(255,255,255,.07);cursor:pointer}
+.arcard .aci:active{background:rgba(255,255,255,.1)}
+.arcard .aci .k{font-weight:800;width:18px;color:#ffea00}.arcard .aci.perm .k{color:#ffab40}
+.arcard .aci .t{flex:1;color:rgba(255,255,255,.85)}.arcard .aci .v{font-weight:700;font-variant-numeric:tabular-nums}
+.arcard .acmini{display:flex;flex-wrap:wrap;gap:4px 12px;padding:0 10px 8px;font-size:12px;color:rgba(255,255,255,.7)}
+.arcard .acmini b{font-size:13.5px;color:#ffea00}.arcard .acmini .perm b{color:#ffab40}.arcard .acmini .any b{color:#fff}
+.arcard .acmini .u{flex-basis:100%;font-size:10.5px;color:rgba(255,255,255,.5)}
+.arcard .acfoot{padding:5px 10px 7px;font-size:10.5px;color:rgba(255,255,255,.5)}
 .ptlabel{background:transparent;border:none;box-shadow:none}
 .ptlabel div{transform:translate(-50%,-130%);background:rgba(26,28,30,.85);color:#fff;
   font-size:10px;font-weight:700;padding:1px 5px;border-radius:6px;white-space:nowrap;
@@ -290,6 +316,7 @@ html,body{height:100%;font-family:'Segoe UI',Tahoma,'Leelawadee UI',sans-serif}
 <input type="file" id="filein" multiple accept=".zip,.shp,.dbf,.prj,.cpg,.shx" style="display:none">
 <div class="kmnow" id="kmNow"></div>
 <div class="toast" id="toast"></div>
+<div class="arcard" id="arCard" style="display:none"></div>
 
 <div class="modal" id="shareModal">
   <div class="mbox">
@@ -1687,11 +1714,10 @@ setTimeout(computeFx,300);
 var AREA={}, areaReady=false, areaShow=false, areaFocus=null;
 var areaLayer=L.featureGroup().addTo(map);
 var PC=window.polygonClipping;
-function m2Txt(m2){
-  const r=Math.floor(m2/1600), g=Math.floor((m2-r*1600)/400), w=(m2-r*1600-g*400)/4;
-  return `${r} ไร่ ${g} งาน ${w.toFixed(1)} ตร.วา`;
-}
-function m2Short(m2){const r=Math.floor(m2/1600),g=Math.floor((m2-r*1600)/400),w=(m2-r*1600-g*400)/4;return `${r}-${g}-${w.toFixed(1)}`;}
+function rngw(m2){const tw=Math.round(m2/4*10)/10, r=Math.floor(tw/400), g=Math.floor((tw-r*400)/100);
+  return [r,g,Math.round((tw-r*400-g*100)*10)/10];}
+function m2Txt(m2){const [r,g,w]=rngw(m2);return `${r.toLocaleString()} ไร่ - ${g} งาน - ${w.toFixed(1)} ตร.ว.`;}
+function m2Short(m2){const [r,g,w]=rngw(m2);return `${r}-${g}-${w.toFixed(1)}`;}
 // เนื้อที่ (ตร.ม.) จากรูปแปลง [outer, holes...] ในพิกัด lon/lat → คำนวณบน UTM 47N
 function ringM2(r){
   const u=r.map(([lo,la])=>proj4(UTM47,[lo,la]));
@@ -1940,6 +1966,57 @@ function showAreaHere(name){
   }else showAreaRoute(name);
 }
 
+
+/* ---- การ์ดสรุปเนื้อที่ของสายทางที่เลือก (ทุกแปลงที่ทับซ้อนป่า + ยอดรวม) ---- */
+var cardKey=null, cardMin=window.innerWidth<600;   // จอมือถือเริ่มแบบย่อ
+function pieceKm(name,pc){
+  if(pc._kr) return pc._kr;
+  let lo=Infinity,hi=-Infinity;
+  for(const v of pc.rings[0]){const k=kmOfV(name,v); if(k!=null){if(k<lo)lo=k;if(k>hi)hi=k;}}
+  return pc._kr=(lo<=hi)?[lo,hi]:null;
+}
+function updateAreaCard(){
+  const el=document.getElementById('arCard');
+  const name=(areaShow&&areaReady)?areaFocus:null;
+  if(!name||!AREA[name]){el.style.display='none';cardKey=null;return;}
+  const key=name+'|'+cardMin;
+  el.style.display='block';
+  if(key===cardKey)return; cardKey=key;
+  const rec=AREA[name];
+  const rows=[];
+  for(const kind of ['nrf','perm']){const R=rec[kind]; if(!R)continue;
+    R.pieces.forEach((pc,pi)=>rows.push({kind,pi,pc,kr:pieceKm(name,pc)}));}
+  rows.sort((a,b)=>(a.kr?a.kr[0]:0)-(b.kr?b.kr[0]:0));
+  const tot=k=>rec[k]?`<b>${m2Txt(rec[k].m2)}</b><small>${rec[k].m2.toLocaleString(undefined,{maximumFractionDigits:2})} ตร.ม. · ${rec[k].pieces.length} แปลง</small>`:'—';
+  el.innerHTML=`<div class="ach"><b>🌲 ${name}</b><span>เขตทางในเขตป่า</span>
+      <button id="acMin">${cardMin?'▲':'▼'}</button><button id="acX">✕</button></div>
+    ${cardMin?`<div class="acmini">
+      ${rec.nrf?`<span class="nrf">ส. <b>${m2Short(rec.nrf.m2)}</b></span>`:''}
+      ${rec.perm?`<span class="perm">ถ. <b>${m2Short(rec.perm.m2)}</b></span>`:''}
+      ${rec.nrf&&rec.perm?`<span class="any">รวม <b>${m2Short(rec.any)}</b></span>`:''}
+      <span class="u">ไร่-งาน-ตร.ว. · ${rows.length} แปลง</span></div>`:`<div class="acsum">
+      ${rec.nrf?`<div class="acr nrf"><span>ป่าสงวนแห่งชาติ</span>${tot('nrf')}</div>`:''}
+      ${rec.perm?`<div class="acr perm"><span>ป่าไม้ถาวร</span>${tot('perm')}</div>`:''}
+      ${rec.nrf&&rec.perm?`<div class="acr any"><span>รวมไม่นับซ้ำ</span><b>${m2Txt(rec.any)}</b><small>${rec.any.toLocaleString(undefined,{maximumFractionDigits:2})} ตร.ม. · ส่วนที่อยู่ทั้ง 2 ป่านับครั้งเดียว</small></div>`:''}
+    </div>`}
+    ${cardMin?'':`<div class="aclist">${rows.map((r,i)=>{
+      const R=rec[r.kind], lab=(R.pieces.length>1?'แปลง '+(r.pi+1):'แปลงเดียว');
+      return `<div class="aci ${r.kind}" data-i="${i}"><span class="k">${r.kind==='nrf'?'ส.':'ถ.'}</span>
+        <span class="t">${r.kr?'กม. '+fmtKm(Math.round(r.kr[0]))+(r.kr[1]-r.kr[0]>=1?' – '+fmtKm(Math.round(r.kr[1])):''):lab}</span>
+        <span class="v">${m2Short(r.pc.m2)}</span></div>`;}).join('')}</div>
+    <div class="acfoot">ไร่-งาน-ตร.ว. · ส. = ป่าสงวน · ถ. = ป่าถาวร · แตะรายการเพื่อซูมไปแปลงนั้น</div>`}`;
+  el.querySelector('#acX').onclick=()=>{el.style.display='none';cardKey='hidden';areaFocus=null;refreshArea();};
+  el.querySelector('#acMin').onclick=()=>{cardMin=!cardMin;updateAreaCard();};
+  el.querySelectorAll('.aci').forEach(d=>d.onclick=()=>{
+    const r=rows[+d.dataset.i];
+    if(window.innerWidth<600&&!cardMin){cardMin=true;updateAreaCard();}
+    map.fitBounds(L.latLngBounds(r.pc.rings[0].map(([lo,la])=>[la,lo])),{padding:[90,50],maxZoom:19});
+    setTimeout(()=>L.popup({maxWidth:320,autoPanPaddingTopLeft:[10,(document.querySelector('.topbar').offsetHeight||90)+12],autoPanPaddingBottomRight:[10,150]}).setLatLng(L.latLngBounds(r.pc.rings[0].map(([lo,la])=>[la,lo])).getCenter())
+      .setContent(areaPopup(name,r.kind,r.pi)).openOn(map),450);
+  });
+  L.DomEvent.disableClickPropagation(el); L.DomEvent.disableScrollPropagation(el);
+}
+
 /* ---- วาดพื้นที่ทับซ้อน + หมุดมุม + เส้นหน้าตัด + ป้ายเนื้อที่ ---- */
 function vLab(R,pi,ri,vi){return (R.pieces.length>1?(pi+1)+'-':'')+(ri?'h'+ri+'.':'')+(vi+1);}
 function pairTxt(R,pi,D,c,ri,vi){
@@ -1950,6 +2027,8 @@ function pairTxt(R,pi,D,c,ri,vi){
 function refreshArea(){
   if(!areaLayer)return;
   areaLayer.clearLayers();
+  updateAreaCard();
+  document.body.classList.toggle('accard',document.getElementById('arCard').style.display==='block');
   if(!areaShow||!areaReady)return;
   const z=map.getZoom(), b=map.getBounds().pad(0.1);
   for(const [name,rec] of Object.entries(AREA)){
@@ -1961,7 +2040,7 @@ function refreshArea(){
         const open=e=>{
           if(calState||addMode||pickMode)return;
           L.DomEvent.stop(e);
-          L.popup({maxWidth:320}).setLatLng(e.latlng).setContent(areaPopup(name,kind,pi)).openOn(map);
+          L.popup({maxWidth:320,autoPanPaddingTopLeft:[10,(document.querySelector('.topbar').offsetHeight||90)+12],autoPanPaddingBottomRight:[10,150]}).setLatLng(e.latlng).setContent(areaPopup(name,kind,pi)).openOn(map);
         };
         const pb=L.latLngBounds(pc.rings[0].map(([lo,la])=>[la,lo]));
         if(!b.intersects(pb))return;
