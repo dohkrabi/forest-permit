@@ -1484,9 +1484,9 @@ function computeFx(){
       }
     }
     if(k<FRINGS.length){setTimeout(step,0);return;}
-    const res=[];   // ตัดจุดซ้ำ (ห่างกัน < ~0.5 ม.)
+    const res=[];   // ตัดจุดซ้ำ (ห่างกัน < ~5 ซม. = จุดเดียวกันที่นับจาก 2 ขอบ)
     for(const p of out)
-      if(!res.some(q=>q.route===p.route&&q.kind===p.kind&&Math.abs(q.lat-p.lat)<5e-6&&Math.abs(q.lon-p.lon)<5e-6)) res.push(p);
+      if(!res.some(q=>q.route===p.route&&q.kind===p.kind&&Math.abs(q.lat-p.lat)<5e-7&&Math.abs(q.lon-p.lon)<5e-7)) res.push(p);
     FX=res; fxReady=true; refreshFx();
   };
   step();
