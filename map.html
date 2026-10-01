@@ -175,7 +175,7 @@ html,body{height:100%;font-family:'Segoe UI',Tahoma,'Leelawadee UI',sans-serif}
 .arv div{position:relative;width:11px;height:11px;transform:translate(-50%,-50%);border-radius:50%;
   background:#fff;border:2.5px solid #546e7a;box-shadow:0 1px 3px rgba(0,0,0,.5);cursor:pointer}
 .arv.forest.nrf div{border-color:#00b8d4}.arv.forest.perm div{border-color:#d500f9}
-.arv.mark div{border-color:#2e7d32}.arv.fx div{border-color:#ff1744;border-radius:2px;transform:translate(-50%,-50%) rotate(45deg)}
+.arv.mark div{border-color:#2e7d32}.arv.div div{border-color:#ff9100;width:9px;height:9px;border-width:2.5px}.arv.fx div{border-color:#ff1744;border-radius:2px;transform:translate(-50%,-50%) rotate(45deg)}
 .arv span{position:absolute;left:50%;bottom:135%;transform:translateX(-50%);background:rgba(26,28,30,.85);
   color:#fff;font-size:10px;font-weight:700;padding:0 4px;border-radius:4px;white-space:nowrap}
 .arv.fx span{transform:translateX(-50%) rotate(-45deg)}
@@ -225,6 +225,14 @@ html,body{height:100%;font-family:'Segoe UI',Tahoma,'Leelawadee UI',sans-serif}
     <div style="color:#fff;font-size:12px;line-height:1.5;color:rgba(255,255,255,.75)">
       พื้นที่ที่ <b style="color:#ffea00">เขตทาง ∩ ป่าสงวน</b> (ทึบเหลือง) · <b style="color:#ff9e40">เขตทาง ∩ ป่าถาวร</b> (ประส้ม) ·
       ส. = ป่าสงวน · ถ. = ป่าถาวร (ไร่-งาน-ตร.วา)</div>
+    <div style="display:flex;align-items:center;gap:8px;margin-top:8px;color:#fff;font-size:12.5px">
+      <span style="white-space:nowrap">จุดแบ่งตามแนวเขตทาง</span>
+      <select id="arStep" style="flex:1;border-radius:8px;padding:5px 8px;font-family:inherit;font-size:12.5px">
+        <option value="0">ไม่แบ่ง (เฉพาะมุม)</option><option value="10">ทุก 10 ม.</option>
+        <option value="20">ทุก 20 ม.</option><option value="25">ทุก 25 ม.</option>
+        <option value="50">ทุก 50 ม.</option><option value="100">ทุก 100 ม.</option>
+      </select>
+    </div>
     <div class="klist" id="arList"></div>
     <div class="rpact">
       <button id="arAll">ดูทุกสาย</button>
@@ -439,7 +447,8 @@ for(const [name,e] of Object.entries(BUILTIN)){
     const i=e.info||{};
     const hasInfo=i.rai!=null;
     L.polygon(rings,{color:col,weight:3,fillColor:col,fillOpacity:.12}).addTo(g)
-      .bindPopup(`<div class="pp"><b>เขตทาง ${name}</b>${hasInfo?`<br>เนื้อที่ ${i.rai.toFixed(0)} ไร่ ${i.ngan.toFixed(0)} งาน ${i.wa.toFixed(0)} ตร.วา<br><span style="color:#777">(${Math.round(i.area_m2).toLocaleString()} ตร.ม.)</span>`:""}<br><a class="nav" href="#" onclick="pickAt(lastTapLL);return false">🎯 ดูพิกัดตรงนี้</a></div>`);
+      .bindPopup(`<div class="pp"><b>เขตทาง ${name}</b>${hasInfo?`<br>เนื้อที่ ${i.rai.toFixed(0)} ไร่ ${i.ngan.toFixed(0)} งาน ${i.wa.toFixed(0)} ตร.วา<br><span style="color:#777">(${Math.round(i.area_m2).toLocaleString()} ตร.ม.)</span>`:""}<br><a class="nav" href="#" onclick="pickAt(lastTapLL);return false">🎯 ดูพิกัดตรงนี้</a>
+      <a class="nav" style="background:#2e7d32;margin-left:4px" href="#" onclick='showAreaHere(${JSON.stringify(name)});return false'>🌲 พื้นที่ในเขตป่า</a></div>`);
   }
   if(e.lines&&e.lines.length){
     for(const ln of e.lines)
@@ -1747,6 +1756,94 @@ function computeArea(){
   step();
 }
 
+
+/* ---- จุดแบ่งระยะตามแนวเขตทาง (ช่วงที่อยู่ในเขตป่า) — วางตรง กม. ของสายทาง ---- */
+var AREA_STEP=20;
+try{const v=localStorage.getItem('khet_area_step'); if(v!=null&&v!=='') AREA_STEP=+v;}catch(e){}
+// ขอบ a→b ทับแนวเขตทางหรือไม่ (จุดกึ่งกลางห่างเส้นเขตทาง < 5 ซม.)
+function onRowEdge(name,a,b){
+  const m={lat:(a[1]+b[1])/2,lng:(a[0]+b[0])/2};
+  const kx=Math.cos(m.lat*Math.PI/180)*111320, ky=110540, e=2e-6;
+  for(const R of RRINGS){
+    if(R.name!==name)continue;
+    const bx=R.box; if(m.lng<bx[0]-e||m.lng>bx[2]+e||m.lat<bx[1]-e||m.lat>bx[3]+e)continue;
+    const r=R.ring;
+    for(let i=0;i<r.length-1;i++){
+      const p=r[i],q=r[i+1];
+      if(Math.max(p[0],q[0])<m.lng-e||Math.min(p[0],q[0])>m.lng+e||Math.max(p[1],q[1])<m.lat-e||Math.min(p[1],q[1])>m.lat+e)continue;
+      const vx=(q[0]-p[0])*kx,vy=(q[1]-p[1])*ky,wx=(m.lng-p[0])*kx,wy=(m.lat-p[1])*ky,l2=vx*vx+vy*vy;
+      let t=l2?(wx*vx+wy*vy)/l2:0; t=Math.max(0,Math.min(1,t));
+      if(Math.hypot(wx-vx*t,wy-vy*t)<0.05) return true;
+    }
+  }
+  return false;
+}
+function kmOfV(name,v){const q=routeInfo(name,L.latLng(v[1],v[0]));return (q&&q.km!=null)?q.km:null;}
+function densPiece(name,pc,step){
+  if(pc._dens&&pc._dens.step===step) return pc._dens;
+  const rings=[],vcls=[];
+  pc.rings.forEach((r,ri)=>{
+    const R2=[],C2=[];
+    for(let i=0;i<r.length;i++){
+      R2.push(r[i]); C2.push(pc.vcls[ri][i]);
+      if(!step)continue;
+      const a=r[i],b=r[(i+1)%r.length];
+      const len=mDist({lat:a[1],lng:a[0]},{lat:b[1],lng:b[0]});
+      if(len<step*0.6||!onRowEdge(name,a,b))continue;
+      const lerp=t=>[a[0]+(b[0]-a[0])*t,a[1]+(b[1]-a[1])*t];
+      const ka=kmOfV(name,a),kb=kmOfV(name,b), ts=[];
+      if(ka!=null&&kb!=null&&Math.abs(kb-ka)>step*0.3){
+        // ตรง กม. ที่หารด้วยระยะลงตัว (ปรับละเอียด 2 รอบเพื่อให้ตรง กม. จริง)
+        const lo=Math.min(ka,kb),hi=Math.max(ka,kb);
+        for(let k=Math.ceil((lo+1)/step)*step;k<hi-1;k+=step){
+          let t=(k-ka)/(kb-ka);
+          for(let it=0;it<2;it++){const kp=kmOfV(name,lerp(t)); if(kp==null)break; t+=(k-kp)/(kb-ka);}
+          if(t*len>=3&&(1-t)*len>=3) ts.push({t,k});   // ข้ามจุดที่ชิดมุมไม่ถึง 3 ม.
+        }
+      }else{
+        for(let d=step;d<=len-3;d+=step) ts.push({t:d/len,k:null});
+      }
+      ts.sort((x,y)=>x.t-y.t);
+      for(const s of ts){
+        R2.push(lerp(s.t));
+        C2.push({t:'จุดแบ่งแนวเขตทาง'+(s.k!=null?' กม.'+fmtKm(Math.round(s.k)):''),c:'div'});
+      }
+    }
+    rings.push(R2); vcls.push(C2);
+  });
+  return pc._dens={step,rings,vcls};
+}
+function showAreaRoute(name){
+  if(!areaReady){toast('กำลังคำนวณพื้นที่… ลองใหม่อีกครู่',2600);return;}
+  const r=AREA[name];
+  if(!r){toast(`${name} ไม่มีส่วนที่อยู่ในเขตป่า`,2600);return;}
+  areaShow=true;areaFocus=name;document.getElementById('tbArea').classList.add('on');
+  closeAllPanels(); map.closePopup();
+  const g=L.featureGroup();
+  for(const k of ['nrf','perm']) if(r[k]) r[k].pieces.forEach(p=>L.polygon(p.rings[0].map(([lo,la])=>[la,lo])).addTo(g));
+  try{map.fitBounds(g.getBounds(),{padding:[70,40]});}catch(e){}
+  refreshArea();
+  toast(`${name} · แตะพื้นที่เพื่อดูเนื้อที่ · ซูม 16+ เห็นหมุดมุม · 19+ เห็นเลขมุม`,4200);
+}
+function showAreaHere(name){
+  // ซูมไปแปลงที่ใกล้จุดที่แตะ (ถ้ามี) ไม่งั้นแสดงทั้งสาย
+  const ll=lastTapLL;
+  if(!areaReady){toast('กำลังคำนวณพื้นที่… ลองใหม่อีกครู่',2600);return;}
+  const r=AREA[name]; if(!r){toast(`${name} ไม่มีส่วนที่อยู่ในเขตป่า`,2600);return;}
+  let best=null;
+  if(ll) for(const k of ['nrf','perm']) if(r[k]) r[k].pieces.forEach(p=>{
+    const b=L.latLngBounds(p.rings[0].map(([lo,la])=>[la,lo]));
+    const d=b.contains(ll)?0:ll.distanceTo(b.getCenter());
+    if(!best||d<best.d) best={d,b};
+  });
+  if(best&&best.d<300){
+    areaShow=true;areaFocus=name;document.getElementById('tbArea').classList.add('on');
+    closeAllPanels(); map.closePopup();
+    map.fitBounds(best.b,{padding:[90,50],maxZoom:19}); refreshArea();
+    toast('แตะพื้นที่เพื่อดูเนื้อที่ · แตะหมุดมุมเพื่อดูพิกัด',3600);
+  }else showAreaRoute(name);
+}
+
 /* ---- วาดพื้นที่ทับซ้อน + หมุดมุม ---- */
 function refreshArea(){
   if(!areaLayer)return;
@@ -1768,10 +1865,11 @@ function refreshArea(){
           });
         if(z<16)return;
         const multi=R.pieces.length>1;
-        pc.rings.forEach((r,ri)=>r.forEach((v,vi)=>{
+        const D=densPiece(name,pc,AREA_STEP);
+        D.rings.forEach((r,ri)=>r.forEach((v,vi)=>{
           if(!b.contains([v[1],v[0]]))return;
           const lab=(multi?(pi+1)+'-':'')+(ri?'h'+ri+'.':'')+(vi+1);
-          const c=pc.vcls[ri][vi];
+          const c=D.vcls[ri][vi];
           const mk=L.marker([v[1],v[0]],{zIndexOffset:600,bubblingMouseEvents:false,
             icon:L.divIcon({className:'arv '+c.c+' '+kind,html:z>=19?`<div><span>${lab}</span></div>`:'<div></div>',iconSize:[0,0]})}).addTo(areaLayer);
           mk.on('click',e=>{
@@ -1789,7 +1887,7 @@ function areaPopup(name,kind,pi){
   const rec=AREA[name], R=rec[kind], pc=R.pieces[pi];
   return `<div class="pp"><b>เขตทางในเขต${FX_KIND[kind].n}</b><div style="color:#1565c0;font-weight:600">${name}${R.pieces.length>1?` · แปลงที่ ${pi+1}/${R.pieces.length}`:''}</div>
   <table>
-  <tr><td>แปลงนี้</td><td><b>${m2Txt(pc.m2)}</b><br><span style="color:#777">(${pc.m2.toLocaleString(undefined,{maximumFractionDigits:1})} ตร.ม. · ${pc.rings[0].length} มุม)</span></td></tr>
+  <tr><td>แปลงนี้</td><td><b>${m2Txt(pc.m2)}</b><br><span style="color:#777">(${pc.m2.toLocaleString(undefined,{maximumFractionDigits:1})} ตร.ม. · ${pc.rings[0].length} มุม${AREA_STEP?` + จุดแบ่ง ${densPiece(name,pc,AREA_STEP).rings[0].length-pc.rings[0].length} จุด`:''})</span></td></tr>
   ${R.pieces.length>1?`<tr><td>รวม${FX_KIND[kind].n}</td><td>${m2Txt(R.m2)}</td></tr>`:''}
   </table>
   <a class="nav" href="#" onclick='exportAreaCsv(${JSON.stringify(name)});return false'>⤓ CSV พิกัดมุม</a>
@@ -1812,11 +1910,7 @@ function renderAreaList(){
       ${r.nrf?`<span style="color:#80deea">ส. ${m2Short(r.nrf.m2)}</span>`:''}
       ${r.perm?` <span style="color:#f48fb1">ถ. ${m2Short(r.perm.m2)}</span>`:''}</span></span>`;
     const b1=document.createElement('button'); b1.textContent='ดู';
-    b1.onclick=()=>{areaShow=true;areaFocus=name;document.getElementById('tbArea').classList.add('on');
-      closeAllPanels();
-      const g=L.featureGroup();for(const k of ['nrf','perm'])if(r[k])r[k].pieces.forEach(p=>L.polygon(p.rings[0].map(([lo,la])=>[la,lo])).addTo(g));
-      try{map.fitBounds(g.getBounds(),{padding:[70,40]});}catch(e){}
-      refreshArea(); toast(`${name} · ซูมระดับ 19+ เห็นเลขมุม · แตะพื้นที่ดูเนื้อที่ · แตะมุมดูพิกัด`,4200);};
+    b1.onclick=()=>showAreaRoute(name);
     const b2=document.createElement('button'); b2.textContent='CSV'; b2.onclick=()=>exportAreaCsv(name);
     d.appendChild(b1); d.appendChild(b2); el.appendChild(d);
   }
@@ -1838,9 +1932,10 @@ function areaRows(names){
       sum.push([name,FX_KIND[kind].n,R.pieces.length,R.m2.toFixed(2),m2Txt(R.m2)]);
       R.pieces.forEach((pc,pi)=>{
         if(R.pieces.length>1) sum.push(['',`  แปลงที่ ${pi+1}`,'',pc.m2.toFixed(2),m2Txt(pc.m2)]);
-        pc.rings.forEach((r,ri)=>r.forEach((v,vi)=>{
+        const D=densPiece(name,pc,AREA_STEP);
+        D.rings.forEach((r,ri)=>r.forEach((v,vi)=>{
           const ll=L.latLng(v[1],v[0]), ri2=routeInfo(name,ll), u=utmOf(v[1],v[0]);
-          pts.push([name,FX_KIND[kind].n,pi+1,ri?'รูเจาะ '+ri:'วงนอก',vi+1,pc.vcls[ri][vi].t,
+          pts.push([name,FX_KIND[kind].n,pi+1,ri?'รูเจาะ '+ri:'วงนอก',vi+1,D.vcls[ri][vi].t,
             (ri2&&ri2.km!=null)?fmtKm(Math.round(ri2.km)):'',(ri2&&ri2.side)||'',ri2?ri2.off.toFixed(1):'',
             v[1].toFixed(7),v[0].toFixed(7),u?u.x.toFixed(3):'',u?u.y.toFixed(3):'']);
         }));
@@ -1864,7 +1959,8 @@ function exportAreaKml(name){
   let pm='';
   for(const n of names){const rec=AREA[n]; if(!rec)continue;
     for(const kind of ['nrf','perm']){const R=rec[kind]; if(!R)continue;
-      R.pieces.forEach((pc,pi)=>{
+      R.pieces.forEach((pc0,pi)=>{
+        const pc=Object.assign({},pc0,{rings:densPiece(n,pc0,AREA_STEP).rings});
         pm+=`<Placemark><name>${n} ใน${FX_KIND[kind].n}${R.pieces.length>1?' แปลง '+(pi+1):''}</name><styleUrl>#${kind}</styleUrl>
 <description>${m2Txt(pc.m2)} (${pc.m2.toFixed(2)} ตร.ม.)</description>
 <Polygon><outerBoundaryIs><LinearRing><coordinates>${co(pc.rings[0])}</coordinates></LinearRing></outerBoundaryIs>${
@@ -1885,6 +1981,9 @@ document.getElementById('tbArea').onclick=()=>{
 document.getElementById('arAll').onclick=()=>{areaFocus=null;areaShow=true;refreshArea();toast('แสดงพื้นที่ทุกสาย',2000);};
 document.getElementById('arHide').onclick=()=>{areaShow=false;areaFocus=null;document.getElementById('tbArea').classList.remove('on');refreshArea();closeAllPanels();};
 document.getElementById('arCsv').onclick=()=>exportAreaCsv(null);
+(function(){const sel=document.getElementById('arStep'); sel.value=String(AREA_STEP); if(!sel.value){sel.value='20';AREA_STEP=20;}
+  sel.onchange=()=>{AREA_STEP=+sel.value; try{localStorage.setItem('khet_area_step',sel.value);}catch(e){}
+    refreshArea(); toast(AREA_STEP?`เพิ่มจุดแบ่งทุก ${AREA_STEP} ม. ตามแนวเขตทาง (ตรง กม.)`:'แสดงเฉพาะมุมแปลง',2600);};})();
 document.getElementById('arKml').onclick=()=>exportAreaKml(null);
 document.getElementById('arClose').onclick=closeAllPanels;
 hookGroup(areaLayer);
