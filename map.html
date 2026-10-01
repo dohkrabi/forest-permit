@@ -2219,7 +2219,7 @@ hookGroup(areaLayer);
 const C_DONE="#ffffff", C_NOREQ="#8a8a8a";
 // override สถานะสายทาง (แก้/ถอนได้ที่นี่) — 'noreq'=บังคับเทา, 'done'=บังคับขาว
 // 'noreq'=บังคับเทา(ไม่มีคำขอ) · 'done'=บังคับขาว(ลงตรวจแล้ว) · 'hasreq'=บังคับสีปกติ(มีคำขอ รอดำเนินการ)
-const STATUS_OVERRIDE={"ทล.4156 นครฯ":"noreq","ทล.4046":"hasreq"};
+const STATUS_OVERRIDE={"ทล.4156 นครฯ":"hasreq","ทล.4046":"hasreq","ทล.4041":"hasreq","ทล.4203":"hasreq","ทล.4204":"hasreq"};  // สายพ่วงกับคำขออื่น (ไม่ใช่สายที่ยังไม่ได้ยื่น)
 const ST_DONE=['ลงตรวจแล้ว','เซ็นรายงานแล้ว','ได้รับอนุญาต'];
 function recolorGroup(name,color,ring){
   const g=groups[name]; if(!g) return;
