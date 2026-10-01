@@ -175,7 +175,11 @@ html,body{height:100%;font-family:'Segoe UI',Tahoma,'Leelawadee UI',sans-serif}
 .arv div{position:relative;width:11px;height:11px;transform:translate(-50%,-50%);border-radius:50%;
   background:#fff;border:2.5px solid #546e7a;box-shadow:0 1px 3px rgba(0,0,0,.5);cursor:pointer}
 .arv.forest.nrf div{border-color:#00b8d4}.arv.forest.perm div{border-color:#d500f9}
-.arv.mark div{border-color:#2e7d32}.arv.div div{border-color:#ff9100;width:9px;height:9px;border-width:2.5px}.arv.fx div{border-color:#ff1744;border-radius:2px;transform:translate(-50%,-50%) rotate(45deg)}
+.arv.mark div{border-color:#2e7d32}.arv.pair div{border-color:#e53935;width:9px;height:9px;border-width:2.5px}
+.arlab{background:transparent;border:none}
+.arlab div{display:inline-block;transform:translate(-50%,-50%);background:rgba(26,28,30,.88);color:#ffea00;font-size:12px;font-weight:800;
+  padding:3px 8px;border-radius:8px;white-space:nowrap;text-align:center;line-height:1.25;border:1.5px solid #ffea00;cursor:pointer}
+.arlab div small{display:block;color:#fff;font-size:10px;font-weight:600}.arv.div div{border-color:#ff9100;width:9px;height:9px;border-width:2.5px}.arv.fx div{border-color:#ff1744;border-radius:2px;transform:translate(-50%,-50%) rotate(45deg)}
 .arv span{position:absolute;left:50%;bottom:135%;transform:translateX(-50%);background:rgba(26,28,30,.85);
   color:#fff;font-size:10px;font-weight:700;padding:0 4px;border-radius:4px;white-space:nowrap}
 .arv.fx span{transform:translateX(-50%) rotate(-45deg)}
@@ -226,7 +230,7 @@ html,body{height:100%;font-family:'Segoe UI',Tahoma,'Leelawadee UI',sans-serif}
       พื้นที่ที่ <b style="color:#ffea00">เขตทาง ∩ ป่าสงวน</b> (ทึบเหลือง) · <b style="color:#ff9e40">เขตทาง ∩ ป่าถาวร</b> (ประส้ม) ·
       ส. = ป่าสงวน · ถ. = ป่าถาวร (ไร่-งาน-ตร.วา)</div>
     <div style="display:flex;align-items:center;gap:8px;margin-top:8px;color:#fff;font-size:12.5px">
-      <span style="white-space:nowrap">จุดแบ่งตามแนวเขตทาง</span>
+      <span style="white-space:nowrap">หน้าตัด/จุดคู่</span>
       <select id="arStep" style="flex:1;border-radius:8px;padding:5px 8px;font-family:inherit;font-size:12.5px">
         <option value="0">ไม่แบ่ง (เฉพาะมุม)</option><option value="10">ทุก 10 ม.</option>
         <option value="20">ทุก 20 ม.</option><option value="25">ทุก 25 ม.</option>
@@ -1779,39 +1783,131 @@ function onRowEdge(name,a,b){
   return false;
 }
 function kmOfV(name,v){const q=routeInfo(name,L.latLng(v[1],v[0]));return (q&&q.km!=null)?q.km:null;}
+// เส้นหน้าตัด (ตั้งฉากแนวกึ่งกลางถนน) ที่ระยะ d ยาวข้างละ W ม.
+function secAt(L0,d,W){
+  d=Math.max(0,Math.min(L0.len,d));
+  const A=interpLine(L0,Math.max(0,d-3)),B=interpLine(L0,Math.min(L0.len,d+3)),C=interpLine(L0,d);
+  const kx=Math.cos(C.lat*Math.PI/180)*111320, ky=110540;
+  let tx=(B.lng-A.lng)*kx, ty=(B.lat-A.lat)*ky; const n=Math.hypot(tx,ty)||1; tx/=n; ty/=n;
+  const nx=-ty, ny=tx;
+  return {C,p:[C.lng-nx*W/kx,C.lat-ny*W/ky],q:[C.lng+nx*W/kx,C.lat+ny*W/ky]};
+}
+function segXT(a,b,c,d){
+  const rx=b[0]-a[0],ry=b[1]-a[1],sx=d[0]-c[0],sy=d[1]-c[1];
+  const den=rx*sy-ry*sx; if(!den)return null;
+  const qx=c[0]-a[0],qy=c[1]-a[1];
+  const t=(qx*sy-qy*sx)/den,u=(qx*ry-qy*rx)/den;
+  return (t>=0&&t<=1&&u>=0&&u<=1)?{t,pt:[a[0]+t*rx,a[1]+t*ry]}:null;
+}
+// ตัดรูปหลายเหลี่ยม (เว้าได้) ด้วยสี่เหลี่ยมนูน — Sutherland–Hodgman
+function clipConvex(ring,quad){
+  let ar=0; for(let i=0;i<quad.length;i++){const a=quad[i],b=quad[(i+1)%quad.length];ar+=a[0]*b[1]-b[0]*a[1];}
+  const sg=ar>0?1:-1; let out=ring;
+  for(let i=0;i<quad.length&&out.length;i++){
+    const A=quad[i],B=quad[(i+1)%quad.length],inp=out; out=[];
+    const side=P=>sg*((B[0]-A[0])*(P[1]-A[1])-(B[1]-A[1])*(P[0]-A[0]));
+    for(let j=0;j<inp.length;j++){
+      const P=inp[j],Q=inp[(j+1)%inp.length],sp=side(P),sq=side(Q);
+      if(sp>=0) out.push(P);
+      if((sp>=0)!==(sq>=0)){const t=sp/(sp-sq);out.push([P[0]+(Q[0]-P[0])*t,P[1]+(Q[1]-P[1])*t]);}
+    }
+  }
+  return out;
+}
+// ตัดด้วยครึ่งระนาบ: เก็บด้านที่ sg*((P-C)·t) >= 0
+function clipHalf(ring,h,sg){
+  const f=P=>sg*((P[0]-h.C.lng)*h.kx*h.tx+(P[1]-h.C.lat)*h.ky*h.ty), out=[];
+  for(let j=0;j<ring.length;j++){
+    const P=ring[j],Q=ring[(j+1)%ring.length],sp=f(P),sq=f(Q);
+    if(sp>=0) out.push(P);
+    if((sp>=0)!==(sq>=0)){const t=sp/(sp-sq);out.push([P[0]+(Q[0]-P[0])*t,P[1]+(Q[1]-P[1])*t]);}
+  }
+  return out;
+}
+const llD=(a,b)=>mDist({lat:a[1],lng:a[0]},{lat:b[1],lng:b[0]});
+/* แบ่งแปลงด้วยหน้าตัดทุก step ม. (ตรง กม.) → ได้จุดคู่ 2 ฝั่ง (แนวเขตทาง ↔ แนวป่า) + เนื้อที่รายช่วง */
 function densPiece(name,pc,step){
   if(pc._dens&&pc._dens.step===step) return pc._dens;
-  const rings=[],vcls=[];
+  const base={step,rings:pc.rings,vcls:pc.vcls,secs:[],strips:[]};
+  if(!step) return pc._dens=base;
+  // หาเส้นกึ่งกลางที่ใกล้แปลงที่สุด
+  const ls=routeLines(name); if(!ls.length) return pc._dens=base;
+  let li=0,bo=Infinity;
+  ls.forEach((L0,i)=>{const o=projectLine(L0,L.latLng(pc.rings[0][0][1],pc.rings[0][0][0])).off;if(o<bo){bo=o;li=i;}});
+  const L0=ls[li], hasKm=!!kmPts(name,li);
+  let dmin=Infinity,dmax=-Infinity,omax=0;
+  for(const r of pc.rings) for(const v of r){const q=projectLine(L0,L.latLng(v[1],v[0]));
+    if(q.d<dmin)dmin=q.d;if(q.d>dmax)dmax=q.d;if(q.off>omax)omax=q.off;}
+  const st=[];
+  if(hasKm){
+    const ka=kmFromD(name,li,dmin),kb=kmFromD(name,li,dmax),lo=Math.min(ka,kb),hi=Math.max(ka,kb);
+    for(let k=Math.ceil(lo/step)*step;k<=hi;k+=step){const d=dFromKm(name,li,k);if(d!=null&&d>dmin+0.3&&d<dmax-0.3)st.push({d,k});}
+  }else for(let d=Math.ceil(dmin/step)*step;d<dmax-0.3;d+=step) if(d>dmin+0.3) st.push({d,k:null});
+  st.sort((a,b)=>a.d-b.d);
+  const W=Math.min(150,omax+10), ins=pc.rings.map(r=>r.map(()=>[])), secs=[];
+  for(const s of st){
+    const X=secAt(L0,s.d,W), hits=[];
+    const x0=Math.min(X.p[0],X.q[0]),x1=Math.max(X.p[0],X.q[0]),y0=Math.min(X.p[1],X.q[1]),y1=Math.max(X.p[1],X.q[1]);
+    pc.rings.forEach((r,ri)=>{for(let i=0;i<r.length;i++){
+      const a=r[i],b=r[(i+1)%r.length];
+      if((a[0]<x0&&b[0]<x0)||(a[0]>x1&&b[0]>x1)||(a[1]<y0&&b[1]<y0)||(a[1]>y1&&b[1]>y1))continue;
+      const h=segXT(a,b,X.p,X.q); if(h) hits.push({ri,i,t:h.t,pt:h.pt});}});
+    // ตัดจุดซ้ำ (ตัดผ่านมุมพอดี → นับจาก 2 ขอบ)
+    const uh=[]; for(const h of hits) if(!uh.some(q=>llD(q.pt,h.pt)<0.05)) uh.push(h);
+    if(uh.length<2) continue;
+    const j=secs.length; secs.push({d:s.d,k:s.k,X,at:[]});
+    for(const h of uh) ins[h.ri][h.i].push({t:h.t,pt:h.pt,sec:j});
+  }
+  // สร้างวงใหม่: แทรกจุดหน้าตัดลงบนขอบ
+  const rings=[],vcls=[],origIdx=pc.rings.map(()=>[]),pend=[];
   pc.rings.forEach((r,ri)=>{
     const R2=[],C2=[];
     for(let i=0;i<r.length;i++){
-      R2.push(r[i]); C2.push(pc.vcls[ri][i]);
-      if(!step)continue;
-      const a=r[i],b=r[(i+1)%r.length];
-      const len=mDist({lat:a[1],lng:a[0]},{lat:b[1],lng:b[0]});
-      if(len<step*0.6||!onRowEdge(name,a,b))continue;
-      const lerp=t=>[a[0]+(b[0]-a[0])*t,a[1]+(b[1]-a[1])*t];
-      const ka=kmOfV(name,a),kb=kmOfV(name,b), ts=[];
-      if(ka!=null&&kb!=null&&Math.abs(kb-ka)>step*0.3){
-        // ตรง กม. ที่หารด้วยระยะลงตัว (ปรับละเอียด 2 รอบเพื่อให้ตรง กม. จริง)
-        const lo=Math.min(ka,kb),hi=Math.max(ka,kb);
-        for(let k=Math.ceil((lo+1)/step)*step;k<hi-1;k+=step){
-          let t=(k-ka)/(kb-ka);
-          for(let it=0;it<2;it++){const kp=kmOfV(name,lerp(t)); if(kp==null)break; t+=(k-kp)/(kb-ka);}
-          if(t*len>=3&&(1-t)*len>=3) ts.push({t,k});   // ข้ามจุดที่ชิดมุมไม่ถึง 3 ม.
-        }
-      }else{
-        for(let d=step;d<=len-3;d+=step) ts.push({t:d/len,k:null});
-      }
-      ts.sort((x,y)=>x.t-y.t);
-      for(const s of ts){
-        R2.push(lerp(s.t));
-        C2.push({t:'จุดแบ่งแนวเขตทาง'+(s.k!=null?' กม.'+fmtKm(Math.round(s.k)):''),c:'div'});
+      const a=r[i],b=r[(i+1)%r.length],len=llD(a,b);
+      origIdx[ri][i]=R2.length; R2.push(a); C2.push(Object.assign({},pc.vcls[ri][i]));
+      const list=ins[ri][i].sort((x,y)=>x.t-y.t); if(!list.length)continue;
+      const onRow=onRowEdge(name,a,b);
+      for(const h of list){
+        const k=secs[h.sec].k, kt=k!=null?' กม.'+fmtKm(Math.round(k)):'';
+        if(h.t*len<1){secs[h.sec].at.push({ri,vi:origIdx[ri][i]});continue;}        // ชิดมุมเดิม → ใช้มุมเดิม
+        if((1-h.t)*len<1){pend.push({sec:h.sec,ri,i:(i+1)%r.length});continue;}
+        secs[h.sec].at.push({ri,vi:R2.length});
+        R2.push(h.pt); C2.push({t:(onRow?'จุดแบ่งแนวเขตทาง':'จุดคู่แนวป่า')+kt,c:onRow?'div':'pair'});
       }
     }
     rings.push(R2); vcls.push(C2);
   });
-  return pc._dens={step,rings,vcls};
+  for(const p of pend) secs[p.sec].at.push({ri:p.ri,vi:origIdx[p.ri][p.i]});
+  // ความกว้างหน้าตัด + จับคู่
+  for(const [j,S] of secs.entries()){
+    const seen=new Set(); S.at=S.at.filter(a=>{const k=a.ri+':'+a.vi;if(seen.has(k))return false;seen.add(k);return true;});
+    const P=S.at.map(a=>rings[a.ri][a.vi]);
+    // เรียงตามแนวหน้าตัด แล้วกว้าง = ระยะคู่ปลาย (ไม่รวมช่วงที่อยู่นอกแปลง ถ้ามีหลายช่วง)
+    const ord=S.at.map((a,i)=>({a,pt:P[i],u:llD(S.X.p,P[i])})).sort((x,y)=>x.u-y.u);
+    S.at=ord.map(o=>o.a);
+    let w=0; for(let i=0;i+1<ord.length;i+=2) w+=llD(ord[i].pt,ord[i+1].pt);
+    S.w=w;
+    for(const a of S.at){ const c=vcls[a.ri][a.vi]; c.sec=j;
+      if(S.k!=null&&!/กม\./.test(c.t)) c.t+=' · หน้าตัด กม.'+fmtKm(Math.round(S.k)); }
+  }
+  // เนื้อที่รายช่วง: ตัดแปลงด้วยแถบระหว่างหน้าตัดที่ติดกัน (กว้างข้างละ W) · ช่วงหัว/ท้ายต่อแถบยาวออกไปตามแนวถนน
+  const strips=[];
+  if(secs.length){
+    const tan=S=>{const C=S.X.C,kx=Math.cos(C.lat*Math.PI/180)*111320,ky=110540;
+      const A=interpLine(L0,Math.max(0,S.d-3)),B=interpLine(L0,Math.min(L0.len,S.d+3));
+      let tx=(B.lng-A.lng)*kx,ty=(B.lat-A.lat)*ky; const n=Math.hypot(tx,ty)||1;
+      return {dx:tx/n/kx,dy:ty/n/ky};};
+    const ext=(X,t,Lm)=>({p:[X.p[0]+t.dx*Lm,X.p[1]+t.dy*Lm],q:[X.q[0]+t.dx*Lm,X.q[1]+t.dy*Lm]});
+    const LONG=Math.max(300,(dmax-dmin)+200);
+    const bnd=[ext(secs[0].X,tan(secs[0]),-LONG)].concat(secs.map(S=>S.X),[ext(secs[secs.length-1].X,tan(secs[secs.length-1]),LONG)]);
+    const labs=['ต้นแปลง'].concat(secs.map(S=>S.k!=null?fmtKm(Math.round(S.k)):(S.d.toFixed(0)+' ม.')),['ท้ายแปลง']);
+    for(let i=0;i+1<bnd.length;i++){
+      const A=bnd[i],B=bnd[i+1],quad=[A.p,A.q,B.q,B.p];
+      let m2=0; pc.rings.forEach((r,ri)=>{const c=clipConvex(r,quad); if(c.length>=3) m2+=(ri?-1:1)*ringM2(c);});
+      strips.push({a:labs[i],b:labs[i+1],m2});
+    }
+  }
+  return pc._dens={step,rings,vcls,secs,strips};
 }
 function showAreaRoute(name){
   if(!areaReady){toast('กำลังคำนวณพื้นที่… ลองใหม่อีกครู่',2600);return;}
@@ -1844,7 +1940,13 @@ function showAreaHere(name){
   }else showAreaRoute(name);
 }
 
-/* ---- วาดพื้นที่ทับซ้อน + หมุดมุม ---- */
+/* ---- วาดพื้นที่ทับซ้อน + หมุดมุม + เส้นหน้าตัด + ป้ายเนื้อที่ ---- */
+function vLab(R,pi,ri,vi){return (R.pieces.length>1?(pi+1)+'-':'')+(ri?'h'+ri+'.':'')+(vi+1);}
+function pairTxt(R,pi,D,c,ri,vi){
+  if(c.sec==null)return '';
+  const S=D.secs[c.sec]; const o=S.at.filter(a=>!(a.ri===ri&&a.vi===vi)).map(a=>vLab(R,pi,a.ri,a.vi));
+  return o.length?` · คู่กับมุมที่ ${o.join(', ')} · กว้าง ${S.w.toFixed(2)} ม.`:'';
+}
 function refreshArea(){
   if(!areaLayer)return;
   areaLayer.clearLayers();
@@ -1856,27 +1958,45 @@ function refreshArea(){
       const R=rec[kind]; if(!R||!map.hasLayer(FX_KIND[kind].layer))continue;
       const col=kind==='nrf'?'#ffea00':'#ff6d00';
       R.pieces.forEach((pc,pi)=>{
+        const open=e=>{
+          if(calState||addMode||pickMode)return;
+          L.DomEvent.stop(e);
+          L.popup({maxWidth:320}).setLatLng(e.latlng).setContent(areaPopup(name,kind,pi)).openOn(map);
+        };
+        const pb=L.latLngBounds(pc.rings[0].map(([lo,la])=>[la,lo]));
+        if(!b.intersects(pb))return;
         L.polygon(pc.rings.map(r=>r.map(([lo,la])=>[la,lo])),
           {color:col,weight:2.5,fillColor:col,fillOpacity:.38,dashArray:kind==='perm'?'6 4':null})
-          .addTo(areaLayer).on('click',e=>{
-            if(calState||addMode||pickMode)return;
-            L.DomEvent.stop(e);
-            L.popup({maxWidth:300}).setLatLng(e.latlng).setContent(areaPopup(name,kind,pi)).openOn(map);
-          });
-        if(z<16)return;
-        const multi=R.pieces.length>1;
+          .addTo(areaLayer).on('click',open);
         const D=densPiece(name,pc,AREA_STEP);
+        // ป้ายเนื้อที่ (กลางหน้าตัดที่กว้างที่สุด)
+        if(z>=15&&pc.m2>=20){
+          // วางป้ายกลางหน้าตัดตัวกลางของแปลง (ไม่มีหน้าตัด → จุดเฉลี่ยมุม)
+          let at=null; const ok=D.secs.filter(S=>S.at.length>=2);
+          if(ok.length){const S=ok[Math.floor(ok.length/2)],p1=D.rings[S.at[0].ri][S.at[0].vi],p2=D.rings[S.at[1].ri][S.at[1].vi];
+            at=L.latLng((p1[1]+p2[1])/2,(p1[0]+p2[0])/2);}
+          else{const r=pc.rings[0];at=L.latLng(r.reduce((s,v)=>s+v[1],0)/r.length,r.reduce((s,v)=>s+v[0],0)/r.length);}
+          L.marker(at,{zIndexOffset:700,icon:L.divIcon({className:'arlab',iconSize:[0,0],
+            html:`<div>${m2Short(pc.m2)} ไร่<small>${pc.m2.toLocaleString(undefined,{maximumFractionDigits:1})} ตร.ม.</small></div>`})})
+            .addTo(areaLayer).on('click',open);
+        }
+        if(z<16)return;
+        // เส้นหน้าตัด (เชื่อมคู่จุด)
+        for(const S of D.secs){
+          const P=S.at.map(a=>D.rings[a.ri][a.vi]);
+          for(let i=0;i+1<P.length;i+=2)
+            L.polyline([[P[i][1],P[i][0]],[P[i+1][1],P[i+1][0]]],{color:'#fff',weight:1.5,dashArray:'4 4',opacity:.9,interactive:false}).addTo(areaLayer);
+        }
         D.rings.forEach((r,ri)=>r.forEach((v,vi)=>{
           if(!b.contains([v[1],v[0]]))return;
-          const lab=(multi?(pi+1)+'-':'')+(ri?'h'+ri+'.':'')+(vi+1);
-          const c=D.vcls[ri][vi];
+          const lab=vLab(R,pi,ri,vi), c=D.vcls[ri][vi];
           const mk=L.marker([v[1],v[0]],{zIndexOffset:600,bubblingMouseEvents:false,
             icon:L.divIcon({className:'arv '+c.c+' '+kind,html:z>=19?`<div><span>${lab}</span></div>`:'<div></div>',iconSize:[0,0]})}).addTo(areaLayer);
           mk.on('click',e=>{
             if(calState||addMode||pickMode)return;
             L.DomEvent.stop(e);
             pickAt(L.latLng(v[1],v[0]),{exact:true,type:c.c==='fx'?'fx':'raw',kind,route:name,
-              title:`มุมที่ ${lab} · เขตทางใน${FX_KIND[kind].n}`,sub:c.t});
+              title:`มุมที่ ${lab} · เขตทางใน${FX_KIND[kind].n}`,sub:c.t+pairTxt(R,pi,D,c,ri,vi)});
           });
         }));
       });
@@ -1884,13 +2004,20 @@ function refreshArea(){
   }
 }
 function areaPopup(name,kind,pi){
-  const rec=AREA[name], R=rec[kind], pc=R.pieces[pi];
+  const rec=AREA[name], R=rec[kind], pc=R.pieces[pi], D=densPiece(name,pc,AREA_STEP);
+  const st=D.strips.filter(s=>s.m2>=0.005);
+  const sumS=st.reduce((s,x)=>s+x.m2,0);
   return `<div class="pp"><b>เขตทางในเขต${FX_KIND[kind].n}</b><div style="color:#1565c0;font-weight:600">${name}${R.pieces.length>1?` · แปลงที่ ${pi+1}/${R.pieces.length}`:''}</div>
   <table>
-  <tr><td>แปลงนี้</td><td><b>${m2Txt(pc.m2)}</b><br><span style="color:#777">(${pc.m2.toLocaleString(undefined,{maximumFractionDigits:1})} ตร.ม. · ${pc.rings[0].length} มุม${AREA_STEP?` + จุดแบ่ง ${densPiece(name,pc,AREA_STEP).rings[0].length-pc.rings[0].length} จุด`:''})</span></td></tr>
+  <tr><td>เนื้อที่แปลงนี้</td><td><b>${m2Txt(pc.m2)}</b><br><span style="color:#777">(${pc.m2.toLocaleString(undefined,{maximumFractionDigits:2})} ตร.ม. · ${D.rings[0].length} จุด)</span></td></tr>
   ${R.pieces.length>1?`<tr><td>รวม${FX_KIND[kind].n}</td><td>${m2Txt(R.m2)}</td></tr>`:''}
   </table>
-  <a class="nav" href="#" onclick='exportAreaCsv(${JSON.stringify(name)});return false'>⤓ CSV พิกัดมุม</a>
+  ${st.length?`<div style="margin-top:6px;font-weight:600">เนื้อที่รายช่วง (หน้าตัดทุก ${AREA_STEP} ม.)</div>
+  <table style="width:100%">${st.map(s=>`<tr><td>${s.a} → ${s.b}</td><td style="text-align:right">${s.m2.toFixed(2)} ตร.ม.</td></tr>`).join('')}
+  ${Math.abs(pc.m2-sumS)>=0.1?`<tr><td style="color:#c62828">ส่วนต่างจากการแบ่งช่วง*</td><td style="text-align:right;color:#c62828">${(pc.m2-sumS>0?'+':'')+(pc.m2-sumS).toFixed(2)} ตร.ม.</td></tr>`:''}
+  <tr><td><b>รวม = เนื้อที่แปลง</b></td><td style="text-align:right"><b>${pc.m2.toFixed(2)} ตร.ม.</b></td></tr></table>
+  ${Math.abs(pc.m2-sumS)>=0.1?'<div style="color:#8a8f96;font-size:11px">* หน้าตัดตั้งฉากเหลื่อมกันตรงทางโค้งแคบ/ทางแยก — เนื้อที่แปลงยังเป็นค่าที่ถูกต้อง</div>':''}`:''}
+  <a class="nav" href="#" onclick='exportAreaCsv(${JSON.stringify(name)});return false'>⤓ CSV พิกัด+เนื้อที่</a>
   <a class="nav" style="background:#37474f;margin-left:4px" href="#" onclick='exportAreaKml(${JSON.stringify(name)});return false'>⤓ KML</a></div>`;
 }
 
@@ -1924,7 +2051,9 @@ function renderAreaList(){
 function areaRows(names){
   const sum=[['สรุปเนื้อที่เขตทางในเขตป่า (คำนวณบน UTM 47N)'],
     ['สายทาง','ชั้นเขตป่า','จำนวนแปลง','เนื้อที่ (ตร.ม.)','ไร่-งาน-ตร.วา']];
-  const pts=[['สายทาง','ชั้นเขตป่า','แปลงที่','วง','มุมที่','ชนิดจุด','กม.','ด้าน','ห่างกึ่งกลาง (ม.)','Lat','Lon','X_UTM47N','Y_UTM47N']];
+  const pts=[['สายทาง','ชั้นเขตป่า','แปลงที่','วง','มุมที่','ชนิดจุด','คู่กับมุมที่','กม.','ด้าน','ห่างกึ่งกลาง (ม.)','Lat','Lon','X_UTM47N','Y_UTM47N']];
+  const sec=[['สายทาง','ชั้นเขตป่า','แปลงที่','หน้าตัด กม.','มุม A','X_A','Y_A','มุม B','X_B','Y_B','กว้าง (ม.)']];
+  const strip=[['สายทาง','ชั้นเขตป่า','แปลงที่','จาก','ถึง','เนื้อที่ (ตร.ม.)','ไร่-งาน-ตร.วา']];
   for(const name of names){
     const rec=AREA[name]; if(!rec)continue;
     for(const kind of ['nrf','perm']){
@@ -1934,16 +2063,33 @@ function areaRows(names){
         if(R.pieces.length>1) sum.push(['',`  แปลงที่ ${pi+1}`,'',pc.m2.toFixed(2),m2Txt(pc.m2)]);
         const D=densPiece(name,pc,AREA_STEP);
         D.rings.forEach((r,ri)=>r.forEach((v,vi)=>{
-          const ll=L.latLng(v[1],v[0]), ri2=routeInfo(name,ll), u=utmOf(v[1],v[0]);
-          pts.push([name,FX_KIND[kind].n,pi+1,ri?'รูเจาะ '+ri:'วงนอก',vi+1,D.vcls[ri][vi].t,
+          const ll=L.latLng(v[1],v[0]), ri2=routeInfo(name,ll), u=utmOf(v[1],v[0]), c=D.vcls[ri][vi];
+          const pr=c.sec!=null?D.secs[c.sec].at.filter(a=>!(a.ri===ri&&a.vi===vi)).map(a=>vLab(R,pi,a.ri,a.vi)).join(' '):'';
+          pts.push([name,FX_KIND[kind].n,pi+1,ri?'รูเจาะ '+ri:'วงนอก',vi+1,c.t,pr,
             (ri2&&ri2.km!=null)?fmtKm(Math.round(ri2.km)):'',(ri2&&ri2.side)||'',ri2?ri2.off.toFixed(1):'',
             v[1].toFixed(7),v[0].toFixed(7),u?u.x.toFixed(3):'',u?u.y.toFixed(3):'']);
         }));
+        for(const S of D.secs){
+          const P=S.at.map(a=>({lab:vLab(R,pi,a.ri,a.vi),u:utmOf(D.rings[a.ri][a.vi][1],D.rings[a.ri][a.vi][0])}));
+          for(let i=0;i+1<P.length;i+=2){const A=P[i],B=P[i+1];
+            sec.push([name,FX_KIND[kind].n,pi+1,S.k!=null?fmtKm(Math.round(S.k)):S.d.toFixed(1)+' ม.',
+              A.lab,A.u.x.toFixed(3),A.u.y.toFixed(3),B.lab,B.u.x.toFixed(3),B.u.y.toFixed(3),
+              llD(D.rings[S.at[i].ri][S.at[i].vi],D.rings[S.at[i+1].ri][S.at[i+1].vi]).toFixed(2)]);}
+        }
+        let ss=0;
+        for(const s of D.strips) if(s.m2>=0.005){ss+=s.m2; strip.push([name,FX_KIND[kind].n,pi+1,s.a,s.b,s.m2.toFixed(2),m2Txt(s.m2)]);}
+        if(D.strips.length){
+          if(Math.abs(pc.m2-ss)>=0.1) strip.push([name,FX_KIND[kind].n,pi+1,'ส่วนต่างจากการแบ่งช่วง (ทางโค้งแคบ/ทางแยก)','',(pc.m2-ss).toFixed(2),'']);
+          strip.push([name,FX_KIND[kind].n,pi+1,'รวม = เนื้อที่แปลง','',pc.m2.toFixed(2),m2Txt(pc.m2)]);
+        }
       });
     }
     if(rec.nrf&&rec.perm) sum.push([name,'รวมไม่นับซ้ำ','',rec.any.toFixed(2),m2Txt(rec.any)]);
   }
-  return sum.concat([[],['พิกัดมุมแปลง (เรียงตามแนวขอบ ต่อจากมุมสุดท้ายกลับไปมุมที่ 1 = ปิดรูป)']],pts);
+  const out=sum.concat([[],['พิกัดมุมแปลง (เรียงตามแนวขอบ ต่อจากมุมสุดท้ายกลับไปมุมที่ 1 = ปิดรูป)']],pts);
+  if(sec.length>1) out.push([],[`คู่จุดตามหน้าตัด (ตั้งฉากแนวถนน ทุก ${AREA_STEP} ม.)`],...sec,
+    [],['เนื้อที่รายช่วงระหว่างหน้าตัด'],...strip);
+  return out;
 }
 function exportAreaCsv(name){
   if(!areaReady){toast('กำลังคำนวณ… ลองใหม่อีกครู่');return;}
@@ -1983,7 +2129,7 @@ document.getElementById('arHide').onclick=()=>{areaShow=false;areaFocus=null;doc
 document.getElementById('arCsv').onclick=()=>exportAreaCsv(null);
 (function(){const sel=document.getElementById('arStep'); sel.value=String(AREA_STEP); if(!sel.value){sel.value='20';AREA_STEP=20;}
   sel.onchange=()=>{AREA_STEP=+sel.value; try{localStorage.setItem('khet_area_step',sel.value);}catch(e){}
-    refreshArea(); toast(AREA_STEP?`เพิ่มจุดแบ่งทุก ${AREA_STEP} ม. ตามแนวเขตทาง (ตรง กม.)`:'แสดงเฉพาะมุมแปลง',2600);};})();
+    refreshArea(); toast(AREA_STEP?`หน้าตัดทุก ${AREA_STEP} ม. (ตรง กม.) — จุดคู่แนวเขตทาง ↔ แนวป่า + เนื้อที่รายช่วง`:'แสดงเฉพาะมุมแปลง',2600);};})();
 document.getElementById('arKml').onclick=()=>exportAreaKml(null);
 document.getElementById('arClose').onclick=closeAllPanels;
 hookGroup(areaLayer);
