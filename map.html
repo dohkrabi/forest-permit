@@ -68,6 +68,8 @@ html,body{height:100%;font-family:'Segoe UI',Tahoma,'Leelawadee UI',sans-serif}
   color:#fff;font-size:12.5px;padding:7px 0;border-radius:8px;font-family:inherit;cursor:pointer}
 .rpact button.pri{background:var(--road);color:#1a1c1e;border-color:var(--road);font-weight:700}
 .tools{display:grid;gap:6px}
+.fptitle{color:#fff;font-size:12.5px;font-weight:700}
+.fptitle small{display:block;font-weight:400;color:rgba(255,255,255,.6);font-size:11px;margin-top:2px}
 .tools button{width:100%;text-align:left;border:1px solid rgba(255,255,255,.25);background:rgba(255,255,255,.08);
   color:#fff;font-size:13px;padding:9px 12px;border-radius:8px;font-family:inherit;cursor:pointer}
 .tools button.on{background:var(--road);color:#1a1c1e;border-color:var(--road);font-weight:700}
@@ -231,9 +233,7 @@ html,body{height:100%;font-family:'Segoe UI',Tahoma,'Leelawadee UI',sans-serif}
   <div class="rpanel" id="toolPanel" style="display:none">
     <div class="tools">
       <button id="tbPick">🎯 จับพิกัด — แตะจุดใดก็ได้ (ดูดเข้าจุดตัด/แนวเขตอัตโนมัติ)</button>
-      <button id="tbFx" class="on">◆ แสดงจุดตัดแนวเขตป่า × เขตทาง</button>
       <button id="tbFxCsv">⤓ ส่งออกจุดตัดแนวเขตป่าทั้งหมด (CSV)</button>
-      <button id="tbArea">🌲 พื้นที่เขตทางในเขตป่า (เนื้อที่ + พิกัดมุม)</button>
       <button id="tbKm">📏 ตั้งค่า กม. สายทาง (ปักจุดเริ่ม–สิ้นสุด)</button>
       <button id="tbTick">📐 เปิดขีดย่อย 10 ม. / 1 ม. (ซูมเข้าใกล้)</button>
   <button id="tbTickOff" class="on">👁 แสดงขีด กม. (กม.เต็ม + 100 ม.)</button>
@@ -241,6 +241,17 @@ html,body{height:100%;font-family:'Segoe UI',Tahoma,'Leelawadee UI',sans-serif}
       <button id="tbAddGps">🛰 ปักที่ตำแหน่ง GPS ของฉัน</button>
       <button id="tbList">🗂 จุดที่ปักไว้ / ส่งออกข้อมูล</button>
   <button id="tbShare">🔗 คัดลอก / วาง ค่า กม. ข้ามเครื่อง</button>
+    </div>
+  </div>
+
+  <div class="rpanel" id="fPanel" style="display:none">
+    <div class="fptitle">🌲 ชั้นข้อมูลเขตป่า<small>แตะเพื่อเปิด/ปิดแต่ละชั้น</small></div>
+    <div class="chipwrap" id="fChips"></div>
+    <div class="tools" style="margin-top:8px"><button id="tbFx" class="on">◆ แสดงจุดตัดแนวเขตป่า × เขตทาง</button></div>
+    <div class="rpact">
+      <button id="fAllOn">เปิดทั้งหมด</button>
+      <button id="fAllOff">ปิดทั้งหมด</button>
+      <button id="fClose" class="pri">ปิดแผง</button>
     </div>
   </div>
 
@@ -637,18 +648,36 @@ allBtn.onclick=()=>{
 };
 rowR.appendChild(allBtn);
 
+const FCHIPS=[];   // ชิพชั้นป่าในแผง 🌲 ชั้นป่า
+function setForestLayer(fc,on){
+  if(on===map.hasLayer(fc.layer))return;
+  if(on){map.addLayer(fc.layer);setTimeout(ensurePatterns,0);} else map.removeLayer(fc.layer);
+  fc.el.classList.toggle('on',on);
+}
+function forestChanged(){
+  updForestBtn();
+  if(typeof refreshFx==='function')refreshFx();
+  if(typeof refreshArea==='function')refreshArea();
+}
 function forestChip(label,color,layer){
   const c=document.createElement('div');
   c.className='chip on';
   c.innerHTML=`<span class="dot" style="background:${color};border-radius:2px"></span>${label}`;
-  c.onclick=()=>{
-    if(map.hasLayer(layer)){map.removeLayer(layer);c.classList.remove('on');}
-    else{map.addLayer(layer);c.classList.add('on');setTimeout(ensurePatterns,0);}
-    if(typeof refreshFx==='function')refreshFx();
-    if(typeof refreshArea==='function')refreshArea();
-  };
-  chipsL.appendChild(c);
+  const fc={el:c,layer}; FCHIPS.push(fc);
+  c.onclick=()=>{setForestLayer(fc,!map.hasLayer(layer));forestChanged();};
+  document.getElementById('fChips').appendChild(c);
 }
+const forestBtn=document.createElement('div');
+forestBtn.className='chip';
+function updForestBtn(){forestBtn.textContent=`🌲 ชั้นป่า ▾ ${FCHIPS.filter(f=>map.hasLayer(f.layer)).length}/${FCHIPS.length}`;}
+forestBtn.onclick=()=>{
+  const fp=document.getElementById('fPanel'), show=fp.style.display==='none';
+  closeAllPanels();
+  if(show){fp.style.display='block';document.getElementById('tbFx').classList.toggle('on',fxOn);}
+};
+document.getElementById('fAllOn').onclick=()=>{FCHIPS.forEach(f=>setForestLayer(f,true));forestChanged();};
+document.getElementById('fAllOff').onclick=()=>{FCHIPS.forEach(f=>setForestLayer(f,false));forestChanged();};
+document.getElementById('fClose').onclick=()=>closeAllPanels();
 
 
 function addChip(name,color){
@@ -669,9 +698,15 @@ const addBtn=document.createElement('div');
 addBtn.className='chip add';addBtn.id='chipAdd';addBtn.textContent='＋ นำเข้า';
 addBtn.onclick=()=>document.getElementById('filein').click();
 rowR.appendChild(addBtn);
-forestChip('ป่าสงวน','#00e5ff',gNRF);
-forestChip('ป่าถาวร','#ff00e5',gPERM);
-forestChip('ป่าชายเลน','#76ff03',gMGR);
+forestChip('ป่าสงวนแห่งชาติ','#00e5ff',gNRF);
+forestChip('ป่าไม้ถาวร','#ff00e5',gPERM);
+forestChip('ป่าชายเลน (มติ ครม. 30 ส.ค. 43)','#76ff03',gMGR);
+updForestBtn(); chipsL.appendChild(forestBtn);
+// ปุ่มพื้นที่เขตทางในเขตป่า (ย้ายออกจาก 🛠 เครื่องมือ) — คง id tbArea เดิม
+const areaBtn=document.createElement('div');
+areaBtn.className='chip'; areaBtn.id='tbArea'; areaBtn.textContent='📐 เขตทางในป่า';
+areaBtn.title='พื้นที่เขตทางในเขตป่า (เนื้อที่ + พิกัดมุม)';
+chipsL.appendChild(areaBtn);
 const bm=document.createElement('div');
 bm.className='chip';bm.textContent='🗺 ดาวเทียม';
 bm.onclick=()=>{map.removeLayer(bases[baseIdx][1]);baseIdx=(baseIdx+1)%bases.length;
@@ -1310,6 +1345,7 @@ function closeAllPanels(){
   kmPanel.style.display='none';
   ptPanel.style.display='none';
   const ap=document.getElementById('arPanel'); if(ap) ap.style.display='none';
+  const fp=document.getElementById('fPanel'); if(fp) fp.style.display='none';
 }
 function renderKmList(){
   const el=document.getElementById('kmList'); el.innerHTML='';
@@ -2212,6 +2248,7 @@ ${pm}</Document></kml>`,'application/vnd.google-earth.kml+xml');
 }
 
 document.getElementById('tbArea').onclick=()=>{
+  if(areaPanel.style.display==='block'){closeAllPanels();return;}
   closeAllPanels(); areaPanel.style.display='block'; renderAreaList();
   if(!areaShow){areaShow=true;areaFocus=null;document.getElementById('tbArea').classList.add('on');refreshArea();}
 };
