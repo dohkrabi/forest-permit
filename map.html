@@ -256,7 +256,7 @@ html,body{height:100%;font-family:'Segoe UI',Tahoma,'Leelawadee UI',sans-serif}
     <svg width="0" height="0" style="position:absolute"><defs><pattern id="lg-nrf" width="22" height="22" patternUnits="userSpaceOnUse"><path d="M-5.5,5.5 l11,-11 M0,22 l22,-22 M16.5,27.5 l11,-11" stroke="#00e5ff" stroke-width="1.1"/></pattern><pattern id="lg-perm" width="22" height="22" patternUnits="userSpaceOnUse"><path d="M-5.5,16.5 l11,11 M0,0 l22,22 M16.5,-5.5 l11,11" stroke="#ff4dff" stroke-width="1.1"/></pattern><pattern id="lg-mgr" width="30" height="20" patternUnits="userSpaceOnUse"><path d="M3,5 h9 M18,15 h9" stroke="#ffffff" stroke-width="1.3" stroke-linecap="round"/></pattern></defs></svg>
     <div class="chipwrap" id="fChips"></div>
     <div class="fprow"><span>ความเข้มลาย</span><input type="range" id="fOp" min="0" max="100" step="5" value="100"><b id="fOpV">100%</b></div>
-    <label class="fpchk"><input type="checkbox" id="fAuto" checked> ปรับตามซูมอัตโนมัติ (ซูม 15–16 จางลงครึ่งหนึ่ง · 17+ เหลือแต่เส้นขอบ)</label>
+    <label class="fpchk"><input type="checkbox" id="fAuto" checked> ลายจางลงอัตโนมัติเมื่อซูมเข้าใกล้ (ซูม 15+ จางลงครึ่งหนึ่ง)</label>
     <div class="tools" style="margin-top:8px"><button id="tbFx" class="on">◆ แสดงจุดตัดแนวเขตป่า × เขตทาง</button></div>
     <div class="rpact">
       <button id="fAllOn">เปิดทั้งหมด</button>
@@ -449,7 +449,7 @@ map.whenReady(()=>setTimeout(ensurePatterns,0));
 /* ---- ความเข้มลายชั้นป่า: ค่าที่ผู้ใช้ตั้ง × ตัวคูณตามระดับซูม ---- */
 var FOP={v:100,auto:true};
 try{const s=JSON.parse(localStorage.getItem('khet_forest_op')||'null'); if(s){FOP.v=+s.v;FOP.auto=!!s.auto;}}catch(e){}
-function zoomFactor(){if(!FOP.auto)return 1; const z=map.getZoom(); return z>=17?0:z>=15?0.5:1;}
+function zoomFactor(){if(!FOP.auto)return 1; const z=map.getZoom(); return z>=15?0.5:1;}
 function applyFop(){
   const f=(FOP.v/100)*zoomFactor();
   document.documentElement.style.setProperty('--fop',String(f));
@@ -700,7 +700,7 @@ document.getElementById('fClose').onclick=()=>closeAllPanels();
   r.oninput=()=>{FOP.v=+r.value;v.textContent=FOP.v+'%';applyFop();};
   r.onchange=saveFop;
   a.onchange=()=>{FOP.auto=a.checked;applyFop();saveFop();
-    if(FOP.auto&&map.getZoom()>=17) toast('ซูม 17+ ซ่อนลาย เหลือแต่เส้นขอบป่า',2400);};
+};
 })();
 
 
