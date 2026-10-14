@@ -170,7 +170,7 @@ html,body{height:100%;font-family:'Segoe UI',Tahoma,'Leelawadee UI',sans-serif}
 .fxmk div{width:14px;height:14px;transform:translate(-50%,-50%) rotate(45deg);background:#fff;
   border:3px solid #00b8d4;box-shadow:0 0 0 1.5px #1a1c1e,0 1px 5px rgba(0,0,0,.55);cursor:pointer}
 .fxmk.perm div{border-color:#d500f9}
-.fxmk.mgr div{border-color:#64dd17}
+.fxmk.mgr div{border-color:#2979ff}
 .pickmk{background:transparent;border:none;pointer-events:none}
 .pickmk div{width:30px;height:30px;transform:translate(-50%,-50%);border:2.5px solid #ff1744;border-radius:50%;
   background:linear-gradient(#ff1744,#ff1744) center/2px 100% no-repeat,linear-gradient(#ff1744,#ff1744) center/100% 2px no-repeat;
@@ -178,7 +178,7 @@ html,body{height:100%;font-family:'Segoe UI',Tahoma,'Leelawadee UI',sans-serif}
 .arv{background:transparent;border:none}
 .arv div{position:relative;width:11px;height:11px;transform:translate(-50%,-50%);border-radius:50%;
   background:#fff;border:2.5px solid #546e7a;box-shadow:0 1px 3px rgba(0,0,0,.5);cursor:pointer}
-.arv.forest.nrf div{border-color:#00b8d4}.arv.forest.perm div{border-color:#d500f9}.arv.forest.mgr div{border-color:#64dd17}
+.arv.forest.nrf div{border-color:#00b8d4}.arv.forest.perm div{border-color:#d500f9}.arv.forest.mgr div{border-color:#2979ff}
 .arv.mark div{border-color:#2e7d32}.arv.pair div{border-color:#e53935;width:9px;height:9px;border-width:2.5px}
 .arlab{background:transparent;border:none}
 .arlab div{display:inline-block;transform:translate(-50%,-50%);background:rgba(26,28,30,.88);color:#ffea00;font-size:12px;font-weight:800;
@@ -202,18 +202,18 @@ html,body{height:100%;font-family:'Segoe UI',Tahoma,'Leelawadee UI',sans-serif}
   font-size:12px;cursor:pointer;font-family:inherit}
 .arcard .acsum{padding:0 10px 8px;display:grid;gap:5px}
 .arcard .acr{border-radius:8px;padding:6px 9px;background:rgba(255,255,255,.06);border-left:4px solid #ffea00}
-.arcard .acr.perm{border-left-color:#ff6d00}.arcard .acr.mgr{border-left-color:#00e676}.arcard .acr.any{border-left-color:#fff;background:rgba(255,234,0,.12)}
+.arcard .acr.perm{border-left-color:#ff6d00}.arcard .acr.mgr{border-left-color:#2979ff}.arcard .acr.any{border-left-color:#fff;background:rgba(255,234,0,.12)}
 .arcard .acr span{display:block;font-size:11px;color:rgba(255,255,255,.65)}
 .arcard .acr b{display:block;font-size:15px;color:#ffea00;letter-spacing:.2px}
-.arcard .acr.perm b{color:#ffab40}.arcard .acr.mgr b{color:#69f0ae}.arcard .acr.any b{color:#fff}
+.arcard .acr.perm b{color:#ffab40}.arcard .acr.mgr b{color:#82b1ff}.arcard .acr.any b{color:#fff}
 .arcard .acr small{display:block;font-size:10.5px;color:rgba(255,255,255,.55)}
 .arcard .aclist{max-height:24vh;overflow-y:auto;border-top:1px solid rgba(255,255,255,.12);-webkit-overflow-scrolling:touch}
 .arcard .aci{display:flex;align-items:center;gap:8px;padding:6px 10px;border-bottom:1px solid rgba(255,255,255,.07);cursor:pointer}
 .arcard .aci:active{background:rgba(255,255,255,.1)}
-.arcard .aci .k{font-weight:800;width:18px;color:#ffea00}.arcard .aci.perm .k{color:#ffab40}.arcard .aci.mgr .k{color:#69f0ae}
+.arcard .aci .k{font-weight:800;width:18px;color:#ffea00}.arcard .aci.perm .k{color:#ffab40}.arcard .aci.mgr .k{color:#82b1ff}
 .arcard .aci .t{flex:1;color:rgba(255,255,255,.85)}.arcard .aci .v{font-weight:700;font-variant-numeric:tabular-nums}
 .arcard .acmini{display:flex;flex-wrap:wrap;gap:4px 12px;padding:0 10px 8px;font-size:12px;color:rgba(255,255,255,.7)}
-.arcard .acmini b{font-size:13.5px;color:#ffea00}.arcard .acmini .perm b{color:#ffab40}.arcard .acmini .mgr b{color:#69f0ae}.arcard .acmini .any b{color:#fff}
+.arcard .acmini b{font-size:13.5px;color:#ffea00}.arcard .acmini .perm b{color:#ffab40}.arcard .acmini .mgr b{color:#82b1ff}.arcard .acmini .any b{color:#fff}
 .arcard .acmini .u{flex-basis:100%;font-size:10.5px;color:rgba(255,255,255,.5)}
 .arcard .acfoot{padding:5px 10px 7px;font-size:10.5px;color:rgba(255,255,255,.5)}
 .ptlabel{background:transparent;border:none;box-shadow:none}
@@ -245,7 +245,8 @@ html,body{height:100%;font-family:'Segoe UI',Tahoma,'Leelawadee UI',sans-serif}
   </div>
 
   <div class="rpanel" id="fPanel" style="display:none">
-    <div class="fptitle">🌲 ชั้นข้อมูลเขตป่า<small>แตะเพื่อเปิด/ปิดแต่ละชั้น</small></div>
+    <div class="fptitle">🌲 ชั้นข้อมูลเขตป่า<small>แตะเพื่อเปิด/ปิดแต่ละชั้น · พื้นที่ที่ซ้อนกันจะเห็นลายรวมกัน</small></div>
+    <svg width="0" height="0" style="position:absolute"><defs><pattern id="lg-nrf" width="14" height="14" patternUnits="userSpaceOnUse"><path d="M-3.5,3.5 l7,-7 M0,14 l14,-14 M10.5,17.5 l7,-7" stroke="#00e5ff" stroke-width="2.2"/></pattern><pattern id="lg-perm" width="14" height="14" patternUnits="userSpaceOnUse"><path d="M-3.5,10.5 l7,7 M0,0 l14,14 M10.5,-3.5 l7,7" stroke="#ff4dff" stroke-width="2.2"/></pattern><pattern id="lg-mgr" width="24" height="16" patternUnits="userSpaceOnUse"><path d="M2,4 h8 M14,12 h8" stroke="#1a1c1e" stroke-width="4.2" stroke-linecap="round" stroke-opacity=".55"/><path d="M2,4 h8 M14,12 h8" stroke="#ffffff" stroke-width="2.4" stroke-linecap="round"/></pattern></defs></svg>
     <div class="chipwrap" id="fChips"></div>
     <div class="tools" style="margin-top:8px"><button id="tbFx" class="on">◆ แสดงจุดตัดแนวเขตป่า × เขตทาง</button></div>
     <div class="rpact">
@@ -266,7 +267,7 @@ html,body{height:100%;font-family:'Segoe UI',Tahoma,'Leelawadee UI',sans-serif}
 
   <div class="rpanel" id="arPanel" style="display:none">
     <div style="color:#fff;font-size:12px;line-height:1.5;color:rgba(255,255,255,.75)">
-      พื้นที่ที่ <b style="color:#ffea00">เขตทาง ∩ ป่าสงวน</b> (ทึบเหลือง) · <b style="color:#ff9e40">เขตทาง ∩ ป่าถาวร</b> (ประส้ม) · <b style="color:#69f0ae">เขตทาง ∩ ป่าชายเลน</b> (จุดเขียว) ·
+      พื้นที่ที่ <b style="color:#ffea00">เขตทาง ∩ ป่าสงวน</b> (ทึบเหลือง) · <b style="color:#ff9e40">เขตทาง ∩ ป่าถาวร</b> (ประส้ม) · <b style="color:#82b1ff">เขตทาง ∩ ป่าชายเลน</b> (ประฟ้า) ·
       ส. = ป่าสงวน · ถ. = ป่าถาวร · ช. = ป่าชายเลน (ไร่-งาน-ตร.วา)</div>
     <div style="display:flex;align-items:center;gap:8px;margin-top:8px;color:#fff;font-size:12.5px">
       <span style="white-space:nowrap">หน้าตัด/จุดคู่</span>
@@ -420,23 +421,18 @@ function forestLayer(polys,cls,stroke){
   const g=L.featureGroup();
   for(const rings of polys){
     L.polygon(rings.map(r=>r.map(([lo,la])=>[la,lo])),
-      {renderer:forestRenderer,className:cls,color:stroke,weight:1.2,fillOpacity:1,interactive:false}).addTo(g);
+      {renderer:forestRenderer,className:cls,color:stroke,weight:2.5,opacity:.95,fillOpacity:1,interactive:false}).addTo(g);
   }
   return g;
 }
-const gNRF=forestLayer(FOREST.nrf,'f-nrf','#00b8d4').addTo(map);   // ป่าสงวนแห่งชาติ = ตารางเขียว
-const gPERM=forestLayer(FOREST.perm,'f-perm','#d500f9').addTo(map); // ป่าไม้ถาวร = ตารางม่วงบานเย็น
-const gMGR=forestLayer(FOREST.mgr,'f-mgr','#64dd17').addTo(map);   // ป่าชายเลน = ตารางเขียวมะนาว
+const gNRF=forestLayer(FOREST.nrf,'f-nrf','#00e5ff').addTo(map);   // ป่าสงวนแห่งชาติ = เส้นทแยง ／ ฟ้า
+const gPERM=forestLayer(FOREST.perm,'f-perm','#ff4dff').addTo(map); // ป่าไม้ถาวร = เส้นทแยง ＼ ชมพู
+const gMGR=forestLayer(FOREST.mgr,'f-mgr','#ffffff').addTo(map);   // ป่าชายเลน = สัญลักษณ์ชายเลน (ขีดสั้นสลับ) ขาว
 function ensurePatterns(){
   const svg=forestRenderer._container;
   if(!svg||svg.querySelector('#pat-nrf'))return;
   const defs=document.createElementNS('http://www.w3.org/2000/svg','defs');
-  defs.innerHTML='<pattern id="pat-nrf" width="12" height="12" patternUnits="userSpaceOnUse">'+
-    '<path d="M0 0H12 M0 0V12" stroke="#00e5ff" stroke-width="1.2"/></pattern>'+
-    '<pattern id="pat-perm" width="12" height="12" patternUnits="userSpaceOnUse">'+
-    '<path d="M0 0H12 M0 0V12" stroke="#ff00e5" stroke-width="1.2"/></pattern>'+
-    '<pattern id="pat-mgr" width="12" height="12" patternUnits="userSpaceOnUse">'+
-    '<path d="M0 0H12 M0 0V12" stroke="#76ff03" stroke-width="1.2"/></pattern>';
+  defs.innerHTML='<pattern id="pat-nrf" width="14" height="14" patternUnits="userSpaceOnUse"><path d="M-3.5,3.5 l7,-7 M0,14 l14,-14 M10.5,17.5 l7,-7" stroke="#00e5ff" stroke-width="2.2"/></pattern><pattern id="pat-perm" width="14" height="14" patternUnits="userSpaceOnUse"><path d="M-3.5,10.5 l7,7 M0,0 l14,14 M10.5,-3.5 l7,7" stroke="#ff4dff" stroke-width="2.2"/></pattern><pattern id="pat-mgr" width="24" height="16" patternUnits="userSpaceOnUse"><path d="M2,4 h8 M14,12 h8" stroke="#1a1c1e" stroke-width="4.2" stroke-linecap="round" stroke-opacity=".55"/><path d="M2,4 h8 M14,12 h8" stroke="#ffffff" stroke-width="2.4" stroke-linecap="round"/></pattern>';
   svg.insertBefore(defs,svg.firstChild);
 }
 map.whenReady(()=>setTimeout(ensurePatterns,0));
@@ -662,7 +658,8 @@ function forestChanged(){
 function forestChip(label,color,layer){
   const c=document.createElement('div');
   c.className='chip on';
-  c.innerHTML=`<span class="dot" style="background:${color};border-radius:2px"></span>${label}`;
+  const k=layer===gNRF?'nrf':layer===gPERM?'perm':'mgr';
+  c.innerHTML=`<svg width="30" height="18" style="flex:0 0 auto;border-radius:3px;background:#3b4a33"><rect x="1.5" y="1.5" width="27" height="15" fill="url(#lg-${k})" stroke="${color}" stroke-width="2"/></svg>${label}`;
   const fc={el:c,layer}; FCHIPS.push(fc);
   c.onclick=()=>{setForestLayer(fc,!map.hasLayer(layer));forestChanged();};
   document.getElementById('fChips').appendChild(c);
@@ -699,8 +696,8 @@ addBtn.className='chip add';addBtn.id='chipAdd';addBtn.textContent='＋ นำ�
 addBtn.onclick=()=>document.getElementById('filein').click();
 rowR.appendChild(addBtn);
 forestChip('ป่าสงวนแห่งชาติ','#00e5ff',gNRF);
-forestChip('ป่าไม้ถาวร','#ff00e5',gPERM);
-forestChip('ป่าชายเลน (มติ ครม. 30 ส.ค. 43)','#76ff03',gMGR);
+forestChip('ป่าไม้ถาวร','#ff4dff',gPERM);
+forestChip('ป่าชายเลน (มติ ครม. 30 ส.ค. 43)','#ffffff',gMGR);
 updForestBtn(); chipsL.appendChild(forestBtn);
 // ปุ่มพื้นที่เขตทางในเขตป่า (ย้ายออกจาก 🛠 เครื่องมือ) — คง id tbArea เดิม
 const areaBtn=document.createElement('div');
@@ -1474,10 +1471,10 @@ if(!Object.keys(KMCAL).length)
 
 /* ================= 🎯 จับพิกัด + ◆ จุดตัดแนวเขตป่า × เขตทาง ================= */
 // ใช้ var (ไม่ใช่ let/const) เพราะ refreshTicks() ที่ประกาศไว้ก่อนหน้าเรียก refreshFx() ได้ทุกเมื่อ
-var FX_KIND={nrf:{n:'ป่าสงวนแห่งชาติ',c:'#00b8d4',layer:gNRF},perm:{n:'ป่าไม้ถาวร',c:'#d500f9',layer:gPERM},mgr:{n:'ป่าชายเลน',c:'#64dd17',layer:gMGR}};
+var FX_KIND={nrf:{n:'ป่าสงวนแห่งชาติ',c:'#00b8d4',layer:gNRF},perm:{n:'ป่าไม้ถาวร',c:'#d500f9',layer:gPERM},mgr:{n:'ป่าชายเลน',c:'#2979ff',layer:gMGR}};
 var FKINDS=['nrf','perm','mgr'];   // ลำดับชั้นเขตป่า
 var FK_AB={nrf:'ส.',perm:'ถ.',mgr:'ช.'}, FK_SHORT={nrf:'ป่าสงวน',perm:'ป่าถาวร',mgr:'ป่าชายเลน'};
-var FK_FILL={nrf:'#ffea00',perm:'#ff6d00',mgr:'#00e676'}, FK_DASH={nrf:null,perm:'6 4',mgr:'2 5'}, FK_TXT={nrf:'#80deea',perm:'#f48fb1',mgr:'#b9f6ca'};
+var FK_FILL={nrf:'#ffea00',perm:'#ff6d00',mgr:'#2979ff'}, FK_DASH={nrf:null,perm:'6 4',mgr:'2 5'}, FK_TXT={nrf:'#80deea',perm:'#f48fb1',mgr:'#82b1ff'};
 function fkMulti(rec){return FKINDS.filter(k=>rec[k]).length>1;}
 var FX_ZOOM=14;            // แสดงหมุดจุดตัดตั้งแต่ซูมระดับนี้
 var FX=[], fxReady=false, fxOn=true;
@@ -2242,7 +2239,7 @@ pc.rings.slice(1).map(h=>`<innerBoundaryIs><LinearRing><coordinates>${co(h)}</co
 <kml xmlns="http://www.opengis.net/kml/2.2"><Document><name>เขตทางในเขตป่า — ขท.กระบี่</name>
 <Style id="nrf"><LineStyle><color>ff00eaff</color><width>2</width></LineStyle><PolyStyle><color>6600eaff</color></PolyStyle></Style>
 <Style id="perm"><LineStyle><color>ff006dff</color><width>2</width></LineStyle><PolyStyle><color>66006dff</color></PolyStyle></Style>
-<Style id="mgr"><LineStyle><color>ff76e600</color><width>2</width></LineStyle><PolyStyle><color>6676e600</color></PolyStyle></Style>
+<Style id="mgr"><LineStyle><color>ffff7929</color><width>2</width></LineStyle><PolyStyle><color>66ff7929</color></PolyStyle></Style>
 ${pm}</Document></kml>`,'application/vnd.google-earth.kml+xml');
   toast('ส่งออก KML แล้ว',2200);
 }
