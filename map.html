@@ -3432,17 +3432,17 @@ function renderCallout(pg){
   if(G.sub){
     const q=G.sub, k=[...G.kinds][0];
     h=`<b>แผ่นย่อย ${pg.spec.idx.pre}${q.i}/${q.n}${q.km?` · ช่วง กม. ${q.km[0]} – ${q.km[1]}`:''}</b><br>`+
-      (q.m2!=null?`พื้นที่ขออนุญาตในแผ่นนี้ เนื้อที่ ${areaTxt(q.m2)} ไร่ (รวมทั้งหมด ${areaTxt(pg.spec.GT.m2)} ไร่)`:`พื้นที่ขออนุญาตรวมทั้งหมด เนื้อที่ ${areaTxt(pg.spec.GT.m2)} ไร่`)+`<br>อยู่ในเขต${esc(fName(k))}`;
+      (q.m2!=null?`พื้นที่ขออนุญาตในแผ่นนี้ เนื้อที่ ${areaTxt(q.m2)} ไร่ (รวมทั้งหมด ${areaTxt(pg.spec.GT.m2)} ไร่)`:`พื้นที่ขออนุญาตรวมทั้งหมด เนื้อที่ ${areaTxt(pg.spec.GT.m2)} ไร่`)+`<br>อยู่ในเขต${RK[k].n}`;
   }else if(G.isRow){
     const fk=FK();
-    h=`<b>พื้นที่ขออนุญาต (${esc(fName(fk))}) เนื้อที่ ${areaTxt(pg.spec.GT.m2)} ไร่</b>`;
-    for(const k of FKINDS){const v=kindArea(CUR,k); if(v>0) h+=`<br>อยู่ในเขต${esc(fName(k))} เนื้อที่ ${areaTxt(v)} ไร่`;}
+    h=`<b>พื้นที่ขออนุญาต (${RK[fk].n}) เนื้อที่ ${areaTxt(pg.spec.GT.m2)} ไร่</b>`;
+    for(const k of FKINDS){const v=kindArea(CUR,k); if(v>0) h+=`<br>อยู่ในเขต${RK[k].n} เนื้อที่ ${areaTxt(v)} ไร่`;}
   }else if(G.kinds.size===1){
     h=`<b>พื้นที่ขออนุญาต เนื้อที่ ${areaTxt(G.m2)} ไร่</b>`;
-    const k=[...G.kinds][0]; h+=`<br>อยู่ในเขต${esc(fName(k))}`;
+    const k=[...G.kinds][0]; h+=`<br>อยู่ในเขต${RK[k].n}`;
   }else{
     h=`<b>พื้นที่ขออนุญาต เนื้อที่ ${areaTxt(G.m2)} ไร่</b>`;
-    for(const k of FKINDS) if(G.perKind[k]) h+=`<br>อยู่ในเขต${esc(fName(k))} เนื้อที่ ${areaTxt(G.perKind[k])} ไร่`;
+    for(const k of FKINDS) if(G.perKind[k]) h+=`<br>อยู่ในเขต${RK[k].n} เนื้อที่ ${areaTxt(G.perKind[k])} ไร่`;
     h+=`<br><span style="font-size:7pt">(พื้นที่ที่ป่าซ้อนกันนับครั้งเดียวในยอดรวม)</span>`;
   }
   if(pg.ab) pg.ab.innerHTML=nw(h);
