@@ -2810,8 +2810,9 @@ const AC='#ff1493';                                 // สีพื้นที�
 const MAXSHEET=80, ROWS=50, COLS=3;
 const LSK='khet_rpt_v1';
 const DEF_G={org:'แขวงทางหลวงกระบี่ กรมทางหลวง',img:'Google',lyr:'s',hi:true,thai:true,dec:1,grid:false,row:true,
-  skf:false,drag:false,scale:'auto',pages:{p1:true,p2:true,p3:true,tb:true}};
-const TEXT_KEYS=['org','img','purpose','moo','tambon','amphoe','province','nrfName','permName','mgrName','cab'];
+  skf:false,drag:false,scale:'auto',pages:{p1:true,p2:true,p3:true,tb:true,mg:true}};
+const TEXT_KEYS=['org','img','purpose','moo','tambon','amphoe','province','nrfName','permName','mgrName','cab','cabMgr'];
+const CAB_MGR_DEF='30 สิงหาคม 2543';
 let ST={g:JSON.parse(JSON.stringify(DEF_G)),r:{},last:null};
 try{const s=JSON.parse(localStorage.getItem(LSK)||'null');
   if(s){ST.g=Object.assign({},DEF_G,s.g||{});ST.g.pages=Object.assign({},DEF_G.pages,(s.g||{}).pages||{});ST.r=s.r||{};ST.last=s.last||null;}}catch(e){}
@@ -2923,8 +2924,11 @@ function fName(kind){
   const f=R().f, nm=kind==='nrf'?f.nrfName:kind==='perm'?f.permName:f.mgrName;
   return RK[kind].n+(nm?' '+String(nm).trim():'');
 }
+function cabOf(kind){const f=R().f; return kind==='mgr'?(f.cabMgr==null?CAB_MGR_DEF:f.cabMgr):f.cab;}
 function autoTitle(k,G){
-  const f=R().f, g=ST.g, a=`เนื้อที่ ${areaTxt(G.m2)} ไร่`, cab=f.cab?` (ขอตามมติคณะรัฐมนตรี เมื่อวันที่ ${String(f.cab).trim()})`:'';
+  const f=R().f, g=ST.g, a=`เนื้อที่ ${areaTxt(G.m2)} ไร่`, ok1=G.kinds.size===1?[...G.kinds][0]:null;
+  const cv=String(cabOf(ok1||'nrf')||'').trim(), cab=cv?` (ขอตามมติคณะรัฐมนตรี เมื่อวันที่ ${cv})`:'';
+  k=k.replace(/m$/,'');
   const pur=f.purpose?' เพื่อ'+strip(f.purpose,'เพื่อ'):'', loc=locTxt();
   const oneKind=G.kinds.size===1?[...G.kinds][0]:null;
   const what=k==='p1'&&!oneKind?'ป่า':fName(oneKind||'nrf');
@@ -2986,15 +2990,18 @@ ${tf('nrfName','ชื่อป่าสงวนแห่งชาติ','เ�
 <div class="row2"><div>${tf('permName','ชื่อป่าไม้ถาวร','(ถ้ามี)')}</div><div>${tf('mgrName','ชื่อป่าชายเลน','(ถ้ามี)')}</div></div>
 <label class="f">วันที่มติคณะรัฐมนตรี (เว้นว่าง = ไม่แสดง)</label>
 <div class="dt"><input type="text" data-k="cab" value="${esc(r.f.cab||'')}" placeholder="เช่น 25 กุมภาพันธ์ 2568"><button title="เลือกจากปฏิทิน">📅<input type="date" id="rfCabD"></button></div>
+${P.some(p=>p.kind==='mgr')?`<label class="f">วันที่มติคณะรัฐมนตรี — ป่าชายเลน (เว้นว่าง = ไม่แสดง)</label>
+<input type="text" data-k="cabMgr" value="${esc(r.f.cabMgr==null?CAB_MGR_DEF:r.f.cabMgr)}" placeholder="เช่น 30 สิงหาคม 2543">`:''}
 ${tf('img','แหล่งภาพถ่ายดาวเทียม (แสดงในหัวเรื่อง)')}
 <details><summary>✎ แก้หัวเรื่องเอง (เว้นว่าง = สร้างอัตโนมัติ)</summary>
-${[['p1','หน้า 1'],['p2','หน้า 2'],['p3','หน้า 3'],['tb','ตารางพิกัด']].map(([k,t])=>`<label class="f">${t} — ขึ้นบรรทัดใหม่ได้</label><textarea data-tt="${k}">${esc(r.tt[k]||'')}</textarea>`).join('')}
+${[['p1','หน้า 1'],['p2','หน้า 2 (ป่าสงวน)'],['p3','หน้า 3 (ป่าสงวน)'],['tb','ตารางพิกัด (ป่าสงวน)'],['p2m','หน้า 2ช. (ป่าชายเลน)'],['p3m','หน้า 3ช. (ป่าชายเลน)'],['tbm','ตารางพิกัด (ป่าชายเลน)'],['tba','ตารางพิกัด (พื้นที่รวม)']].map(([k,t])=>`<label class="f">${t} — ขึ้นบรรทัดใหม่ได้</label><textarea data-tt="${k}">${esc(r.tt[k]||'')}</textarea>`).join('')}
 </details>
 <h4>3. หน้าที่จะพิมพ์</h4>
 ${ck('rpg1',g.pages.p1,'หน้า 1 แผนที่ภาพถ่ายดาวเทียม (ทุกชนิดป่า)')}
 ${ck('rpg2',g.pages.p2,'หน้า 2 แผนที่ภาพถ่ายดาวเทียม (เฉพาะป่าสงวน)')}
 ${ck('rpg3',g.pages.p3,'หน้า 3 แผนที่สังเขป + เลขจุดพิกัด')}
 ${ck('rpgt',g.pages.tb,'ตารางค่าพิกัด (แผ่นแยก ต่อหน้าอัตโนมัติ)')}
+${ck('rpgm',g.pages.mg,'ชุดป่าชายเลน — หน้า 2ช. / 3ช. / ตารางพิกัด'+(P.some(p=>p.kind==='mgr')?'':' <span style="color:#8a8f96">(สายนี้ไม่มี)</span>'))}
 <h4>4. มาตราส่วน</h4>
 <select id="rfScale"><option value="auto" ${g.scale==='auto'?'selected':''}>อัตโนมัติ — พอดี 1 แผ่น</option>
 ${SCALES.map(s=>`<option value="${s}" ${String(g.scale)===String(s)?'selected':''}>1:${s.toLocaleString('en-US')}</option>`).join('')}</select>
@@ -3038,7 +3045,7 @@ function bindForm(){
     const txt=d.toLocaleDateString('th-TH',{day:'numeric',month:'long',year:'numeric'});
     R().f.cab=txt; F.querySelector('input[data-k=cab]').value=txt; save(); updateTexts();};
   $('rfPre').onclick=()=>{prefill(true);renderForm();updateTexts();toast('ดึงข้อมูลจากคำขอแล้ว',1800);};
-  const pg={rpg1:'p1',rpg2:'p2',rpg3:'p3',rpgt:'tb'};
+  const pg={rpg1:'p1',rpg2:'p2',rpg3:'p3',rpgt:'tb',rpgm:'mg'};
   for(const [id,k] of Object.entries(pg)) $(id).onchange=e=>{ST.g.pages[k]=e.target.checked;save();later(rebuild,50);};
   $('rfScale').onchange=e=>{ST.g.scale=e.target.value;save();later(rebuild,50);};
   const bools={rfHi:'hi',rfRow:'row',rfGrid:'grid',rfSkf:'skf',rfThai:'thai',rfDrag:'drag'};
@@ -3079,7 +3086,10 @@ function geoms(){
   const P=all.filter(p=>!sel||sel.has(p.key));
   const G1=geomOf(P), nrf=P.filter(p=>p.kind==='nrf');
   const G2=nrf.length?(G1&&G1.kinds.size===1?G1:geomOf(nrf)):null;
-  return {P,G1,G2,G3:G2||G1};
+  const mg=P.filter(p=>p.kind==='mgr');
+  const G4=mg.length?(G1&&G1.kinds.size===1?G1:geomOf(mg)):null;
+  // หน้า 3 / ตาราง ใช้เฉพาะป่านั้น ๆ — ถ้าไม่มีป่าสงวนใช้พื้นที่รวมได้เฉพาะเมื่อมีป่าชนิดเดียว
+  return {P,G1,G2,G3:G2||(G1&&G1.kinds.size===1&&!G4?G1:null),G4};
 }
 function destroy(){
   for(const p of PAGES) if(p.map){try{p.map.remove();}catch(e){}}
@@ -3096,13 +3106,18 @@ function rebuild(){
   destroy();
   const host=$('rptPages'); host.innerHTML='';
   if(!CUR)return;
-  const {G1,G2,G3}=geoms(), g=ST.g, specs=[], info=[];
+  const {G1,G2,G3,G4}=geoms(), g=ST.g, specs=[], info=[];
   if(!G1){host.innerHTML='<div class="rpt-cap">ยังไม่ได้เลือกแปลง</div>';$('rfScInfo').textContent='—';return;}
   if(g.pages.p1) specs.push({k:'p1',type:'sat',G:G1,lab:'หน้า 1'});
   if(g.pages.p2){ if(G2) specs.push({k:'p2',type:'sat',G:G2,lab:'หน้า 2'}); else info.push('หน้า 2: ไม่มีส่วนในป่าสงวน — ข้าม'); }
-  if(g.pages.p3) specs.push({k:'p3',type:'sk',G:G3,lab:'หน้า 3'});
-  if(g.pages.tb){ specs.push({k:'tb',type:'tbl',G:G3,lab:'ตารางพิกัด'});
-    if(G2&&G1!==G2&&G1.kinds.size>1) specs.push({k:'tb',type:'tbl',G:G1,lab:'ตารางพิกัด (พื้นที่รวมทุกชนิดป่า)'}); }
+  if(g.pages.p3&&G3) specs.push({k:'p3',type:'sk',G:G3,lab:'หน้า 3'});
+  if(g.pages.tb&&G3) specs.push({k:'tb',type:'tbl',G:G3,lab:'ตารางพิกัด'+(G2?' (ป่าสงวน)':'')});
+  if(g.pages.mg&&G4){
+    specs.push({k:'p2m',type:'sat',G:G4,lab:'หน้า 2ช. (ป่าชายเลน)'});
+    specs.push({k:'p3m',type:'sk',G:G4,lab:'หน้า 3ช. (ป่าชายเลน)'});
+    specs.push({k:'tbm',type:'tbl',G:G4,lab:'ตารางพิกัด (ป่าชายเลน)'});
+  }
+  if(g.pages.tb&&G1.kinds.size>1) specs.push({k:'tba',type:'tbl',G:G1,lab:'ตารางพิกัด (พื้นที่รวมทุกชนิดป่า)'});
   let pn=0;
   for(const sp of specs){
     if(sp.type==='tbl'){const n=tablePages(sp,()=>wrapPage(`${sp.lab}`));info.push(`${sp.lab}: ${n} แผ่น · ${verts(sp.G).length} จุด`);continue;}
@@ -3241,7 +3256,7 @@ function renderLegend(pg){
   const sw=(fill,stroke,dash,extra)=>`<svg viewBox="0 0 40 20"><rect x="2" y="2" width="36" height="16" fill="${fill}" stroke="${stroke}" stroke-width="2" ${dash?`stroke-dasharray="${dash}"`:''}/>${extra||''}</svg>`;
   let h=`<div class="h">คำอธิบายสัญลักษณ์แผนที่</div>`;
   if(pg.sat){
-    const what=sp.k==='p2'?' (ในเขตป่าสงวนแห่งชาติ)':'';
+    const k1=sp.G.kinds.size===1?[...sp.G.kinds][0]:null, what=(/^p2/.test(sp.k)&&k1)?` (ในเขต${esc(thd(fName(k1)))})`:'';
     h+=`<div class="i">${sw('rgba(255,20,147,.22)',AC)}<span>พื้นที่ขออนุญาต${what} เนื้อที่ ${a} ไร่</span></div>`;
   }else{
     h+=`<div class="i"><svg viewBox="0 0 40 20"><circle cx="20" cy="10" r="5" fill="#ffd400" stroke="#6d4c00" stroke-width="1.4"/></svg><span>จุดพิกัดพื้นที่ขออนุญาต (เลขตามตารางค่าพิกัด)</span></div>`;
@@ -3255,8 +3270,8 @@ function renderLegend(pg){
 function renderCallout(pg){
   if(!pg.co)return;
   const G=pg.spec.G; let h;
-  if(pg.spec.k==='p2'||G.kinds.size===1){
-    h=`<b>พื้นที่ขออนุญาต${pg.spec.k==='p2'?'':''} เนื้อที่ ${areaTxt(G.m2)} ไร่</b>`;
+  if(G.kinds.size===1){
+    h=`<b>พื้นที่ขออนุญาต เนื้อที่ ${areaTxt(G.m2)} ไร่</b>`;
     const k=[...G.kinds][0]; h+=`<br>อยู่ในเขต${esc(fName(k))}`;
   }else{
     h=`<b>พื้นที่ขออนุญาต เนื้อที่ ${areaTxt(G.m2)} ไร่</b>`;
