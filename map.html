@@ -2803,8 +2803,8 @@ if(!jumped){
 'use strict';
 const MM=96/25.4;                                   // CSS px ต่อ 1 มม. (พิมพ์ที่ 100%)
 const FR={x:20,y:46,w:172,h:234};                   // กรอบแผนที่บนกระดาษ A4 (มม.)
-const SCALES=[1000,2000,4000,5000,10000,20000,25000,50000,100000];
-const GRIDI={1000:50,2000:100,4000:200,5000:250,10000:500,20000:1000,25000:1000,50000:2000,100000:5000};
+const SCALES=[1000,2000,4000,5000,10000,20000,25000,50000,100000,150000,200000,250000,500000];
+const GRIDI={1000:50,2000:100,4000:200,5000:250,10000:500,20000:1000,25000:1000,50000:2000,100000:5000,150000:5000,200000:10000,250000:10000,500000:20000};
 const RK={nrf:{n:'ป่าสงวนแห่งชาติ',c:'#e53935'},perm:{n:'ป่าไม้ถาวร',c:'#2e9e44'},mgr:{n:'ป่าชายเลน',c:'#0091ea'}};
 const AC='#ff1493';                                 // สีพื้นที่ขออนุญาต
 const MAXSHEET=80, ROWS=50, COLS=3;
@@ -3140,9 +3140,11 @@ function rebuild(){
   let pn=0;
   for(const sp of specs){
     if(sp.type==='tbl'){const n=tablePages(sp,()=>wrapPage(`${sp.lab}`));info.push(`${sp.lab}: ${n} แผ่น · ${verts(sp.G).length} จุด`);continue;}
-    let S=g.scale==='auto'?fitScale(sp.G):+g.scale, sh=sheetsFor(sp.G,S);
-    if(!sh){const S2=fitScale(sp.G);info.push(`${sp.lab}: 1:${S.toLocaleString('en-US')} ต้องใช้เกิน ${MAXSHEET} แผ่น — ใช้ 1:${S2.toLocaleString('en-US')} แทน`);S=S2;sh=sheetsFor(sp.G,S);}
-    info.push(`${sp.lab}: 1:${S.toLocaleString('en-US')} · ${sh.length} แผ่น`);
+    // ทุกหน้าแผนที่ต้องเห็นทั้งพื้นที่ใน 1 แผ่น — ถ้ามาตราส่วนที่เลือกไม่พอดี ใช้มาตราส่วนที่พอดีแทน
+    const Sf=fitScale(sp.G); let S=g.scale==='auto'?Sf:+g.scale, sh=sheetsFor(sp.G,S), note='';
+    if(!sh||sh.length>1){if(g.scale!=='auto')note=` (เลือก 1:${S.toLocaleString('en-US')} แต่ไม่พอดี 1 แผ่น — ปรับให้อัตโนมัติ)`;S=Math.max(S,Sf);sh=sheetsFor(sp.G,S);}
+    while(!sh||sh.length>1){S=SCALES.find(x=>x>S)||Math.ceil(S*1.25/1000)*1000;sh=sheetsFor(sp.G,S);}
+    info.push(`${sp.lab}: 1:${S.toLocaleString('en-US')}${note}`);
     sh.forEach((s,i)=>{
       const el=wrapPage(`${sp.lab}${sh.length>1?` · แผ่น ${i+1}/${sh.length}`:''} · 1:${S.toLocaleString('en-US')}`);
       PAGES.push(mapPage(el,sp,S,s,i,sh)); pn++;
