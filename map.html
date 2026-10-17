@@ -343,6 +343,50 @@ html,body{height:100%;font-family:'Segoe UI',Tahoma,'Leelawadee UI',sans-serif}
   body.rpt-printing .rpt-pw:last-child{page-break-after:auto;break-after:auto}
   body.rpt-printing .rpt-page{transform:none !important}
 }
+
+/* แถบข้อมูลใต้แผนที่ (รูปแบบ ก / ค) */
+.rp-strip{position:absolute;left:20mm;width:172mm;display:flex;gap:2.5mm;align-items:stretch}
+.rp-strip .rp-box{position:relative;left:auto;right:auto;top:auto;bottom:auto;max-width:none}
+.rp-strip .rp-lg{flex:1.35;display:grid;grid-template-columns:1fr;align-content:start}
+.rp-strip.c .rp-lg{grid-template-columns:1fr 1fr;column-gap:3mm}
+.rp-strip.c .rp-lg .h,.rp-strip.c .rp-lg .nt{grid-column:1/-1}
+.rp-strip .rp-ab{flex:1;background:#fff9c4;padding:2mm 3mm;font-size:8.5pt;line-height:1.5}
+.rp-strip .rp-nb{flex:0 0 44mm;width:44mm}
+.rp-co.tag{padding:.8mm 2mm}
+.rp-nb.sm{width:30mm;padding:1mm 1.2mm}
+.rp-nb.sm .na{width:10mm;height:10mm}
+.rp-nb.sm .sc{font-size:7pt;margin-top:0}
+.rp-nb.sm .crs{font-size:6pt;margin-top:.3mm}
+.rp-nb.sm svg.bar{margin-top:.5mm}
+.rp-strip .rp-lg{grid-template-columns:1fr 1fr;column-gap:3mm;padding:1.6mm 2.4mm}
+.rp-strip .rp-lg .h{grid-column:1/-1;font-size:8.5pt;margin-bottom:.4mm}
+.rp-strip .rp-lg .nt{grid-column:1/-1}
+.rp-strip .rp-lg .i{font-size:7.4pt;line-height:1.2;margin-top:.9mm;gap:1.6mm}
+.rp-strip .rp-lg .i:nth-of-type(2){grid-column:1/-1}
+.rp-strip .rp-lg .i svg{width:8.5mm;height:4.2mm}
+.rp-strip .rp-ab{font-size:8pt;line-height:1.45;padding:1.6mm 2.4mm}
+
+/* v64: แถบใต้แผนที่ = คำอธิบายสัญลักษณ์ (ย่อ) + เข็มทิศ/มาตราส่วน แนวนอน */
+.rp-strip .rp-lg{padding:1.3mm 2.2mm}
+.rp-strip .rp-lg .h{font-size:7.8pt;margin-bottom:.2mm}
+.rp-strip .rp-lg .i{font-size:6.9pt;line-height:1.15;margin-top:.7mm;gap:1.4mm}
+.rp-strip .rp-lg .i svg{width:7.5mm;height:3.8mm}
+.rp-strip .rp-lg .nt{font-size:6.3pt;margin-top:.6mm}
+.rp-strip .rp-nb{flex:0 0 52mm;width:52mm;display:grid;grid-template-columns:14mm 1fr;column-gap:1.5mm;align-items:center;align-content:center;padding:1.2mm 2mm}
+.rp-strip .rp-nb .na{grid-row:1/4;width:14mm;height:14mm}
+.rp-strip .rp-nb .sc{font-size:8pt;margin:0}
+.rp-strip .rp-nb svg.bar{margin:.6mm auto 0}
+.rp-strip .rp-nb .crs{font-size:6.8pt;margin-top:.3mm}
+
+/* v64 (ข+ค): คำอธิบายสัญลักษณ์แบบย่อ */
+.rp-lg.cmp{max-width:80mm;padding:1.2mm 2mm 1.4mm}
+.rp-lg.cmp .h{font-size:7.6pt;margin-bottom:.3mm}
+.rp-lg.cmp .i{font-size:6.9pt;line-height:1.18;margin-top:.7mm;gap:1.5mm}
+.rp-lg.cmp .i svg{width:7.5mm;height:3.8mm}
+.rp-lg.cmp .nt{font-size:6pt;margin-top:.6mm}
+.rp-strip.e .rp-lg{flex:1;max-width:none;display:grid;grid-template-columns:repeat(3,1fr);column-gap:4mm;align-content:center}
+.rp-strip.e .rp-lg .h,.rp-strip.e .rp-lg .nt{grid-column:1/-1}
+.rp-strip.e .rp-lg .i:nth-of-type(2){grid-column:span 2}
 </style>
 </head>
 <body>
@@ -2802,7 +2846,7 @@ if(!jumped){
 (function(){
 'use strict';
 const MM=96/25.4;                                   // CSS px ต่อ 1 มม. (พิมพ์ที่ 100%)
-const FR={x:20,y:46,w:172,h:234};                   // กรอบแผนที่บนกระดาษ A4 (มม.)
+let FR={x:20,y:46,w:172,h:234};                   // กรอบแผนที่บนกระดาษ A4 (มม.)
 const SCALES=[1000,2000,4000,5000,10000,20000,25000,50000,100000,150000,200000,250000,500000];
 const GRIDI={1000:50,2000:100,4000:200,5000:250,10000:500,20000:1000,25000:1000,50000:2000,100000:5000,150000:5000,200000:10000,250000:10000,500000:20000};
 const RK={nrf:{n:'ป่าสงวนแห่งชาติ',c:'#e53935'},perm:{n:'ป่าไม้ถาวร',c:'#2e9e44'},mgr:{n:'ป่าชายเลน',c:'#0091ea'}};
@@ -2810,7 +2854,7 @@ const AC='#ff1493';                                 // สีพื้นที�
 const MAXSHEET=80, ROWS=50, COLS=3;
 const LSK='khet_rpt_v1';
 const DEF_G={org:'แขวงทางหลวงกระบี่ กรมทางหลวง',img:'Google',lyr:'s',hi:true,thai:true,dec:1,grid:false,row:true,
-  skf:false,drag:false,scale:'auto',pages:{p1:true,p2:true,p3:true,tb:true,tba:false}};
+  skf:false,drag:false,scale:'auto',lay:'e',pages:{p1:true,p2:true,p3:true,tb:true,tba:false}};
 const TEXT_KEYS=['org','img','purpose','moo','tambon','amphoe','province','nrfName','permName','mgrName','cab','cabMgr'];
 const CAB_MGR_DEF='30 สิงหาคม 2543';
 const REQK=['nrf','mgr'];                          // ป่าที่ยื่นคำขอได้ (ป่าถาวรไม่นับเป็นพื้นที่ขออนุญาต)
@@ -2924,10 +2968,10 @@ function sheetsFor(G,S){
   return out;
 }
 function zoomFor(S,lat){const mpp=S*0.0254/96;return Math.log2(40075016.686*Math.cos(lat*Math.PI/180)/(256*mpp));}
-function niceBar(S){
-  const target=0.02*S; let best=null;
+function niceBar(S,mx){
+  mx=mx||26; const target=0.02*S*mx/26; let best=null;
   for(let e=-1;e<6;e++)for(const m of [1,2,2.5,5]){const L=m*Math.pow(10,e);const mm=L/S*1000;
-    if(mm>=12&&mm<=26&&(!best||Math.abs(L-target)<Math.abs(best-target)))best=L;}
+    if(mm>=mx*0.46&&mm<=mx&&(!best||Math.abs(L-target)<Math.abs(best-target)))best=L;}
   return best||target;
 }
 
@@ -3029,6 +3073,9 @@ ${ks.length>1?ck('rpga',g.pages.tba,'ตารางค่าพิกัดร�
 ${SCALES.map(s=>`<option value="${s}" ${String(g.scale)===String(s)?'selected':''}>1:${s.toLocaleString('en-US')}</option>`).join('')}</select>
 <div class="note" id="rfScInfo"></div>
 <h4>5. การแสดงผล</h4>
+<label class="f">คำอธิบายสัญลักษณ์</label>
+${seg('rfLay',g.lay==='d'?'d':'e',[['e','ใต้แผนที่'],['d','ในแผนที่ (มุมที่ว่าง)']])}
+<label class="f">ภาพพื้นหลัง</label>
 ${seg('rfLyr',g.lyr,[['s','ภาพดาวเทียมล้วน'],['y','มีชื่อถนน']])}
 ${ck('rfHi',g.hi,'ภาพคมชัดสูง 2× (โหลดนานขึ้น)')}
 ${ck('rfRow',g.row,'แสดงแนวเขตทางหลวง (เส้นประเหลือง)')}
@@ -3075,6 +3122,7 @@ function bindForm(){
   const bools={rfHi:'hi',rfRow:'row',rfGrid:'grid',rfSkf:'skf',rfThai:'thai',rfDrag:'drag'};
   for(const [id,k] of Object.entries(bools)) $(id).onchange=e=>{ST.g[k]=e.target.checked;save();
     if(k==='thai'){updSum();} later(rebuild,50);};
+  F.querySelectorAll('input[name=rfLay]').forEach(i=>i.onchange=()=>{ST.g.lay=i.value;save();segOn('rfLay');later(rebuild,50);});
   F.querySelectorAll('input[name=rfLyr]').forEach(i=>i.onchange=()=>{ST.g.lyr=i.value;save();segOn('rfLyr');later(rebuild,50);});
   F.querySelectorAll('input[name=rfDec]').forEach(i=>i.onchange=()=>{ST.g.dec=+i.value;save();segOn('rfDec');updSum();later(rebuild,50);});
 }
@@ -3125,7 +3173,9 @@ function wrapPage(cap){
   const p=document.createElement('div'); p.className='rpt-page'; w.appendChild(p); host.appendChild(w);
   return p;
 }
+const LAYH={e:214,d:234};   // e = คำอธิบายสัญลักษณ์ใต้แผนที่ (ค่าตั้งต้น) · d = ทุกอย่างในแผนที่                     // ความสูงกรอบแผนที่ตามรูปแบบการวางป้าย
 function rebuild(){
+  if(ST.g.lay!=='d') ST.g.lay='e'; FR={x:20,y:46,w:172,h:LAYH[ST.g.lay]};
   destroy();
   const host=$('rptPages'); host.innerHTML='';
   if(!CUR)return;
@@ -3168,23 +3218,28 @@ window.addEventListener('resize',()=>{if(UI.classList.contains('show'))later(lay
 function mapPage(el,sp,S,sheet,i,sheets){
   const sat=sp.type==='sat';
   el.classList.toggle('rp-sk',!sat);
+  // ป้ายเหลือง + เข็มทิศ/มาตราส่วน (ย่อ) อยู่ในแผนที่เสมอ · คำอธิบายสัญลักษณ์ใต้แผนที่ (e) หรือในแผนที่ (d)
+  const lay=ST.g.lay==='d'?'d':'e', sTop=FR.y+FR.h+6;
+  const nbH='<div class="rp-box rp-nb sm"></div>', lgH='<div class="rp-box rp-lg cmp"></div>';
+  const coIn=sat;
   el.innerHTML=`<div class="rp-title"></div>
   <div class="rp-frame" style="left:${FR.x}mm;top:${FR.y}mm;width:${FR.w}mm;height:${FR.h}mm">
     <div class="rp-map"></div><svg class="rp-ov"></svg>
-    <div class="rp-box rp-nb"></div><div class="rp-box rp-lg"></div>
+    ${nbH}${lay==='d'?lgH:''}
     ${sheets.length>1?'<div class="rp-box rp-ix"></div>':''}
-    ${sat?'<div class="rp-box rp-co"></div>':''}
+    ${coIn?'<div class="rp-box rp-co"></div>':''}
     <div class="rp-attr ${sat?'':'sk'}">${sat?'ภาพถ่ายดาวเทียม © Google':'แผนที่สังเขป · ไม่มีภาพพื้นหลัง'}</div>
   </div>
   <div class="rp-lab" style="left:${FR.x}mm;top:${FR.y}mm;width:${FR.w}mm;height:${FR.h}mm"></div>
+  ${lay==='e'?`<div class="rp-strip e" style="top:${sTop}mm;height:${286-sTop}mm">${lgH}</div>`:''}
   <div class="rp-foot"><span>ระบบพิกัด WGS 1984 UTM Zone 47N · ${esc(CUR)} · จัดทำจากแอปแผนที่เขตทาง แขวงทางหลวงกระบี่</span><span class="sn"></span></div>`;
   const pg={el,spec:sp,S,sheet,i,n:sheets.length,sheets,sat,okey:`${CUR}|${sp.k}|${S}|${i}`,
     titleEl:el.querySelector('.rp-title'),frame:el.querySelector('.rp-frame'),mapEl:el.querySelector('.rp-map'),
     ov:el.querySelector('.rp-ov'),lab:el.querySelector('.rp-lab'),nb:el.querySelector('.rp-nb'),lg:el.querySelector('.rp-lg'),
-    ix:el.querySelector('.rp-ix'),co:el.querySelector('.rp-co'),sn:el.querySelector('.sn')};
+    ix:el.querySelector('.rp-ix'),co:el.querySelector('.rp-co'),ab:el.querySelector('.rp-ab'),sn:el.querySelector('.sn')};
   pg.sn.textContent=sheets.length>1?`แผ่นที่ ${i+1}/${sheets.length}`:'';
   // เข็มทิศ + มาตราส่วน
-  const L_=niceBar(S), mm=L_/S*1000, u=L_>=1000?'กม.':'ม.', f=v=>{const x=L_>=1000?v/1000:v;return +x.toFixed(2)+'';};
+  const L_=niceBar(S,17), mm=L_/S*1000, u=L_>=1000?'กม.':'ม.', f=v=>{const x=L_>=1000?v/1000:v;return +x.toFixed(2)+'';};
   const W=mm+14, seg=mm/4;
   let bars=''; for(let k=0;k<4;k++) bars+=`<rect x="${5+k*seg}" y="1" width="${seg}" height="1.6" fill="${k%2?'#fff':'#000'}" stroke="#000" stroke-width=".2"/>`;
   pg.nb.innerHTML=`<svg class="na" viewBox="-20 -20 40 40">
@@ -3291,7 +3346,7 @@ function renderLegend(pg){
   pg.lg.innerHTML=nw(h);
 }
 function renderCallout(pg){
-  if(!pg.co)return;
+  if(!pg.co&&!pg.ab)return;
   const G=pg.spec.G; let h;
   if(G.isRow){
     const fk=FK();
@@ -3305,7 +3360,8 @@ function renderCallout(pg){
     for(const k of FKINDS) if(G.perKind[k]) h+=`<br>อยู่ในเขต${esc(fName(k))} เนื้อที่ ${areaTxt(G.perKind[k])} ไร่`;
     h+=`<br><span style="font-size:7pt">(พื้นที่ที่ป่าซ้อนกันนับครั้งเดียวในยอดรวม)</span>`;
   }
-  pg.co.innerHTML=nw(h);
+  if(pg.ab) pg.ab.innerHTML=nw(h);
+  if(pg.co) pg.co.innerHTML=pg.ab?'<b>พื้นที่ขออนุญาต</b>':nw(h);
 }
 function rectOf(el){return el?{x:el.offsetLeft,y:el.offsetTop,w:el.offsetWidth,h:el.offsetHeight}:null;}
 const ovl=(a,b)=>Math.max(0,Math.min(a.x+a.w,b.x+b.w)-Math.max(a.x,b.x))*Math.max(0,Math.min(a.y+a.h,b.y+b.h)-Math.max(a.y,b.y));
@@ -3331,10 +3387,24 @@ function overlay(pg){
     if(yl>=4&&yl<=H-4){svg+=`<line x1="0" y1="${yl}" x2="${T}" y2="${yl}" stroke="#000" stroke-width="1"/>`;lab+=`<span class="l" style="left:-2.6mm;top:${yl}px">${gy}</span>`;}
     if(yr>=4&&yr<=H-4){svg+=`<line x1="${W}" y1="${yr}" x2="${W-T}" y2="${yr}" stroke="#000" stroke-width="1"/>`;lab+=`<span class="r" style="left:calc(${W}px + 2.6mm);top:${yr}px">${gy}</span>`;}
   }
-  const avoid=[rectOf(pg.nb),rectOf(pg.lg),rectOf(pg.ix)].filter(Boolean);
-  // จุดของรูปแปลงบนจอ
-  const V=verts(pg.spec.G), st=Math.max(1,Math.floor(V.length/1500)), pts=[];
-  for(let i=0;i<V.length;i+=st){const p=toC(V[i].x,V[i].y);if(p.x>=0&&p.x<=W&&p.y>=0&&p.y<=H){p.pi=V[i].pi;pts.push(p);}}
+  // จุดของรูปแปลงบนจอ (+ จุดแทรกตามแนวขอบทุก ~8 px ใช้ตรวจว่ากล่องทับเส้นทางหรือไม่)
+  const V=verts(pg.spec.G), st=Math.max(1,Math.floor(V.length/1500)), pts=[], dense=[];
+  let prev=null;
+  for(let i=0;i<V.length;i+=st){const p=toC(V[i].x,V[i].y); p.pi=V[i].pi;
+    if(p.x>=0&&p.x<=W&&p.y>=0&&p.y<=H)pts.push(p);
+    if(prev&&prev.ri===V[i].ri&&prev.pi===V[i].pi){const d=Math.hypot(p.x-prev.x,p.y-prev.y),n=Math.min(200,Math.floor(d/8));
+      for(let k=1;k<n;k++)dense.push({x:prev.x+(p.x-prev.x)*k/n,y:prev.y+(p.y-prev.y)*k/n});}
+    dense.push(p); prev={x:p.x,y:p.y,pi:V[i].pi,ri:V[i].ri};}
+  const hits=(r,m)=>{let c=0;for(const p of dense)if(p.x>=r.x-m&&p.x<=r.x+r.w+m&&p.y>=r.y-m&&p.y<=r.y+r.h+m)c++;return c;};
+  // กล่องในกรอบ: เลือกมุมที่ทับเส้นทางน้อยที่สุด
+  {const placed=[], pd=3*MM;
+   for(const e of [pg.nb,pg.lg]){ if(!e||e.parentNode!==pg.frame)continue;
+     const w=e.offsetWidth,h=e.offsetHeight, TR=[W-w-pd,pd],TL=[pd,pd],BL=[pd,H-h-pd],BR=[W-w-pd,H-h-pd];
+     const C=e===pg.nb?[TR,TL,BR,BL]:[BL,BR,TL,TR]; let best=null;
+     C.forEach(([x,y],ci)=>{const r={x,y,w,h};let sc=hits(r,6)*100+ci;for(const q of placed)if(ovl(r,q)>0)sc+=1e6;if(!best||sc<best.sc)best={sc,r};});
+     e.style.left=best.r.x+'px';e.style.top=best.r.y+'px';e.style.right='auto';e.style.bottom='auto';placed.push(best.r);}
+  }
+  const avoid=[pg.nb,pg.lg,pg.ix].filter(e=>e&&e.parentNode===pg.frame).map(rectOf);
   // ป้ายพื้นที่ (callout) + เส้นชี้
   if(pg.co&&pts.length){
     const bw=pg.co.offsetWidth,bh=pg.co.offsetHeight,pd=10,nb=rectOf(pg.nb);
@@ -3342,7 +3412,7 @@ function overlay(pg){
     let best=null;
     for(const [x,y] of C){
       const r={x,y,w:bw,h:bh}, e={x:x-14,y:y-14,w:bw+28,h:bh+28};
-      let sc=0; for(const p of pts) if(p.x>=e.x&&p.x<=e.x+e.w&&p.y>=e.y&&p.y<=e.y+e.h) sc+=1000;
+      let sc=hits(r,14)*1000;
       for(const a of avoid) sc+=ovl(r,a)*50;
       if(x<0||y<0||x+bw>W||y+bh>H) sc+=1e7;
       let dmin=Infinity,tg=null; for(const p of pts){const d=Math.hypot(p.x-(x+bw/2),p.y-(y+bh/2));if(d<dmin){dmin=d;tg=p;}}
