@@ -2870,6 +2870,20 @@ function geomOf(pieces){
   for(const p of polys)for(const [x,y] of p.rings[0]){if(x<b[0])b[0]=x;if(y<b[1])b[1]=y;if(x>b[2])b[2]=x;if(y>b[3])b[3]=y;}
   return {polys,m2,box:b,kinds,perKind};
 }
+const RGC={}, KAC={};
+function rowG(name){                                       // หน้า 1: เขตทางทั้งเส้น (ไม่ตัดแยก)
+  if(RGC[name])return RGC[name];
+  const polys=rowGeom(name).map(pg=>{let r=pg[0].map(([lo,la])=>fwd(lo,la));
+    const a=r[0],z=r[r.length-1]; if(r.length>3&&Math.abs(a[0]-z[0])<1e-6&&Math.abs(a[1]-z[1])<1e-6) r=r.slice(0,-1);
+    return {rings:[r],m2:Math.abs(shoe(r)),kr:['','']};});
+  let b=[Infinity,Infinity,-Infinity,-Infinity];
+  for(const p of polys)for(const [x,y] of p.rings[0]){if(x<b[0])b[0]=x;if(y<b[1])b[1]=y;if(x>b[2])b[2]=x;if(y>b[3])b[3]=y;}
+  return RGC[name]={polys,m2:polys.reduce((s,p)=>s+p.m2,0),box:b,kinds:new Set(['row']),perKind:{},isRow:true};
+}
+function kindArea(name,kind){                              // เนื้อที่ทั้งสายในป่าแต่ละชนิด (ค่าเดียวกับ SHP)
+  const k=name+'|'+kind; if(k in KAC)return KAC[k];
+  const Ly=xpLayer(name,kind,0); return KAC[k]=Ly?Ly.m2:0;
+}
 function verts(G){
   if(G._v)return G._v; const V=[]; let n=0;
   G.polys.forEach((p,pi)=>p.rings.forEach((r,ri)=>r.forEach(([x,y])=>V.push({n:++n,pi,ri,x,y}))));
@@ -2911,9 +2925,9 @@ function sheetsFor(G,S){
 }
 function zoomFor(S,lat){const mpp=S*0.0254/96;return Math.log2(40075016.686*Math.cos(lat*Math.PI/180)/(256*mpp));}
 function niceBar(S){
-  const target=0.032*S; let best=null;
+  const target=0.02*S; let best=null;
   for(let e=-1;e<6;e++)for(const m of [1,2,2.5,5]){const L=m*Math.pow(10,e);const mm=L/S*1000;
-    if(mm>=18&&mm<=40&&(!best||Math.abs(L-target)<Math.abs(best-target)))best=L;}
+    if(mm>=12&&mm<=26&&(!best||Math.abs(L-target)<Math.abs(best-target)))best=L;}
   return best||target;
 }
 
@@ -2934,7 +2948,7 @@ function autoTitle(k,G){
   k=k.replace(/m$/,'');
   const pur=f.purpose?' เพื่อ'+strip(f.purpose,'เพื่อ'):'', loc=locTxt();
   const oneKind=G.kinds.size===1?[...G.kinds][0]:null;
-  const what=k==='p1'&&!oneKind?'ป่า':fName(oneKind||'nrf');
+  const what=k==='p1'?'ป่า':fName(oneKind||'nrf');
   const rest=`ขอใช้พื้นที่${what}${pur} ${loc} ${a}${cab}`;
   if(k==='p1'||k==='p2') return [`แผนที่ภาพถ่ายดาวเทียม ${g.img} แสดงบริเวณพื้นที่${g.org}`,rest];
   if(k==='p3') return [`แผนที่สังเขปและค่าพิกัด GPS แสดงบริเวณพื้นที่${g.org}`,rest];
@@ -3032,8 +3046,7 @@ function updSum(){
   if(!GF){el.innerHTML='ยังไม่ได้เลือกแปลง';return;}
   const rows=[`พื้นที่ขออนุญาต (${RK[fk].n}) <b>${areaTxt(GF.m2)}</b> ไร่`,
     `<span style="color:#8a8f96">${GF.polys.length} แปลง · ${verts(GF).length} จุดพิกัด</span>`];
-  if(G1&&G1.kinds.size>1) rows.push(`<span style="color:#8a8f96">หน้า 1 ภาพรวม: `+REQK.filter(k=>G1.perKind[k]).map(k=>`${RK[k].n} ${areaTxt(G1.perKind[k])}`).join(' · ')+` · รวม ${areaTxt(G1.m2)} ไร่</span>`);
-  if(AREA[CUR]&&AREA[CUR].perm) rows.push(`<span style="color:#8a8f96">ส่วนในป่าไม้ถาวรไม่นับเป็นพื้นที่ขออนุญาต (แสดงเป็นแนวเขตพื้นหลังเท่านั้น)</span>`);
+  rows.push(`<span style="color:#8a8f96">หน้า 1 (เขตทางทั้งเส้น) ระบุในป้าย: `+FKINDS.filter(k=>kindArea(CUR,k)>0).map(k=>`${RK[k].n} ${areaTxt(kindArea(CUR,k))}`).join(' · ')+` ไร่</span>`);
   el.innerHTML=rows.join('<br>');
 }
 let tmr=null;
@@ -3119,7 +3132,7 @@ function rebuild(){
   const {G1,GF,GA,fk}=geoms(), g=ST.g, specs=[], info=[], m=fk==='mgr'?'m':'';
   if(!GF){host.innerHTML='<div class="rpt-cap">ยังไม่ได้เลือกแปลง</div>';$('rfScInfo').textContent='—';return;}
   const fn=RK[fk].n;
-  if(g.pages.p1) specs.push({k:'p1',type:'sat',G:G1,lab:'หน้า 1 (ภาพรวม)'});
+  if(g.pages.p1) specs.push({k:'p1',type:'sat',G:rowG(CUR),GT:GF,lab:'หน้า 1 (เขตทางทั้งเส้น)'});
   if(g.pages.p2) specs.push({k:'p2'+m,type:'sat',G:GF,lab:`หน้า 2 (${fn})`});
   if(g.pages.p3) specs.push({k:'p3'+m,type:'sk',G:GF,lab:`หน้า 3 (${fn})`});
   if(g.pages.tb) specs.push({k:'tb'+m,type:'tbl',G:GF,lab:`ตารางพิกัด (${fn})`});
@@ -3170,7 +3183,7 @@ function mapPage(el,sp,S,sheet,i,sheets){
   pg.sn.textContent=sheets.length>1?`แผ่นที่ ${i+1}/${sheets.length}`:'';
   // เข็มทิศ + มาตราส่วน
   const L_=niceBar(S), mm=L_/S*1000, u=L_>=1000?'กม.':'ม.', f=v=>{const x=L_>=1000?v/1000:v;return +x.toFixed(2)+'';};
-  const W=mm+18, seg=mm/4;
+  const W=mm+14, seg=mm/4;
   let bars=''; for(let k=0;k<4;k++) bars+=`<rect x="${5+k*seg}" y="1" width="${seg}" height="1.6" fill="${k%2?'#fff':'#000'}" stroke="#000" stroke-width=".2"/>`;
   pg.nb.innerHTML=`<svg class="na" viewBox="-20 -20 40 40">
     <g stroke="#000" stroke-width=".5">
@@ -3234,7 +3247,7 @@ function initSheet(pg){
         {renderer:rd,className:'rpf-'+kind,color:RK[kind].c,weight:pg.sat?1.7:1.1,opacity:pg.sat?1:.8,fillOpacity:1,interactive:false}).addTo(m);
     }
   }
-  if(g.row) for(const pgn of rowGeom(CUR)) L.polygon(pgn[0].map(([lo,la])=>[la,lo]),
+  if(g.row&&!sp.G.isRow) for(const pgn of rowGeom(CUR)) L.polygon(pgn[0].map(([lo,la])=>[la,lo]),
     {renderer:rd,fill:false,color:pg.sat?'#ffe600':'#9e9e9e',weight:1.2,dashArray:'6 4',interactive:false}).addTo(m);
   for(const p of sp.G.polys){
     const ll=llRings(p);
@@ -3253,22 +3266,24 @@ function initSheet(pg){
     overlay(pg);
   });
   renderLegend(pg);
-  pg.titleEl.innerHTML=titleHtml(sp.k,sp.G);
+  pg.titleEl.innerHTML=titleHtml(sp.k,sp.GT||sp.G);
   renderCallout(pg);
   overlay(pg);
 }
 function renderLegend(pg){
-  const sp=pg.spec, a=thd(areaTxt(sp.G.m2));
+  const sp=pg.spec, a=thd(areaTxt((sp.GT||sp.G).m2));
   const sw=(fill,stroke,dash,extra)=>`<svg viewBox="0 0 40 20"><rect x="2" y="2" width="36" height="16" fill="${fill}" stroke="${stroke}" stroke-width="2" ${dash?`stroke-dasharray="${dash}"`:''}/>${extra||''}</svg>`;
   let h=`<div class="h">คำอธิบายสัญลักษณ์แผนที่</div>`;
-  if(pg.sat){
+  if(sp.G.isRow){
+    h+=`<div class="i">${sw('rgba(255,20,147,.22)',AC)}<span>เขตทางหลวง ${esc(thd(CUR))} · พื้นที่ขออนุญาตใน${esc(thd(fName(FK())))} เนื้อที่ ${a} ไร่</span></div>`;
+  }else if(pg.sat){
     const k1=sp.G.kinds.size===1?[...sp.G.kinds][0]:null, what=(/^p2/.test(sp.k)&&k1)?` (ในเขต${esc(thd(fName(k1)))})`:'';
     h+=`<div class="i">${sw('rgba(255,20,147,.22)',AC)}<span>พื้นที่ขออนุญาต${what} เนื้อที่ ${a} ไร่</span></div>`;
   }else{
     h+=`<div class="i"><svg viewBox="0 0 40 20"><circle cx="20" cy="10" r="5" fill="#ffd400" stroke="#6d4c00" stroke-width="1.4"/></svg><span>จุดพิกัดพื้นที่ขออนุญาต (เลขตามตารางค่าพิกัด)</span></div>`;
     h+=`<div class="i">${sw('rgba(255,138,196,.28)',AC)}<span>พื้นที่ขออนุญาต เนื้อที่ ${a} ไร่</span></div>`;
   }
-  if(ST.g.row) h+=`<div class="i"><svg viewBox="0 0 40 20"><line x1="2" y1="10" x2="38" y2="10" stroke="${pg.sat?'#c9b400':'#9e9e9e'}" stroke-width="2.4" stroke-dasharray="6 4"/></svg><span>แนวเขตทางหลวง ${esc(thd(CUR))}</span></div>`;
+  if(ST.g.row&&!sp.G.isRow) h+=`<div class="i"><svg viewBox="0 0 40 20"><line x1="2" y1="10" x2="38" y2="10" stroke="${pg.sat?'#c9b400':'#9e9e9e'}" stroke-width="2.4" stroke-dasharray="6 4"/></svg><span>แนวเขตทางหลวง ${esc(thd(CUR))}</span></div>`;
   for(const k of (pg.kinds||[])) h+=`<div class="i">${sw(`url(#rp-${k})`,RK[k].c)}<span>แนวเขต${esc(thd(fName(k)))}</span></div>`;
   if(pg.lblSkip) h+=`<div class="nt">* แสดงเลขเฉพาะจุดที่ไม่ซ้อนกัน — ค่าพิกัดครบทุกจุดอยู่ในตารางค่าพิกัด</div>`;
   pg.lg.innerHTML=nw(h);
@@ -3276,7 +3291,11 @@ function renderLegend(pg){
 function renderCallout(pg){
   if(!pg.co)return;
   const G=pg.spec.G; let h;
-  if(G.kinds.size===1){
+  if(G.isRow){
+    const fk=FK();
+    h=`<b>พื้นที่ขออนุญาต (${esc(fName(fk))}) เนื้อที่ ${areaTxt(pg.spec.GT.m2)} ไร่</b>`;
+    for(const k of FKINDS){const v=kindArea(CUR,k); if(v>0) h+=`<br>อยู่ในเขต${esc(fName(k))} เนื้อที่ ${areaTxt(v)} ไร่`;}
+  }else if(G.kinds.size===1){
     h=`<b>พื้นที่ขออนุญาต เนื้อที่ ${areaTxt(G.m2)} ไร่</b>`;
     const k=[...G.kinds][0]; h+=`<br>อยู่ในเขต${esc(fName(k))}`;
   }else{
@@ -3313,7 +3332,7 @@ function overlay(pg){
   const avoid=[rectOf(pg.nb),rectOf(pg.lg),rectOf(pg.ix)].filter(Boolean);
   // จุดของรูปแปลงบนจอ
   const V=verts(pg.spec.G), st=Math.max(1,Math.floor(V.length/1500)), pts=[];
-  for(let i=0;i<V.length;i+=st){const p=toC(V[i].x,V[i].y);if(p.x>=0&&p.x<=W&&p.y>=0&&p.y<=H)pts.push(p);}
+  for(let i=0;i<V.length;i+=st){const p=toC(V[i].x,V[i].y);if(p.x>=0&&p.x<=W&&p.y>=0&&p.y<=H){p.pi=V[i].pi;pts.push(p);}}
   // ป้ายพื้นที่ (callout) + เส้นชี้
   if(pg.co&&pts.length){
     const bw=pg.co.offsetWidth,bh=pg.co.offsetHeight,pd=10,nb=rectOf(pg.nb);
@@ -3328,9 +3347,20 @@ function overlay(pg){
       sc+=dmin/4; if(!best||sc<best.sc)best={sc,x,y,tg};
     }
     pg.co.style.left=best.x+'px'; pg.co.style.top=best.y+'px';
-    const t=best.tg, sx=Math.max(best.x,Math.min(best.x+bw,t.x)), sy=Math.max(best.y,Math.min(best.y+bh,t.y));
-    if(Math.hypot(t.x-sx,t.y-sy)>6) svg+=`<line x1="${sx}" y1="${sy}" x2="${t.x}" y2="${t.y}" stroke="#000" stroke-width="3" opacity=".55"/>
-      <line x1="${sx}" y1="${sy}" x2="${t.x}" y2="${t.y}" stroke="#fff9c4" stroke-width="1.5"/><circle cx="${t.x}" cy="${t.y}" r="2.6" fill="#fff9c4" stroke="#000" stroke-width=".8"/>`;
+    let tgs=[best.tg];
+    if(/^p2/.test(pg.spec.k)){                       // หลายช่วง → โยงเส้นไปทุกแปลงที่อยู่ในกรอบ
+      const cx=best.x+bw/2, cy=best.y+bh/2, by={};
+      for(const p of pts){const d=Math.hypot(p.x-cx,p.y-cy); if(!by[p.pi]||d<by[p.pi].d) by[p.pi]={d,p};}
+      tgs=Object.values(by).map(o=>o.p);
+    }
+    let ln='',dot='';
+    for(const t of tgs){
+      const sx=Math.max(best.x,Math.min(best.x+bw,t.x)), sy=Math.max(best.y,Math.min(best.y+bh,t.y));
+      if(Math.hypot(t.x-sx,t.y-sy)<=6)continue;
+      ln+=`<line x1="${sx}" y1="${sy}" x2="${t.x}" y2="${t.y}" stroke="#000" stroke-width="3" opacity=".55"/>`;
+      dot+=`<line x1="${sx}" y1="${sy}" x2="${t.x}" y2="${t.y}" stroke="#fff9c4" stroke-width="1.5"/><circle cx="${t.x}" cy="${t.y}" r="2.6" fill="#fff9c4" stroke="#000" stroke-width=".8"/>`;
+    }
+    svg+=ln+dot;
   }
   // เลขจุด (แผนที่สังเขป) — ไม่ให้ป้ายซ้อนกัน
   if(!sat){
@@ -3378,7 +3408,7 @@ function tablePages(sp,mk){
 }
 function updateTexts(){
   for(const pg of PAGES){
-    pg.titleEl.innerHTML=titleHtml(pg.spec.k,pg.spec.G); fitTitle(pg.titleEl);
+    pg.titleEl.innerHTML=titleHtml(pg.spec.k,pg.spec.GT||pg.spec.G); fitTitle(pg.titleEl);
     if(pg.lg) renderLegend(pg);
     if(pg.co){renderCallout(pg); if(pg.map) overlay(pg);}
   }
