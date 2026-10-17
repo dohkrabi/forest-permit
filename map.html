@@ -2810,9 +2810,10 @@ const AC='#ff1493';                                 // สีพื้นที�
 const MAXSHEET=80, ROWS=50, COLS=3;
 const LSK='khet_rpt_v1';
 const DEF_G={org:'แขวงทางหลวงกระบี่ กรมทางหลวง',img:'Google',lyr:'s',hi:true,thai:true,dec:1,grid:false,row:true,
-  skf:false,drag:false,scale:'auto',pages:{p1:true,p2:true,p3:true,tb:true,mg:true}};
+  skf:false,drag:false,scale:'auto',pages:{p1:true,p2:true,p3:true,tb:true,tba:false}};
 const TEXT_KEYS=['org','img','purpose','moo','tambon','amphoe','province','nrfName','permName','mgrName','cab','cabMgr'];
 const CAB_MGR_DEF='30 สิงหาคม 2543';
+const REQK=['nrf','mgr'];                          // ป่าที่ยื่นคำขอได้ (ป่าถาวรไม่นับเป็นพื้นที่ขออนุญาต)
 let ST={g:JSON.parse(JSON.stringify(DEF_G)),r:{},last:null};
 try{const s=JSON.parse(localStorage.getItem(LSK)||'null');
   if(s){ST.g=Object.assign({},DEF_G,s.g||{});ST.g.pages=Object.assign({},DEF_G.pages,(s.g||{}).pages||{});ST.r=s.r||{};ST.last=s.last||null;}}catch(e){}
@@ -2820,6 +2821,8 @@ function save(){try{localStorage.setItem(LSK,JSON.stringify(ST));}catch(e){}}
 let CUR=null, PAGES=[], TL=[], OFFS={}, REQS=null;
 const $=s=>document.getElementById(s);
 function R(){return ST.r[CUR]||(ST.r[CUR]={mode:'all',sel:[],f:{},tt:{}});}
+function kindsOf(name){return REQK.filter(k=>AREA[name]&&AREA[name][k]);}
+function FK(){const r=R(), ks=kindsOf(CUR); if(!ks.includes(r.fk)) r.fk=ks[0]||'nrf'; return r.fk;}
 const esc=s=>String(s==null?'':s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
 const inv=(x,y)=>proj4(UTM47).inverse([x,y]);           // UTM → [lon,lat]
 const fwd=(lo,la)=>proj4(UTM47,[lo,la]);
@@ -2838,7 +2841,7 @@ const PCACHE={};
 function routePieces(name){
   if(PCACHE[name])return PCACHE[name];
   const out=[];
-  for(const kind of FKINDS){
+  for(const kind of REQK){
     const Ly=xpLayer(name,kind,0); if(!Ly)continue;          // step 0 = มุมจริงทุกจุด ไม่แทรก ไม่ simplify
     Ly.polys.forEach(p=>out.push({kind,id:p.id,key:kind+':'+p.id,kf:p.kf,kt:p.kt,m2:p.m2,rings:p.rings}));
   }
@@ -2927,7 +2930,7 @@ function fName(kind){
 function cabOf(kind){const f=R().f; return kind==='mgr'?(f.cabMgr==null?CAB_MGR_DEF:f.cabMgr):f.cab;}
 function autoTitle(k,G){
   const f=R().f, g=ST.g, a=`เนื้อที่ ${areaTxt(G.m2)} ไร่`, ok1=G.kinds.size===1?[...G.kinds][0]:null;
-  const cv=String(cabOf(ok1||'nrf')||'').trim(), cab=cv?` (ขอตามมติคณะรัฐมนตรี เมื่อวันที่ ${cv})`:'';
+  const cv=String(cabOf(ok1||FK())||'').trim(), cab=cv?` (ขอตามมติคณะรัฐมนตรี เมื่อวันที่ ${cv})`:'';
   k=k.replace(/m$/,'');
   const pur=f.purpose?' เพื่อ'+strip(f.purpose,'เพื่อ'):'', loc=locTxt();
   const oneKind=G.kinds.size===1?[...G.kinds][0]:null;
@@ -2969,12 +2972,15 @@ function ck(id,on,t){return `<label class="ck"><input type="checkbox" id="${id}"
 function tf(k,label,ph){const v=k in DEF_G?ST.g[k]:R().f[k];return `<label class="f">${label}</label><input type="text" data-k="${k}" value="${esc(v||'')}" placeholder="${esc(ph||'')}">`;}
 
 function renderForm(){
-  const r=R(), g=ST.g, names=Object.keys(AREA).sort((a,b)=>a.localeCompare(b,'th',{numeric:true}));
-  const P=routePieces(CUR), sel=new Set(r.sel);
+  const r=R(), g=ST.g, names=Object.keys(AREA).filter(n=>kindsOf(n).length).sort((a,b)=>a.localeCompare(b,'th',{numeric:true}));
+  const fk=FK(), ks=kindsOf(CUR), P=routePieces(CUR).filter(p=>p.kind===fk), sel=new Set(r.sel);
+  const hasPerm=!!(AREA[CUR]&&AREA[CUR].perm);
   const reqTxt=REQS==null?'กำลังอ่านคำขอ…':(REQS.length?REQS.map(q=>`ทล.${esc(q.route_no)} ${esc(q.route_extra||'')} · ${esc(q.forest_type||'')} · เลขที่ ${esc(q.request_no||'–')} · ${esc(q.status||'')}`).join('<br>'):'ไม่พบคำขอของสายนี้ในเครื่อง (กรอกเองได้)');
   $('rpF').innerHTML=`
-<h4>1. สายทาง / ขอบเขต</h4>
+<h4>1. สายทาง / ป่าที่ยื่นคำขอ / ขอบเขต</h4>
 <select id="rfRoute">${names.map(n=>`<option ${n===CUR?'selected':''}>${esc(n)}</option>`).join('')}</select>
+<label class="f">ยื่นคำขอสำหรับ</label>
+<div class="seg">${REQK.map(k=>{const on=k===fk, has=ks.includes(k);return `<label class="${on?'on':''}" style="${has?'':'opacity:.4;pointer-events:none'}"><input type="radio" name="rfFk" value="${k}" ${on?'checked':''} ${has?'':'disabled'}>${k==='nrf'?'🌲 ป่าสงวน':'🌊 ป่าชายเลน'}${has?'':' (ไม่มี)'}</label>`;}).join('')}</div>
 <div style="margin-top:6px">${seg('rfMode',r.mode,[['all','ทั้งสายทาง'],['pick','เลือกแปลง']])}</div>
 ${r.mode==='pick'?`<div class="pl">${P.map(p=>`<label class="ck"><input type="checkbox" data-pk="${p.key}" ${sel.has(p.key)?'checked':''}><span><b>${FK_AB[p.kind]}${p.id}</b> กม. ${esc(p.kf||'?')}–${esc(p.kt||'?')} · ${m2Short(p.m2)} ไร่</span></label>`).join('')}</div>
 <div class="mini"><button id="rfAll">เลือกทั้งหมด</button><button id="rfNone">ไม่เลือก</button></div>`:''}
@@ -2986,22 +2992,24 @@ ${tf('org','หน่วยงานที่ขออนุญาต')}
 ${tf('purpose','วัตถุประสงค์ (ต่อจากคำว่า "เพื่อ")','เช่น ใช้ประโยชน์ในเขตทางหลวงหมายเลข 4033')}
 <div class="row2"><div>${tf('moo','หมู่ที่','เช่น 8')}</div><div>${tf('tambon','ตำบล','เช่น เกาะลันตาใหญ่')}</div></div>
 <div class="row2"><div>${tf('amphoe','อำเภอ','เช่น เกาะลันตา')}</div><div>${tf('province','จังหวัด','กระบี่')}</div></div>
-${tf('nrfName','ชื่อป่าสงวนแห่งชาติ','เช่น ป่าเกาะลันตาใหญ่')}
-<div class="row2"><div>${tf('permName','ชื่อป่าไม้ถาวร','(ถ้ามี)')}</div><div>${tf('mgrName','ชื่อป่าชายเลน','(ถ้ามี)')}</div></div>
-<label class="f">วันที่มติคณะรัฐมนตรี (เว้นว่าง = ไม่แสดง)</label>
-<div class="dt"><input type="text" data-k="cab" value="${esc(r.f.cab||'')}" placeholder="เช่น 25 กุมภาพันธ์ 2568"><button title="เลือกจากปฏิทิน">📅<input type="date" id="rfCabD"></button></div>
-${P.some(p=>p.kind==='mgr')?`<label class="f">วันที่มติคณะรัฐมนตรี — ป่าชายเลน (เว้นว่าง = ไม่แสดง)</label>
-<input type="text" data-k="cabMgr" value="${esc(r.f.cabMgr==null?CAB_MGR_DEF:r.f.cabMgr)}" placeholder="เช่น 30 สิงหาคม 2543">`:''}
+${fk==='nrf'?`${tf('nrfName','ชื่อป่าสงวนแห่งชาติ','เช่น ป่าเกาะลันตาใหญ่')}
+<label class="f">วันที่มติคณะรัฐมนตรี — ป่าสงวน (เว้นว่าง = ไม่แสดง)</label>
+<div class="dt"><input type="text" data-k="cab" value="${esc(r.f.cab||'')}" placeholder="เช่น 25 กุมภาพันธ์ 2568"><button title="เลือกจากปฏิทิน">📅<input type="date" id="rfCabD"></button></div>`
+:`${tf('mgrName','ชื่อป่าชายเลน','(ถ้ามี)')}
+<label class="f">วันที่มติคณะรัฐมนตรี — ป่าชายเลน (เว้นว่าง = ไม่แสดง)</label>
+<div class="dt"><input type="text" data-k="cabMgr" value="${esc(r.f.cabMgr==null?CAB_MGR_DEF:r.f.cabMgr)}" placeholder="เช่น 30 สิงหาคม 2543"><button title="เลือกจากปฏิทิน">📅<input type="date" id="rfCabD"></button></div>`}
+${ks.length>1?(fk==='nrf'?tf('mgrName','ชื่อป่าชายเลน (แสดงในหน้า 1)','(ถ้ามี)'):tf('nrfName','ชื่อป่าสงวนแห่งชาติ (แสดงในหน้า 1)','')):''}
+${hasPerm?tf('permName','ชื่อป่าไม้ถาวร (แสดงเป็นแนวเขตในคำอธิบายสัญลักษณ์เท่านั้น)','(ถ้ามี)'):''}
 ${tf('img','แหล่งภาพถ่ายดาวเทียม (แสดงในหัวเรื่อง)')}
 <details><summary>✎ แก้หัวเรื่องเอง (เว้นว่าง = สร้างอัตโนมัติ)</summary>
-${[['p1','หน้า 1'],['p2','หน้า 2 (ป่าสงวน)'],['p3','หน้า 3 (ป่าสงวน)'],['tb','ตารางพิกัด (ป่าสงวน)'],['p2m','หน้า 2ช. (ป่าชายเลน)'],['p3m','หน้า 3ช. (ป่าชายเลน)'],['tbm','ตารางพิกัด (ป่าชายเลน)'],['tba','ตารางพิกัด (พื้นที่รวม)']].map(([k,t])=>`<label class="f">${t} — ขึ้นบรรทัดใหม่ได้</label><textarea data-tt="${k}">${esc(r.tt[k]||'')}</textarea>`).join('')}
+${(fk==='nrf'?[['p1','หน้า 1'],['p2','หน้า 2'],['p3','หน้า 3'],['tb','ตารางพิกัด']]:[['p1','หน้า 1'],['p2m','หน้า 2'],['p3m','หน้า 3'],['tbm','ตารางพิกัด']]).concat(ks.length>1?[['tba','ตารางพิกัดรวม']]:[]).map(([k,t])=>`<label class="f">${t} — ขึ้นบรรทัดใหม่ได้</label><textarea data-tt="${k}">${esc(r.tt[k]||'')}</textarea>`).join('')}
 </details>
 <h4>3. หน้าที่จะพิมพ์</h4>
-${ck('rpg1',g.pages.p1,'หน้า 1 แผนที่ภาพถ่ายดาวเทียม (ทุกชนิดป่า)')}
-${ck('rpg2',g.pages.p2,'หน้า 2 แผนที่ภาพถ่ายดาวเทียม (เฉพาะป่าสงวน)')}
+${ck('rpg1',g.pages.p1,'หน้า 1 แผนที่ภาพถ่ายดาวเทียม (ภาพรวม ป่าสงวน + ป่าชายเลน)')}
+${ck('rpg2',g.pages.p2,`หน้า 2 แผนที่ภาพถ่ายดาวเทียม (เฉพาะ${RK[fk].n})`)}
 ${ck('rpg3',g.pages.p3,'หน้า 3 แผนที่สังเขป + เลขจุดพิกัด')}
 ${ck('rpgt',g.pages.tb,'ตารางค่าพิกัด (แผ่นแยก ต่อหน้าอัตโนมัติ)')}
-${ck('rpgm',g.pages.mg,'ชุดป่าชายเลน — หน้า 2ช. / 3ช. / ตารางพิกัด'+(P.some(p=>p.kind==='mgr')?'':' <span style="color:#8a8f96">(สายนี้ไม่มี)</span>'))}
+${ks.length>1?ck('rpga',g.pages.tba,'ตารางค่าพิกัดรวม ป่าสงวน + ป่าชายเลน'):''}
 <h4>4. มาตราส่วน</h4>
 <select id="rfScale"><option value="auto" ${g.scale==='auto'?'selected':''}>อัตโนมัติ — พอดี 1 แผ่น</option>
 ${SCALES.map(s=>`<option value="${s}" ${String(g.scale)===String(s)?'selected':''}>1:${s.toLocaleString('en-US')}</option>`).join('')}</select>
@@ -3020,11 +3028,12 @@ ${ck('rfDrag',g.drag,'ลากเลื่อนแผนที่ในกร�
 }
 function updSum(){
   const el=$('rfSum'); if(!el)return;
-  const {G1,G2}=geoms();
-  if(!G1){el.innerHTML='ยังไม่ได้เลือกแปลง';return;}
-  const rows=FKINDS.filter(k=>G1.perKind[k]).map(k=>`${RK[k].n} <b>${areaTxt(G1.perKind[k])}</b> ไร่`);
-  if(G1.kinds.size>1) rows.push(`รวมไม่นับซ้ำ <b>${areaTxt(G1.m2)}</b> ไร่`);
-  rows.push(`<span style="color:#8a8f96">${G1.polys.length} แปลง · ${verts(G2||G1).length} จุดพิกัด${G2?' (ป่าสงวน)':''}</span>`);
+  const {G1,GF}=geoms(), fk=FK();
+  if(!GF){el.innerHTML='ยังไม่ได้เลือกแปลง';return;}
+  const rows=[`พื้นที่ขออนุญาต (${RK[fk].n}) <b>${areaTxt(GF.m2)}</b> ไร่`,
+    `<span style="color:#8a8f96">${GF.polys.length} แปลง · ${verts(GF).length} จุดพิกัด</span>`];
+  if(G1&&G1.kinds.size>1) rows.push(`<span style="color:#8a8f96">หน้า 1 ภาพรวม: `+REQK.filter(k=>G1.perKind[k]).map(k=>`${RK[k].n} ${areaTxt(G1.perKind[k])}`).join(' · ')+` · รวม ${areaTxt(G1.m2)} ไร่</span>`);
+  if(AREA[CUR]&&AREA[CUR].perm) rows.push(`<span style="color:#8a8f96">ส่วนในป่าไม้ถาวรไม่นับเป็นพื้นที่ขออนุญาต (แสดงเป็นแนวเขตพื้นหลังเท่านั้น)</span>`);
   el.innerHTML=rows.join('<br>');
 }
 let tmr=null;
@@ -3032,21 +3041,23 @@ function later(fn,ms){clearTimeout(tmr);tmr=setTimeout(fn,ms||450);}
 function bindForm(){
   const F=$('rpF');
   $('rfRoute').onchange=e=>setRoute(e.target.value);
+  F.querySelectorAll('input[name=rfFk]').forEach(i=>i.onchange=()=>{const r=R(); if(r.fk===i.value)return;
+    r.fk=i.value; r.mode='all'; r.sel=[]; save(); renderForm(); later(rebuild,50);});
   F.querySelectorAll('input[name=rfMode]').forEach(i=>i.onchange=()=>{const r=R();r.mode=i.value;
-    if(r.mode==='pick'&&!r.sel.length) r.sel=routePieces(CUR).map(p=>p.key); save(); renderForm(); later(rebuild,50);});
+    if(r.mode==='pick'&&!r.sel.length) r.sel=routePieces(CUR).filter(p=>p.kind===FK()).map(p=>p.key); save(); renderForm(); later(rebuild,50);});
   F.querySelectorAll('[data-pk]').forEach(i=>i.onchange=()=>{const r=R();
     r.sel=[...F.querySelectorAll('[data-pk]:checked')].map(x=>x.dataset.pk); save(); updSum(); later(rebuild);});
-  if($('rfAll')) $('rfAll').onclick=()=>{R().sel=routePieces(CUR).map(p=>p.key);save();renderForm();later(rebuild,50);};
+  if($('rfAll')) $('rfAll').onclick=()=>{R().sel=routePieces(CUR).filter(p=>p.kind===FK()).map(p=>p.key);save();renderForm();later(rebuild,50);};
   if($('rfNone')) $('rfNone').onclick=()=>{R().sel=[];save();renderForm();later(rebuild,50);};
   F.querySelectorAll('input[data-k]').forEach(i=>i.oninput=()=>{const k=i.dataset.k;
     if(k in DEF_G) ST.g[k]=i.value; else R().f[k]=i.value; save(); later(updateTexts,250);});
   F.querySelectorAll('textarea[data-tt]').forEach(t=>t.oninput=()=>{R().tt[t.dataset.tt]=t.value;save();later(updateTexts,250);});
   $('rfCabD').onchange=e=>{const v=e.target.value; if(!v)return; const d=new Date(v+'T00:00:00');
     const txt=d.toLocaleDateString('th-TH',{day:'numeric',month:'long',year:'numeric'});
-    R().f.cab=txt; F.querySelector('input[data-k=cab]').value=txt; save(); updateTexts();};
+    const ck_=FK()==='mgr'?'cabMgr':'cab'; R().f[ck_]=txt; F.querySelector(`input[data-k=${ck_}]`).value=txt; save(); updateTexts();};
   $('rfPre').onclick=()=>{prefill(true);renderForm();updateTexts();toast('ดึงข้อมูลจากคำขอแล้ว',1800);};
-  const pg={rpg1:'p1',rpg2:'p2',rpg3:'p3',rpgt:'tb',rpgm:'mg'};
-  for(const [id,k] of Object.entries(pg)) $(id).onchange=e=>{ST.g.pages[k]=e.target.checked;save();later(rebuild,50);};
+  const pg={rpg1:'p1',rpg2:'p2',rpg3:'p3',rpgt:'tb',rpga:'tba'};
+  for(const [id,k] of Object.entries(pg)) if($(id)) $(id).onchange=e=>{ST.g.pages[k]=e.target.checked;save();later(rebuild,50);};
   $('rfScale').onchange=e=>{ST.g.scale=e.target.value;save();later(rebuild,50);};
   const bools={rfHi:'hi',rfRow:'row',rfGrid:'grid',rfSkf:'skf',rfThai:'thai',rfDrag:'drag'};
   for(const [id,k] of Object.entries(bools)) $(id).onchange=e=>{ST.g[k]=e.target.checked;save();
@@ -3082,14 +3093,13 @@ function prefill(force){
 
 /* ---------- ประกอบหน้า ---------- */
 function geoms(){
-  const all=routePieces(CUR), r=R(), sel=r.mode==='pick'?new Set(r.sel):null;
-  const P=all.filter(p=>!sel||sel.has(p.key));
-  const G1=geomOf(P), nrf=P.filter(p=>p.kind==='nrf');
-  const G2=nrf.length?(G1&&G1.kinds.size===1?G1:geomOf(nrf)):null;
-  const mg=P.filter(p=>p.kind==='mgr');
-  const G4=mg.length?(G1&&G1.kinds.size===1?G1:geomOf(mg)):null;
-  // หน้า 3 / ตาราง ใช้เฉพาะป่านั้น ๆ — ถ้าไม่มีป่าสงวนใช้พื้นที่รวมได้เฉพาะเมื่อมีป่าชนิดเดียว
-  return {P,G1,G2,G3:G2||(G1&&G1.kinds.size===1&&!G4?G1:null),G4};
+  // GF = ป่าที่ยื่นคำขอ (ตามขอบเขตที่เลือก) · G1 = หน้า 1 ภาพรวม ป่าสงวน + ป่าชายเลน (ไม่รวมป่าถาวร)
+  const all=routePieces(CUR), r=R(), fk=FK(), sel=r.mode==='pick'?new Set(r.sel):null;
+  const PF=all.filter(p=>p.kind===fk&&(!sel||sel.has(p.key)));
+  const GF=geomOf(PF);
+  const G1=sel?GF:(all.some(p=>p.kind!==fk)?geomOf(all):GF);
+  const GA=all.some(p=>p.kind!==fk)?(sel?null:G1):null;
+  return {G1,GF,GA,fk};
 }
 function destroy(){
   for(const p of PAGES) if(p.map){try{p.map.remove();}catch(e){}}
@@ -3106,18 +3116,14 @@ function rebuild(){
   destroy();
   const host=$('rptPages'); host.innerHTML='';
   if(!CUR)return;
-  const {G1,G2,G3,G4}=geoms(), g=ST.g, specs=[], info=[];
-  if(!G1){host.innerHTML='<div class="rpt-cap">ยังไม่ได้เลือกแปลง</div>';$('rfScInfo').textContent='—';return;}
-  if(g.pages.p1) specs.push({k:'p1',type:'sat',G:G1,lab:'หน้า 1'});
-  if(g.pages.p2){ if(G2) specs.push({k:'p2',type:'sat',G:G2,lab:'หน้า 2'}); else info.push('หน้า 2: ไม่มีส่วนในป่าสงวน — ข้าม'); }
-  if(g.pages.p3&&G3) specs.push({k:'p3',type:'sk',G:G3,lab:'หน้า 3'});
-  if(g.pages.tb&&G3) specs.push({k:'tb',type:'tbl',G:G3,lab:'ตารางพิกัด'+(G2?' (ป่าสงวน)':'')});
-  if(g.pages.mg&&G4){
-    specs.push({k:'p2m',type:'sat',G:G4,lab:'หน้า 2ช. (ป่าชายเลน)'});
-    specs.push({k:'p3m',type:'sk',G:G4,lab:'หน้า 3ช. (ป่าชายเลน)'});
-    specs.push({k:'tbm',type:'tbl',G:G4,lab:'ตารางพิกัด (ป่าชายเลน)'});
-  }
-  if(g.pages.tb&&G1.kinds.size>1) specs.push({k:'tba',type:'tbl',G:G1,lab:'ตารางพิกัด (พื้นที่รวมทุกชนิดป่า)'});
+  const {G1,GF,GA,fk}=geoms(), g=ST.g, specs=[], info=[], m=fk==='mgr'?'m':'';
+  if(!GF){host.innerHTML='<div class="rpt-cap">ยังไม่ได้เลือกแปลง</div>';$('rfScInfo').textContent='—';return;}
+  const fn=RK[fk].n;
+  if(g.pages.p1) specs.push({k:'p1',type:'sat',G:G1,lab:'หน้า 1 (ภาพรวม)'});
+  if(g.pages.p2) specs.push({k:'p2'+m,type:'sat',G:GF,lab:`หน้า 2 (${fn})`});
+  if(g.pages.p3) specs.push({k:'p3'+m,type:'sk',G:GF,lab:`หน้า 3 (${fn})`});
+  if(g.pages.tb) specs.push({k:'tb'+m,type:'tbl',G:GF,lab:`ตารางพิกัด (${fn})`});
+  if(g.pages.tba&&GA&&GA.kinds.size>1) specs.push({k:'tba',type:'tbl',G:GA,lab:'ตารางพิกัดรวม (ป่าสงวน + ป่าชายเลน)'});
   let pn=0;
   for(const sp of specs){
     if(sp.type==='tbl'){const n=tablePages(sp,()=>wrapPage(`${sp.lab}`));info.push(`${sp.lab}: ${n} แผ่น · ${verts(sp.G).length} จุด`);continue;}
@@ -3388,10 +3394,12 @@ async function setRoute(name){
 }
 function openRpt(name){
   if(!areaReady){toast('กำลังคำนวณพื้นที่เขตทางในป่า… ลองใหม่อีกครู่',2600);return;}
-  const names=Object.keys(AREA); if(!names.length){toast('ไม่มีสายทางที่อยู่ในเขตป่า',2600);return;}
+  const names=Object.keys(AREA).filter(n=>kindsOf(n).length); if(!names.length){toast('ไม่มีสายทางที่อยู่ในป่าสงวนหรือป่าชายเลน',2600);return;}
   closeAllPanels();
   UI.classList.add('show'); document.body.style.overflow='hidden';
-  const pick=(name&&AREA[name])?name:(areaFocus&&AREA[areaFocus])?areaFocus:(ST.last&&AREA[ST.last])?ST.last:names.sort((a,b)=>a.localeCompare(b,'th',{numeric:true}))[0];
+  const ok=n=>n&&names.includes(n);
+  if(name&&!ok(name)) toast(`${name} ไม่มีส่วนในป่าสงวน/ป่าชายเลน`,2600);
+  const pick=ok(name)?name:ok(areaFocus)?areaFocus:ok(ST.last)?ST.last:names.sort((a,b)=>a.localeCompare(b,'th',{numeric:true}))[0];
   setRoute(pick);
 }
 function closeRpt(){UI.classList.remove('show');document.body.style.overflow='';destroy();$('rptPages').innerHTML='';}
