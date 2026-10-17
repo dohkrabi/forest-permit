@@ -10,6 +10,7 @@
 <meta name="apple-mobile-web-app-title" content="แผนที่เขตทาง">
 <title>แผนที่เขตทางหลวง — แขวงทางหลวงกระบี่</title>
 <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.css">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Sarabun:wght@400;600;700&display=swap">
 <script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/proj4js/2.9.2/proj4.min.js"></script>
 <script src="https://unpkg.com/shpjs@4.0.4/dist/shp.js"
@@ -227,6 +228,121 @@ html,body{height:100%;font-family:'Segoe UI',Tahoma,'Leelawadee UI',sans-serif}
 .ptlabel div{transform:translate(-50%,-130%);background:rgba(26,28,30,.85);color:#fff;
   font-size:10px;font-weight:700;padding:1px 5px;border-radius:6px;white-space:nowrap;
   display:inline-block}
+</style>
+<style>
+/* ================= 🖨️ รายงานแผนที่ประกอบคำขอ (A4) ================= */
+#rpt{position:fixed;inset:0;z-index:3000;background:#4b4f54;display:none;overflow:auto;-webkit-overflow-scrolling:touch;
+  font-family:'Sarabun','Leelawadee UI','TH Sarabun New',Tahoma,sans-serif}
+#rpt.show{display:block}
+.rpt-bar{position:sticky;top:0;z-index:20;display:flex;align-items:center;gap:8px;background:#1a1c1e;color:#fff;
+  padding:8px 12px;box-shadow:0 2px 8px rgba(0,0,0,.35)}
+.rpt-bar b{font-size:14px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.rpt-bar .st{flex:1;min-width:0;font-size:12px;color:#ffd54f;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.rpt-bar button{border:1px solid rgba(255,255,255,.3);background:rgba(255,255,255,.1);color:#fff;border-radius:8px;
+  padding:7px 12px;font-size:13px;font-family:inherit;cursor:pointer;white-space:nowrap}
+.rpt-bar button.pri{background:#f5b400;border-color:#f5b400;color:#1a1c1e;font-weight:700}
+.rpt-body{display:flex;align-items:flex-start;gap:0}
+.rpt-form{flex:0 0 340px;width:340px;background:#fff;position:sticky;top:50px;max-height:calc(100vh - 50px);
+  overflow-y:auto;padding:10px 14px 24px;font-size:13px;color:#1a1c1e}
+.rpt-form h4{font-size:13px;margin:14px 0 6px;color:#37474f;border-bottom:1px solid #e2e4e8;padding-bottom:3px}
+.rpt-form h4:first-child{margin-top:4px}
+.rpt-form label.f{display:block;font-size:11.5px;color:#5f646b;margin:6px 0 2px}
+.rpt-form input[type=text],.rpt-form select,.rpt-form textarea{width:100%;border:1px solid #d5d8dc;border-radius:7px;
+  padding:6px 8px;font-size:13px;font-family:inherit;background:#fff}
+.rpt-form textarea{min-height:46px;resize:vertical;font-size:12px}
+.rpt-form .row2{display:grid;grid-template-columns:1fr 1fr;gap:6px}
+.rpt-form .ck{display:flex;align-items:center;gap:7px;margin:5px 0;font-size:12.5px;cursor:pointer}
+.rpt-form .ck input{width:16px;height:16px;flex:0 0 auto;accent-color:#f5b400}
+.rpt-form .seg{display:flex;gap:6px}
+.rpt-form .seg label{flex:1;display:flex;align-items:center;justify-content:center;gap:5px;border:1px solid #d5d8dc;
+  border-radius:7px;padding:6px 4px;cursor:pointer;font-size:12.5px}
+.rpt-form .seg label.on{background:#fff3c4;border-color:#f5b400;font-weight:600}
+.rpt-form .seg input{display:none}
+.rpt-form .pl{max-height:220px;overflow-y:auto;border:1px solid #e2e4e8;border-radius:7px;padding:4px 6px;margin-top:6px}
+.rpt-form .pl .ck{font-size:12px;margin:3px 0}
+.rpt-form .pl .ck span b{display:inline-block;min-width:30px}
+.rpt-form .mini{display:flex;gap:6px;margin-top:5px}
+.rpt-form .mini button{flex:1;border:1px solid #d5d8dc;background:#f5f6f7;border-radius:7px;padding:5px 0;font-size:12px;
+  font-family:inherit;cursor:pointer}
+.rpt-form .note{font-size:11.5px;color:#5f646b;line-height:1.5;background:#f5f6f7;border-radius:7px;padding:7px 9px;margin-top:6px}
+.rpt-form .note.warn{background:#fff8e1;color:#6d4c00}
+.rpt-form .sum{font-size:12px;line-height:1.55;background:#fffbea;border:1px solid #f5d77a;border-radius:7px;padding:7px 9px;margin-top:6px}
+.rpt-form details{margin-top:8px}
+.rpt-form details summary{cursor:pointer;font-size:12.5px;color:#1565c0;font-weight:600}
+.rpt-form .dt{display:flex;gap:6px}
+.rpt-form .dt input[type=text]{flex:1}
+.rpt-form .dt button{border:1px solid #d5d8dc;background:#f5f6f7;border-radius:7px;padding:0 9px;cursor:pointer;font-size:14px;position:relative}
+.rpt-form .dt input[type=date]{position:absolute;inset:0;opacity:0;cursor:pointer}
+#rptPages{flex:1;min-width:0;padding:14px 12px 40px;display:flex;flex-direction:column;align-items:center;gap:6px}
+.rpt-cap{color:#e0e0e0;font-size:12px;align-self:center;margin-top:10px}
+.rpt-pw{position:relative;box-shadow:0 3px 14px rgba(0,0,0,.45);background:#fff;overflow:hidden;flex:0 0 auto}
+.rpt-page{position:absolute;left:0;top:0;width:210mm;height:297mm;background:#fff;overflow:hidden;transform-origin:0 0;
+  color:#000;font-family:'Sarabun','TH Sarabun New','Leelawadee UI',Tahoma,sans-serif;
+  -webkit-print-color-adjust:exact;print-color-adjust:exact}
+.rp-title{position:absolute;left:14mm;right:14mm;top:9mm;height:32mm;display:flex;flex-direction:column;align-items:center;
+  justify-content:flex-end;text-align:center;font-size:14.5pt;line-height:1.32;font-weight:600;text-wrap:balance}
+.rp-title div{max-width:100%}
+.rp-frame{position:absolute;border:0.35mm solid #000;overflow:hidden;background:#fff}
+.rp-map{position:absolute;inset:0;background:#fff}
+.rp-map.leaflet-container{background:#fff;font-family:inherit}
+.rp-ov{position:absolute;left:0;top:0;width:100%;height:100%;pointer-events:none;z-index:640;overflow:visible}
+.rp-lab{position:absolute;pointer-events:none;z-index:5}
+.rp-lab span{position:absolute;font-size:7.5pt;white-space:nowrap;line-height:1;color:#000}
+.rp-lab span.t{transform:translate(-50%,-100%)}
+.rp-lab span.b{transform:translate(-50%,0)}
+.rp-lab span.l{transform:translate(-50%,-50%) rotate(-90deg)}
+.rp-lab span.r{transform:translate(-50%,-50%) rotate(-90deg)}
+.rp-box{position:absolute;z-index:650;background:#fff;border:0.3mm solid #000;font-size:8.5pt;line-height:1.3}
+.rp-nb{right:3mm;top:3mm;width:44mm;padding:1.5mm 2mm;text-align:center}
+.rp-nb .na{width:17mm;height:17mm;display:block;margin:0 auto}
+.rp-nb .sc{font-size:8.5pt;font-weight:600;margin-top:.5mm}
+.rp-nb .crs{font-size:7.5pt;margin-top:.6mm}
+.rp-nb svg.bar{display:block;margin:1mm auto 0}
+.rp-lg{left:3mm;bottom:3mm;max-width:100mm;padding:2mm 3mm 2.2mm}
+.rp-lg .h{font-weight:700;font-size:9.5pt;margin-bottom:1.2mm;text-decoration:underline}
+.rp-lg .i{display:flex;align-items:center;gap:2.5mm;margin-top:1.1mm;font-size:8.5pt}
+.rp-lg .i svg{flex:0 0 auto;width:11mm;height:5.5mm}
+.rp-lg .nt{font-size:7pt;color:#444;margin-top:1.2mm}
+.rp-ix{right:3mm;bottom:3mm;padding:1mm 1.5mm;text-align:center;font-size:7pt}
+.rp-ix svg{display:block;width:38mm;height:30mm}
+.rp-co{z-index:655;background:#fff9c4;border:0.3mm solid #333;padding:1.3mm 2.4mm;font-size:8.5pt;line-height:1.38;
+  white-space:nowrap;box-shadow:0 0 0 .4mm rgba(255,255,255,.6)}
+.rp-co b{font-weight:700}
+.rp-attr{position:absolute;z-index:651;left:50%;bottom:1.2mm;transform:translateX(-50%);font-size:6.5pt;color:#fff;
+  text-shadow:0 0 2px #000,0 0 2px #000}
+.rp-attr.sk{color:#666;text-shadow:none}
+.rp-foot{position:absolute;left:20mm;right:18mm;bottom:6mm;display:flex;justify-content:space-between;font-size:7.5pt;color:#333}
+.rp-tw{position:absolute;left:14mm;right:14mm;top:46mm;bottom:16mm;display:grid;grid-template-columns:repeat(3,1fr);gap:4mm;align-items:start}
+.rp-t{width:100%;border-collapse:collapse;font-size:8pt;font-variant-numeric:tabular-nums}
+.rp-t th{border:0.25mm solid #000;background:#eceff1;font-weight:700;height:6mm;padding:0 1mm}
+.rp-t td{border:0.2mm solid #000;height:4.55mm;padding:0 1.2mm;text-align:right;white-space:nowrap}
+.rp-t td:first-child{text-align:center;width:10mm}
+.rp-t td.h{text-align:left;background:#fff3c4;font-weight:600;font-size:7.2pt;white-space:nowrap;line-height:1.2;
+  height:9.1mm;padding:0 1.2mm;overflow:hidden}
+.rp-t td.h span{font-weight:400}
+.rp-tsum{position:absolute;left:14mm;right:14mm;bottom:11mm;font-size:8.5pt;text-align:right}
+.rpf-nrf{fill:url(#rp-nrf) !important}
+.rpf-perm{fill:url(#rp-perm) !important}
+.rpf-mgr{fill:url(#rp-mgr) !important}
+.rp-sk .rpf-nrf,.rp-sk .rpf-perm,.rp-sk .rpf-mgr{fill:none !important}
+@media (max-width:860px){
+  .rpt-body{flex-direction:column;align-items:stretch}
+  .rpt-form{position:static;flex:none;width:auto;max-height:none}
+  .rpt-bar b{display:none}
+}
+@page{size:A4 portrait;margin:0}
+@media print{
+  html,body{height:auto !important;overflow:visible !important;background:#fff !important}
+  body.rpt-printing > *:not(#rpt){display:none !important}
+  body.rpt-printing #rpt{position:static !important;display:block !important;overflow:visible !important;background:#fff !important}
+  body.rpt-printing .rpt-bar,body.rpt-printing .rpt-form,body.rpt-printing .rpt-cap{display:none !important}
+  body.rpt-printing .rpt-body{display:block !important}
+  body.rpt-printing #rptPages{display:block !important;padding:0 !important}
+  body.rpt-printing .rpt-pw{width:210mm !important;height:297mm !important;box-shadow:none !important;margin:0 !important;
+    page-break-after:always;break-after:page;overflow:hidden}
+  body.rpt-printing .rpt-pw:last-child{page-break-after:auto;break-after:auto}
+  body.rpt-printing .rpt-page{transform:none !important}
+}
 </style>
 </head>
 <body>
@@ -2168,6 +2284,7 @@ function areaPopup(name,kind,pi){
   ${Math.abs(pc.m2-sumS)>=0.1?'<div style="color:#8a8f96;font-size:11px">* หน้าตัดตั้งฉากเหลื่อมกันตรงทางโค้งแคบ/ทางแยก — เนื้อที่แปลงยังเป็นค่าที่ถูกต้อง</div>':''}`:''}
   <a class="nav" href="#" onclick='exportAreaCsv(${JSON.stringify(name)});return false'>⤓ CSV พิกัด+เนื้อที่</a>
   <a class="nav" style="background:#37474f;margin-left:4px" href="#" onclick='exportAreaKml(${JSON.stringify(name)});return false'>⤓ KML</a>
+  <a class="nav" style="background:#6a1b9a;margin-left:4px" href="#" onclick='openReport(${JSON.stringify(name)});return false'>🖨️ รายงาน</a>
   <a class="nav" style="background:#2e7d32;margin-left:4px" href="#" onclick='exportShp(${JSON.stringify(name)});return false'>⤓ SHP</a></div>`;
 }
 
@@ -2677,6 +2794,614 @@ if(!jumped){
   for(const g of Object.values(groups)){try{all.extend(g.getBounds());}catch(e){}}
   if(all.isValid())map.fitBounds(all,{padding:[60,30]});
 }
+</script>
+<script>
+/* ================= 🖨️ รายงานแผนที่ประกอบคำขอใช้พื้นที่ป่า (A4 แนวตั้ง · v59) =================
+   หน้า 1 แผนที่ภาพถ่ายดาวเทียม (ทุกชนิดป่า) · หน้า 2 เฉพาะป่าสงวน · หน้า 3 แผนที่สังเขป + เลขจุด · ตารางค่าพิกัด
+   เนื้อที่/พิกัดมาจาก xpLayer() ตัวเดียวกับที่ส่งออก SHP/ค่าพิกัด.xlsx → ตัวเลขตรงกันทุกที่            */
+(function(){
+'use strict';
+const MM=96/25.4;                                   // CSS px ต่อ 1 มม. (พิมพ์ที่ 100%)
+const FR={x:20,y:46,w:172,h:234};                   // กรอบแผนที่บนกระดาษ A4 (มม.)
+const SCALES=[1000,2000,4000,5000,10000,20000,25000,50000,100000];
+const GRIDI={1000:50,2000:100,4000:200,5000:250,10000:500,20000:1000,25000:1000,50000:2000,100000:5000};
+const RK={nrf:{n:'ป่าสงวนแห่งชาติ',c:'#e53935'},perm:{n:'ป่าไม้ถาวร',c:'#2e9e44'},mgr:{n:'ป่าชายเลน',c:'#0091ea'}};
+const AC='#ff1493';                                 // สีพื้นที่ขออนุญาต
+const MAXSHEET=80, ROWS=50, COLS=3;
+const LSK='khet_rpt_v1';
+const DEF_G={org:'แขวงทางหลวงกระบี่ กรมทางหลวง',img:'Google',lyr:'s',hi:true,thai:true,dec:1,grid:false,row:true,
+  skf:false,drag:false,scale:'auto',pages:{p1:true,p2:true,p3:true,tb:true}};
+const TEXT_KEYS=['org','img','purpose','moo','tambon','amphoe','province','nrfName','permName','mgrName','cab'];
+let ST={g:JSON.parse(JSON.stringify(DEF_G)),r:{},last:null};
+try{const s=JSON.parse(localStorage.getItem(LSK)||'null');
+  if(s){ST.g=Object.assign({},DEF_G,s.g||{});ST.g.pages=Object.assign({},DEF_G.pages,(s.g||{}).pages||{});ST.r=s.r||{};ST.last=s.last||null;}}catch(e){}
+function save(){try{localStorage.setItem(LSK,JSON.stringify(ST));}catch(e){}}
+let CUR=null, PAGES=[], TL=[], OFFS={}, REQS=null;
+const $=s=>document.getElementById(s);
+function R(){return ST.r[CUR]||(ST.r[CUR]={mode:'all',sel:[],f:{},tt:{}});}
+const esc=s=>String(s==null?'':s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+const inv=(x,y)=>proj4(UTM47).inverse([x,y]);           // UTM → [lon,lat]
+const fwd=(lo,la)=>proj4(UTM47,[lo,la]);
+const sleep=ms=>new Promise(r=>setTimeout(r,ms));
+function thd(s){return ST.g.thai?String(s).replace(/[0-9]/g,d=>'๐๑๒๓๔๕๖๗๘๙'[d]):String(s);}
+function strip(s,p){return String(s||'').trim().replace(new RegExp('^'+p+'\\s*'),'');}
+function rngwD(m2,dec){const f=Math.pow(10,dec);const tw=Math.round(m2/4*f)/f;const r=Math.floor(tw/400+1e-9);
+  const g=Math.floor((tw-r*400)/100+1e-9);return [r,g,Math.round((tw-r*400-g*100)*f)/f];}
+function areaTxt(m2){const d=+ST.g.dec,[r,g,w]=rngwD(m2,d);let ws=w.toFixed(d);if(ws.split('.')[0].length<2)ws='0'+ws;
+  return `${r.toLocaleString('en-US')}\u00a0-\u00a0${g}\u00a0-\u00a0${ws}`;}
+function shoe(r){let s=0;for(let i=0,j=r.length-1;i<r.length;j=i++)s+=(r[j][0]+r[i][0])*(r[j][1]-r[i][1]);return s/2;}
+function polyArea(rings){return rings.reduce((s,r,i)=>s+(i?-1:1)*Math.abs(shoe(r)),0);}
+
+/* ---------- ข้อมูลแปลง (ต่อสายทาง) ---------- */
+const PCACHE={};
+function routePieces(name){
+  if(PCACHE[name])return PCACHE[name];
+  const out=[];
+  for(const kind of FKINDS){
+    const Ly=xpLayer(name,kind,0); if(!Ly)continue;          // step 0 = มุมจริงทุกจุด ไม่แทรก ไม่ simplify
+    Ly.polys.forEach(p=>out.push({kind,id:p.id,key:kind+':'+p.id,kf:p.kf,kt:p.kt,m2:p.m2,rings:p.rings}));
+  }
+  return PCACHE[name]=out;
+}
+function krOf(rings){
+  const o=rings[0], st=Math.max(1,Math.floor(o.length/40)); let lo=Infinity,hi=-Infinity;
+  for(let i=0;i<o.length;i+=st){const [lo_,la]=inv(o[i][0],o[i][1]);const k=kmOfV(CUR,[lo_,la]);if(k!=null){if(k<lo)lo=k;if(k>hi)hi=k;}}
+  return lo<=hi?[lo,hi]:null;
+}
+function geomOf(pieces){
+  if(!pieces.length)return null;
+  const kinds=new Set(pieces.map(p=>p.kind)), perKind={};
+  for(const p of pieces) perKind[p.kind]=(perKind[p.kind]||0)+p.m2;
+  let polys;
+  if(kinds.size===1){
+    polys=pieces.map(p=>({rings:p.rings,m2:p.m2,kr:[p.kf,p.kt]}));
+  }else{                                                    // หลายชนิดป่า → รวมไม่นับซ้ำ
+    const u=PC.union(...pieces.map(p=>p.rings.map(r=>r.concat([r[0]]))));
+    polys=u.map(pg=>{const rings=pg.map(r=>r.slice(0,-1));const k=krOf(rings);
+      return {rings,m2:polyArea(rings),kr:k?[xpKm(k[0]),xpKm(k[1])]:['',''],_k:k?k[0]:0};});
+    polys.sort((a,b)=>a._k-b._k);
+  }
+  const m2=polys.reduce((s,p)=>s+p.m2,0);
+  let b=[Infinity,Infinity,-Infinity,-Infinity];
+  for(const p of polys)for(const [x,y] of p.rings[0]){if(x<b[0])b[0]=x;if(y<b[1])b[1]=y;if(x>b[2])b[2]=x;if(y>b[3])b[3]=y;}
+  return {polys,m2,box:b,kinds,perKind};
+}
+function verts(G){
+  if(G._v)return G._v; const V=[]; let n=0;
+  G.polys.forEach((p,pi)=>p.rings.forEach((r,ri)=>r.forEach(([x,y])=>V.push({n:++n,pi,ri,x,y}))));
+  return G._v=V;
+}
+function llRings(p){return p._ll||(p._ll=p.rings.map(r=>r.map(([x,y])=>{const q=inv(x,y);return [q[1],q[0]];})));}
+
+/* ---------- มาตราส่วน / แบ่งแผ่น ---------- */
+function fitScale(G){
+  const w=G.box[2]-G.box[0], h=G.box[3]-G.box[1];
+  const need=Math.max(w/(FR.w/1000*0.86), h/(FR.h/1000*0.86));
+  return SCALES.find(s=>s>=need)||SCALES[SCALES.length-1];
+}
+function rectHit(G,x0,y0,x1,y1){
+  const q=[[x0,y0],[x1,y0],[x1,y1],[x0,y1]];
+  for(const p of G.polys){const b=p._b||(p._b=ringBox(p.rings[0]));
+    if(b[2]<x0||b[0]>x1||b[3]<y0||b[1]>y1)continue;
+    const c=clipConvex(p.rings[0],q); if(c.length>=3&&Math.abs(shoe(c))>0.01)return true;}
+  return false;
+}
+function sheetsFor(G,S){
+  const Wm=FR.w/1000*S, Hm=FR.h/1000*S, b=G.box, pad=0.07, eW=Wm*(1-2*pad), eH=Hm*(1-2*pad);
+  const w=b[2]-b[0], h=b[3]-b[1], nx=Math.max(1,Math.ceil(w/eW)), ny=Math.max(1,Math.ceil(h/eH));
+  if(nx*ny===1) return [{cx:(b[0]+b[2])/2,cy:(b[1]+b[3])/2,Wm,Hm}];
+  if(nx*ny>MAXSHEET*6) return null;
+  const gx=(b[0]+b[2])/2-nx*eW/2, gy=(b[1]+b[3])/2-ny*eH/2, out=[];
+  for(let i=0;i<nx;i++)for(let j=0;j<ny;j++){
+    const x0=gx+i*eW, y0=gy+j*eH;
+    if(rectHit(G,x0,y0,x0+eW,y0+eH)) out.push({cx:x0+eW/2,cy:y0+eH/2,Wm,Hm});
+  }
+  if(out.length>MAXSHEET) return null;
+  // เรียงแผ่นตามแนวสายทาง (แกนหลักของรูป) เริ่มจากฝั่ง กม. น้อย
+  const V=verts(G); let mx=0,my=0; V.forEach(v=>{mx+=v.x;my+=v.y;}); mx/=V.length; my/=V.length;
+  let sxx=0,syy=0,sxy=0; V.forEach(v=>{const dx=v.x-mx,dy=v.y-my;sxx+=dx*dx;syy+=dy*dy;sxy+=dx*dy;});
+  const a=0.5*Math.atan2(2*sxy,sxx-syy); let ux=Math.cos(a),uy=Math.sin(a);
+  const f0=G.polys[0].rings[0][0]; if((f0[0]-mx)*ux+(f0[1]-my)*uy>0){ux=-ux;uy=-uy;}
+  out.sort((p,q)=>((p.cx-mx)*ux+(p.cy-my)*uy)-((q.cx-mx)*ux+(q.cy-my)*uy));
+  return out;
+}
+function zoomFor(S,lat){const mpp=S*0.0254/96;return Math.log2(40075016.686*Math.cos(lat*Math.PI/180)/(256*mpp));}
+function niceBar(S){
+  const target=0.032*S; let best=null;
+  for(let e=-1;e<6;e++)for(const m of [1,2,2.5,5]){const L=m*Math.pow(10,e);const mm=L/S*1000;
+    if(mm>=18&&mm<=40&&(!best||Math.abs(L-target)<Math.abs(best-target)))best=L;}
+  return best||target;
+}
+
+/* ---------- ข้อความหัวเรื่อง ---------- */
+function locTxt(){
+  const f=R().f;
+  return [f.moo?'หมู่ที่ '+strip(f.moo,'หมู่ที่'):'', f.tambon?'ตำบล'+strip(f.tambon,'ตำบล'):'',
+    f.amphoe?'อำเภอ'+strip(f.amphoe,'อำเภอ'):'', 'จังหวัด'+strip(f.province||'กระบี่','จังหวัด')].filter(Boolean).join(' ');
+}
+function fName(kind){
+  const f=R().f, nm=kind==='nrf'?f.nrfName:kind==='perm'?f.permName:f.mgrName;
+  return RK[kind].n+(nm?' '+String(nm).trim():'');
+}
+function autoTitle(k,G){
+  const f=R().f, g=ST.g, a=`เนื้อที่ ${areaTxt(G.m2)} ไร่`, cab=f.cab?` (ขอตามมติคณะรัฐมนตรี เมื่อวันที่ ${String(f.cab).trim()})`:'';
+  const pur=f.purpose?' เพื่อ'+strip(f.purpose,'เพื่อ'):'', loc=locTxt();
+  const oneKind=G.kinds.size===1?[...G.kinds][0]:null;
+  const what=k==='p1'&&!oneKind?'ป่า':fName(oneKind||'nrf');
+  const rest=`ขอใช้พื้นที่${what}${pur} ${loc} ${a}${cab}`;
+  if(k==='p1'||k==='p2') return [`แผนที่ภาพถ่ายดาวเทียม ${g.img} แสดงบริเวณพื้นที่${g.org}`,rest];
+  if(k==='p3') return [`แผนที่สังเขปและค่าพิกัด GPS แสดงบริเวณพื้นที่${g.org}`,rest];
+  return [`ค่าพิกัด GPS บริเวณพื้นที่ขออนุญาต${oneKind?' ในเขต'+fName(oneKind):' ในเขตป่า'} ${CUR}`,
+    `${loc} ${a} · ระบบพิกัด WGS 1984 UTM Zone 47N`];
+}
+const AREA_RE=/[0-9๐-๙,]+\u00a0-\u00a0[0-9๐-๙]+\u00a0-\u00a0[0-9๐-๙.]+(\s*ไร่)?/g;
+function nw(h){return String(h).replace(AREA_RE,m=>`<span style="white-space:nowrap">${m}</span>`);}
+function fitTitle(el){
+  if(!el)return; let fs=14.5; el.style.fontSize=fs+'pt';
+  const hh=()=>[...el.children].reduce((s,c)=>s+c.offsetHeight,0);
+  while(fs>10&&hh()>el.clientHeight+1){fs-=0.5;el.style.fontSize=fs+'pt';}
+}
+function titleHtml(k,G){
+  const ov=(R().tt[k]||'').trim();
+  const lines=ov?ov.split(/\n+/):autoTitle(k,G);
+  return lines.map(l=>`<div>${nw(esc(thd(l)))}</div>`).join('');
+}
+
+/* ---------- ฟอร์ม ---------- */
+const UI=document.createElement('div');
+UI.id='rpt';
+UI.innerHTML=`<svg width="0" height="0" style="position:absolute"><defs>
+<pattern id="rp-nrf" width="12" height="12" patternUnits="userSpaceOnUse"><path d="M-3,3 l6,-6 M0,12 l12,-12 M9,15 l6,-6" stroke="${RK.nrf.c}" stroke-width="1.4"/></pattern>
+<pattern id="rp-perm" width="12" height="12" patternUnits="userSpaceOnUse"><path d="M-3,9 l6,6 M0,0 l12,12 M9,-3 l6,6" stroke="${RK.perm.c}" stroke-width="1.4"/></pattern>
+<pattern id="rp-mgr" width="16" height="12" patternUnits="userSpaceOnUse"><path d="M2,3 h6 M10,9 h6" stroke="${RK.mgr.c}" stroke-width="1.6" stroke-linecap="round"/></pattern>
+</defs></svg>
+<div class="rpt-bar"><button id="rpX">← กลับแผนที่</button><b>🖨️ รายงานแผนที่ประกอบคำขอ</b>
+  <span class="st" id="rpSt"></span><button id="rpP" class="pri">🖨️ พิมพ์ / บันทึก PDF</button></div>
+<div class="rpt-body"><div class="rpt-form" id="rpF"></div><div id="rptPages"></div></div>`;
+document.body.appendChild(UI);
+
+function seg(name,val,opts){return `<div class="seg">${opts.map(([v,t])=>`<label class="${String(val)===String(v)?'on':''}"><input type="radio" name="${name}" value="${v}" ${String(val)===String(v)?'checked':''}>${t}</label>`).join('')}</div>`;}
+function ck(id,on,t){return `<label class="ck"><input type="checkbox" id="${id}" ${on?'checked':''}>${t}</label>`;}
+function tf(k,label,ph){const v=k in DEF_G?ST.g[k]:R().f[k];return `<label class="f">${label}</label><input type="text" data-k="${k}" value="${esc(v||'')}" placeholder="${esc(ph||'')}">`;}
+
+function renderForm(){
+  const r=R(), g=ST.g, names=Object.keys(AREA).sort((a,b)=>a.localeCompare(b,'th',{numeric:true}));
+  const P=routePieces(CUR), sel=new Set(r.sel);
+  const reqTxt=REQS==null?'กำลังอ่านคำขอ…':(REQS.length?REQS.map(q=>`ทล.${esc(q.route_no)} ${esc(q.route_extra||'')} · ${esc(q.forest_type||'')} · เลขที่ ${esc(q.request_no||'–')} · ${esc(q.status||'')}`).join('<br>'):'ไม่พบคำขอของสายนี้ในเครื่อง (กรอกเองได้)');
+  $('rpF').innerHTML=`
+<h4>1. สายทาง / ขอบเขต</h4>
+<select id="rfRoute">${names.map(n=>`<option ${n===CUR?'selected':''}>${esc(n)}</option>`).join('')}</select>
+<div style="margin-top:6px">${seg('rfMode',r.mode,[['all','ทั้งสายทาง'],['pick','เลือกแปลง']])}</div>
+${r.mode==='pick'?`<div class="pl">${P.map(p=>`<label class="ck"><input type="checkbox" data-pk="${p.key}" ${sel.has(p.key)?'checked':''}><span><b>${FK_AB[p.kind]}${p.id}</b> กม. ${esc(p.kf||'?')}–${esc(p.kt||'?')} · ${m2Short(p.m2)} ไร่</span></label>`).join('')}</div>
+<div class="mini"><button id="rfAll">เลือกทั้งหมด</button><button id="rfNone">ไม่เลือก</button></div>`:''}
+<div class="sum" id="rfSum"></div>
+<h4>2. ข้อมูลหัวเรื่อง <span style="font-weight:400;color:#8a8f96">(แก้ไขได้ทุกช่อง)</span></h4>
+<div class="note">${reqTxt}</div>
+<div class="mini"><button id="rfPre">↺ ดึงข้อมูลจากคำขอ (ทับค่าเดิม)</button></div>
+${tf('org','หน่วยงานที่ขออนุญาต')}
+${tf('purpose','วัตถุประสงค์ (ต่อจากคำว่า "เพื่อ")','เช่น ใช้ประโยชน์ในเขตทางหลวงหมายเลข 4033')}
+<div class="row2"><div>${tf('moo','หมู่ที่','เช่น 8')}</div><div>${tf('tambon','ตำบล','เช่น เกาะลันตาใหญ่')}</div></div>
+<div class="row2"><div>${tf('amphoe','อำเภอ','เช่น เกาะลันตา')}</div><div>${tf('province','จังหวัด','กระบี่')}</div></div>
+${tf('nrfName','ชื่อป่าสงวนแห่งชาติ','เช่น ป่าเกาะลันตาใหญ่')}
+<div class="row2"><div>${tf('permName','ชื่อป่าไม้ถาวร','(ถ้ามี)')}</div><div>${tf('mgrName','ชื่อป่าชายเลน','(ถ้ามี)')}</div></div>
+<label class="f">วันที่มติคณะรัฐมนตรี (เว้นว่าง = ไม่แสดง)</label>
+<div class="dt"><input type="text" data-k="cab" value="${esc(r.f.cab||'')}" placeholder="เช่น 25 กุมภาพันธ์ 2568"><button title="เลือกจากปฏิทิน">📅<input type="date" id="rfCabD"></button></div>
+${tf('img','แหล่งภาพถ่ายดาวเทียม (แสดงในหัวเรื่อง)')}
+<details><summary>✎ แก้หัวเรื่องเอง (เว้นว่าง = สร้างอัตโนมัติ)</summary>
+${[['p1','หน้า 1'],['p2','หน้า 2'],['p3','หน้า 3'],['tb','ตารางพิกัด']].map(([k,t])=>`<label class="f">${t} — ขึ้นบรรทัดใหม่ได้</label><textarea data-tt="${k}">${esc(r.tt[k]||'')}</textarea>`).join('')}
+</details>
+<h4>3. หน้าที่จะพิมพ์</h4>
+${ck('rpg1',g.pages.p1,'หน้า 1 แผนที่ภาพถ่ายดาวเทียม (ทุกชนิดป่า)')}
+${ck('rpg2',g.pages.p2,'หน้า 2 แผนที่ภาพถ่ายดาวเทียม (เฉพาะป่าสงวน)')}
+${ck('rpg3',g.pages.p3,'หน้า 3 แผนที่สังเขป + เลขจุดพิกัด')}
+${ck('rpgt',g.pages.tb,'ตารางค่าพิกัด (แผ่นแยก ต่อหน้าอัตโนมัติ)')}
+<h4>4. มาตราส่วน</h4>
+<select id="rfScale"><option value="auto" ${g.scale==='auto'?'selected':''}>อัตโนมัติ — พอดี 1 แผ่น</option>
+${SCALES.map(s=>`<option value="${s}" ${String(g.scale)===String(s)?'selected':''}>1:${s.toLocaleString('en-US')}</option>`).join('')}</select>
+<div class="note" id="rfScInfo"></div>
+<h4>5. การแสดงผล</h4>
+${seg('rfLyr',g.lyr,[['s','ภาพดาวเทียมล้วน'],['y','มีชื่อถนน']])}
+${ck('rfHi',g.hi,'ภาพคมชัดสูง 2× (โหลดนานขึ้น)')}
+${ck('rfRow',g.row,'แสดงแนวเขตทางหลวง (เส้นประเหลือง)')}
+${ck('rfGrid',g.grid,'เส้นกริดพิกัดเต็มกรอบ (ปกติแสดงเฉพาะขีดที่ขอบ)')}
+${ck('rfSkf',g.skf,'แสดงแนวเขตป่าในแผนที่สังเขป')}
+${ck('rfThai',g.thai,'ใช้เลขไทยในหัวเรื่องและคำอธิบายสัญลักษณ์')}
+${ck('rfDrag',g.drag,'ลากเลื่อนแผนที่ในกรอบได้ (ปรับตำแหน่งก่อนพิมพ์)')}
+<label class="f">ตร.วา ทศนิยม</label>${seg('rfDec',g.dec,[['0','0 ตำแหน่ง'],['1','1 ตำแหน่ง'],['2','2 ตำแหน่ง']])}
+<div class="note warn"><b>ตั้งค่าเครื่องพิมพ์ให้มาตราส่วนถูกต้อง</b><br>ขนาดกระดาษ A4 แนวตั้ง · ระยะขอบ <b>ไม่มี (None)</b> · มาตราส่วน <b>100%</b> (ห้าม "พอดีกับหน้า") · เปิด <b>กราฟิกพื้นหลัง</b><br>แนะนำ Chrome / Edge บนคอมพิวเตอร์</div>`;
+  bindForm(); updSum();
+}
+function updSum(){
+  const el=$('rfSum'); if(!el)return;
+  const {G1,G2}=geoms();
+  if(!G1){el.innerHTML='ยังไม่ได้เลือกแปลง';return;}
+  const rows=FKINDS.filter(k=>G1.perKind[k]).map(k=>`${RK[k].n} <b>${areaTxt(G1.perKind[k])}</b> ไร่`);
+  if(G1.kinds.size>1) rows.push(`รวมไม่นับซ้ำ <b>${areaTxt(G1.m2)}</b> ไร่`);
+  rows.push(`<span style="color:#8a8f96">${G1.polys.length} แปลง · ${verts(G2||G1).length} จุดพิกัด${G2?' (ป่าสงวน)':''}</span>`);
+  el.innerHTML=rows.join('<br>');
+}
+let tmr=null;
+function later(fn,ms){clearTimeout(tmr);tmr=setTimeout(fn,ms||450);}
+function bindForm(){
+  const F=$('rpF');
+  $('rfRoute').onchange=e=>setRoute(e.target.value);
+  F.querySelectorAll('input[name=rfMode]').forEach(i=>i.onchange=()=>{const r=R();r.mode=i.value;
+    if(r.mode==='pick'&&!r.sel.length) r.sel=routePieces(CUR).map(p=>p.key); save(); renderForm(); later(rebuild,50);});
+  F.querySelectorAll('[data-pk]').forEach(i=>i.onchange=()=>{const r=R();
+    r.sel=[...F.querySelectorAll('[data-pk]:checked')].map(x=>x.dataset.pk); save(); updSum(); later(rebuild);});
+  if($('rfAll')) $('rfAll').onclick=()=>{R().sel=routePieces(CUR).map(p=>p.key);save();renderForm();later(rebuild,50);};
+  if($('rfNone')) $('rfNone').onclick=()=>{R().sel=[];save();renderForm();later(rebuild,50);};
+  F.querySelectorAll('input[data-k]').forEach(i=>i.oninput=()=>{const k=i.dataset.k;
+    if(k in DEF_G) ST.g[k]=i.value; else R().f[k]=i.value; save(); later(updateTexts,250);});
+  F.querySelectorAll('textarea[data-tt]').forEach(t=>t.oninput=()=>{R().tt[t.dataset.tt]=t.value;save();later(updateTexts,250);});
+  $('rfCabD').onchange=e=>{const v=e.target.value; if(!v)return; const d=new Date(v+'T00:00:00');
+    const txt=d.toLocaleDateString('th-TH',{day:'numeric',month:'long',year:'numeric'});
+    R().f.cab=txt; F.querySelector('input[data-k=cab]').value=txt; save(); updateTexts();};
+  $('rfPre').onclick=()=>{prefill(true);renderForm();updateTexts();toast('ดึงข้อมูลจากคำขอแล้ว',1800);};
+  const pg={rpg1:'p1',rpg2:'p2',rpg3:'p3',rpgt:'tb'};
+  for(const [id,k] of Object.entries(pg)) $(id).onchange=e=>{ST.g.pages[k]=e.target.checked;save();later(rebuild,50);};
+  $('rfScale').onchange=e=>{ST.g.scale=e.target.value;save();later(rebuild,50);};
+  const bools={rfHi:'hi',rfRow:'row',rfGrid:'grid',rfSkf:'skf',rfThai:'thai',rfDrag:'drag'};
+  for(const [id,k] of Object.entries(bools)) $(id).onchange=e=>{ST.g[k]=e.target.checked;save();
+    if(k==='thai'){updSum();} later(rebuild,50);};
+  F.querySelectorAll('input[name=rfLyr]').forEach(i=>i.onchange=()=>{ST.g.lyr=i.value;save();segOn('rfLyr');later(rebuild,50);});
+  F.querySelectorAll('input[name=rfDec]').forEach(i=>i.onchange=()=>{ST.g.dec=+i.value;save();segOn('rfDec');updSum();later(rebuild,50);});
+}
+function segOn(name){document.querySelectorAll(`input[name=${name}]`).forEach(i=>i.parentNode.classList.toggle('on',i.checked));}
+
+/* ---------- ดึงข้อมูลจากคำขอ (IndexedDB ของแอปคำขอ) ---------- */
+function readReqs(){return new Promise(res=>{let done=false;const fin=v=>{if(!done){done=true;res(v);}};setTimeout(()=>fin([]),2500);
+  try{const q=indexedDB.open('forest_krabi_db');q.onerror=()=>fin([]);
+    q.onsuccess=()=>{const d=q.result;try{if(!d.objectStoreNames.contains('requests')){d.close();fin([]);return;}
+      const t=d.transaction('requests','readonly').objectStore('requests').getAll();
+      t.onsuccess=()=>{d.close();fin(t.result||[]);};t.onerror=()=>{d.close();fin([]);};}catch(e){try{d.close();}catch(_){}fin([]);}};
+  }catch(e){fin([]);}});}
+let ALLREQ=null;
+function matchReqs(){
+  const [num,extra]=splitNum(CUR); if(!num||!ALLREQ) return [];
+  let hit=ALLREQ.filter(q=>splitNum(String(q.route_no||''))[0]===num);
+  const ex=hit.filter(q=>{const rx=norm(q.route_extra||'');return extra&&rx&&(extra.includes(rx)||rx.includes(extra));});
+  if(ex.length) hit=ex;
+  return hit.sort((a,b)=>(/สงวน/.test(b.forest_type||'')?1:0)-(/สงวน/.test(a.forest_type||'')?1:0));
+}
+function prefill(force){
+  const f=R().f, q=(REQS||[])[0], [num]=splitNum(CUR);
+  const set=(k,v)=>{if(v&&(force||!f[k]))f[k]=v;};
+  set('purpose',`ใช้ประโยชน์ในเขตทางหลวงหมายเลข ${num||CUR}${q&&q.route_extra?' ตอน '+String(q.route_extra).trim():''}`);
+  if(q&&q.province_area) set('province',String(q.province_area).replace(/^(จ\.|จังหวัด)\s*/,'').trim());
+  set('province','กระบี่');
+  f._filled=true; save();
+}
+
+/* ---------- ประกอบหน้า ---------- */
+function geoms(){
+  const all=routePieces(CUR), r=R(), sel=r.mode==='pick'?new Set(r.sel):null;
+  const P=all.filter(p=>!sel||sel.has(p.key));
+  const G1=geomOf(P), nrf=P.filter(p=>p.kind==='nrf');
+  const G2=nrf.length?(G1&&G1.kinds.size===1?G1:geomOf(nrf)):null;
+  return {P,G1,G2,G3:G2||G1};
+}
+function destroy(){
+  for(const p of PAGES) if(p.map){try{p.map.remove();}catch(e){}}
+  PAGES=[]; TL=[]; stat();
+}
+function wrapPage(cap){
+  const host=$('rptPages');
+  const c=document.createElement('div'); c.className='rpt-cap'; c.textContent=cap; host.appendChild(c);
+  const w=document.createElement('div'); w.className='rpt-pw';
+  const p=document.createElement('div'); p.className='rpt-page'; w.appendChild(p); host.appendChild(w);
+  return p;
+}
+function rebuild(){
+  destroy();
+  const host=$('rptPages'); host.innerHTML='';
+  if(!CUR)return;
+  const {G1,G2,G3}=geoms(), g=ST.g, specs=[], info=[];
+  if(!G1){host.innerHTML='<div class="rpt-cap">ยังไม่ได้เลือกแปลง</div>';$('rfScInfo').textContent='—';return;}
+  if(g.pages.p1) specs.push({k:'p1',type:'sat',G:G1,lab:'หน้า 1'});
+  if(g.pages.p2){ if(G2) specs.push({k:'p2',type:'sat',G:G2,lab:'หน้า 2'}); else info.push('หน้า 2: ไม่มีส่วนในป่าสงวน — ข้าม'); }
+  if(g.pages.p3) specs.push({k:'p3',type:'sk',G:G3,lab:'หน้า 3'});
+  if(g.pages.tb){ specs.push({k:'tb',type:'tbl',G:G3,lab:'ตารางพิกัด'});
+    if(G2&&G1!==G2&&G1.kinds.size>1) specs.push({k:'tb',type:'tbl',G:G1,lab:'ตารางพิกัด (พื้นที่รวมทุกชนิดป่า)'}); }
+  let pn=0;
+  for(const sp of specs){
+    if(sp.type==='tbl'){const n=tablePages(sp,()=>wrapPage(`${sp.lab}`));info.push(`${sp.lab}: ${n} แผ่น · ${verts(sp.G).length} จุด`);continue;}
+    let S=g.scale==='auto'?fitScale(sp.G):+g.scale, sh=sheetsFor(sp.G,S);
+    if(!sh){const S2=fitScale(sp.G);info.push(`${sp.lab}: 1:${S.toLocaleString('en-US')} ต้องใช้เกิน ${MAXSHEET} แผ่น — ใช้ 1:${S2.toLocaleString('en-US')} แทน`);S=S2;sh=sheetsFor(sp.G,S);}
+    info.push(`${sp.lab}: 1:${S.toLocaleString('en-US')} · ${sh.length} แผ่น`);
+    sh.forEach((s,i)=>{
+      const el=wrapPage(`${sp.lab}${sh.length>1?` · แผ่น ${i+1}/${sh.length}`:''} · 1:${S.toLocaleString('en-US')}`);
+      PAGES.push(mapPage(el,sp,S,s,i,sh)); pn++;
+    });
+  }
+  $('rfScInfo').innerHTML=info.join('<br>');
+  layout();
+  for(const pg of PAGES) if(pg.sheet) initSheet(pg);
+  updateTexts();
+  try{document.fonts.ready.then(()=>{for(const pg of PAGES){fitTitle(pg.titleEl); if(pg.map) overlay(pg);}});}catch(e){}
+}
+function layout(){
+  const host=$('rptPages'); if(!host)return;
+  const avail=host.clientWidth-24, s=Math.min(1,avail/(210*MM));
+  host.querySelectorAll('.rpt-pw').forEach(w=>{w.style.width=(210*MM*s)+'px';w.style.height=(297*MM*s)+'px';
+    w.firstChild.style.transform=`scale(${s})`;});
+}
+window.addEventListener('resize',()=>{if(UI.classList.contains('show'))later(layout,150);});
+
+/* ---------- หน้าแผนที่ ---------- */
+function mapPage(el,sp,S,sheet,i,sheets){
+  const sat=sp.type==='sat';
+  el.classList.toggle('rp-sk',!sat);
+  el.innerHTML=`<div class="rp-title"></div>
+  <div class="rp-frame" style="left:${FR.x}mm;top:${FR.y}mm;width:${FR.w}mm;height:${FR.h}mm">
+    <div class="rp-map"></div><svg class="rp-ov"></svg>
+    <div class="rp-box rp-nb"></div><div class="rp-box rp-lg"></div>
+    ${sheets.length>1?'<div class="rp-box rp-ix"></div>':''}
+    ${sat?'<div class="rp-box rp-co"></div>':''}
+    <div class="rp-attr ${sat?'':'sk'}">${sat?'ภาพถ่ายดาวเทียม © Google':'แผนที่สังเขป · ไม่มีภาพพื้นหลัง'}</div>
+  </div>
+  <div class="rp-lab" style="left:${FR.x}mm;top:${FR.y}mm;width:${FR.w}mm;height:${FR.h}mm"></div>
+  <div class="rp-foot"><span>ระบบพิกัด WGS 1984 UTM Zone 47N · ${esc(CUR)} · จัดทำจากแอปแผนที่เขตทาง แขวงทางหลวงกระบี่</span><span class="sn"></span></div>`;
+  const pg={el,spec:sp,S,sheet,i,n:sheets.length,sheets,sat,okey:`${CUR}|${sp.k}|${S}|${i}`,
+    titleEl:el.querySelector('.rp-title'),frame:el.querySelector('.rp-frame'),mapEl:el.querySelector('.rp-map'),
+    ov:el.querySelector('.rp-ov'),lab:el.querySelector('.rp-lab'),nb:el.querySelector('.rp-nb'),lg:el.querySelector('.rp-lg'),
+    ix:el.querySelector('.rp-ix'),co:el.querySelector('.rp-co'),sn:el.querySelector('.sn')};
+  pg.sn.textContent=sheets.length>1?`แผ่นที่ ${i+1}/${sheets.length}`:'';
+  // เข็มทิศ + มาตราส่วน
+  const L_=niceBar(S), mm=L_/S*1000, u=L_>=1000?'กม.':'ม.', f=v=>{const x=L_>=1000?v/1000:v;return +x.toFixed(2)+'';};
+  const W=mm+18, seg=mm/4;
+  let bars=''; for(let k=0;k<4;k++) bars+=`<rect x="${5+k*seg}" y="1" width="${seg}" height="1.6" fill="${k%2?'#fff':'#000'}" stroke="#000" stroke-width=".2"/>`;
+  pg.nb.innerHTML=`<svg class="na" viewBox="-20 -20 40 40">
+    <g stroke="#000" stroke-width=".5">
+      <polygon points="0,-15 2.6,-2.6 0,0" fill="#000"/><polygon points="0,-15 -2.6,-2.6 0,0" fill="#fff"/>
+      <polygon points="0,15 -2.6,2.6 0,0" fill="#000"/><polygon points="0,15 2.6,2.6 0,0" fill="#fff"/>
+      <polygon points="11,0 2,2 0,0" fill="#000"/><polygon points="11,0 2,-2 0,0" fill="#fff"/>
+      <polygon points="-11,0 -2,-2 0,0" fill="#000"/><polygon points="-11,0 -2,2 0,0" fill="#fff"/></g>
+    <g font-size="5.2" font-weight="700" text-anchor="middle" font-family="Arial,sans-serif">
+      <text x="0" y="-15.8">N</text><text x="0" y="19.6">S</text><text x="15" y="1.8">E</text><text x="-15" y="1.8">W</text></g></svg>
+    <div class="sc">มาตราส่วน 1:${S.toLocaleString('en-US')}</div>
+    <svg class="bar" width="${W}mm" height="6mm" viewBox="0 0 ${W} 6">${bars}
+      <g font-size="2.3" text-anchor="middle" font-family="Arial,sans-serif"><text x="5" y="5.4">0</text><text x="${5+mm/2}" y="5.4">${f(L_/2)}</text><text x="${5+mm}" y="5.4">${f(L_)}</text><text x="${6.5+mm}" y="2.6" text-anchor="start">${u}</text></g></svg>
+    <div class="crs">WGS 1984 UTM Zone 47N</div>`;
+  if(pg.ix) pg.ix.innerHTML=indexSvg(sp.G,sheets,i);
+  return pg;
+}
+function indexSvg(G,sheets,cur){
+  let x0=Infinity,y0=Infinity,x1=-Infinity,y1=-Infinity;
+  for(const s of sheets){x0=Math.min(x0,s.cx-s.Wm/2);x1=Math.max(x1,s.cx+s.Wm/2);y0=Math.min(y0,s.cy-s.Hm/2);y1=Math.max(y1,s.cy+s.Hm/2);}
+  const BW=38,BH=30,k=Math.min((BW-2)/(x1-x0),(BH-2)/(y1-y0)), ox=(BW-(x1-x0)*k)/2, oy=(BH-(y1-y0)*k)/2;
+  const X=x=>ox+(x-x0)*k, Y=y=>BH-(oy+(y-y0)*k);
+  let s='';
+  sheets.forEach((t,i)=>{s+=`<rect x="${X(t.cx-t.Wm/2)}" y="${Y(t.cy+t.Hm/2)}" width="${t.Wm*k}" height="${t.Hm*k}" fill="${i===cur?'#fff3a0':'none'}" stroke="#555" stroke-width=".25"/>`;});
+  for(const p of G.polys){const st=Math.max(1,Math.floor(p.rings[0].length/150));let d='';
+    p.rings[0].forEach((v,j)=>{if(j%st)return;d+=(d?'L':'M')+X(v[0]).toFixed(2)+','+Y(v[1]).toFixed(2);});
+    s+=`<path d="${d}Z" fill="${AC}" fill-opacity=".35" stroke="${AC}" stroke-width=".5"/>`;}
+  sheets.forEach((t,i)=>{s+=`<text x="${X(t.cx)}" y="${Y(t.cy)+1}" font-size="${Math.min(3.2,t.Hm*k*0.45)}" text-anchor="middle" font-family="Arial" font-weight="${i===cur?700:400}">${i+1}</text>`;});
+  return `<svg viewBox="0 0 ${BW} ${BH}">${s}</svg><div>ดัชนีระวาง (แผ่นที่ ${cur+1}/${sheets.length})</div>`;
+}
+function track(tl){
+  const o={pend:0}; TL.push(o);
+  tl.on('tileloadstart',()=>{o.pend++;stat();});
+  tl.on('tileload tileerror',()=>{o.pend=Math.max(0,o.pend-1);stat();});
+}
+function pending(){return TL.reduce((s,o)=>s+o.pend,0);}
+function stat(){const el=$('rpSt'); if(!el)return; const p=pending();
+  const n=document.querySelectorAll('#rptPages .rpt-pw').length;
+  el.textContent=n?(p?`⏳ กำลังโหลดภาพดาวเทียม… เหลือ ${p} ภาพ · ${n} หน้า`:`✓ พร้อมพิมพ์ · ${n} หน้า`):'';}
+function initSheet(pg){
+  const sp=pg.spec, g=ST.g;
+  const m=L.map(pg.mapEl,{zoomSnap:0,zoomControl:false,attributionControl:false,dragging:!!g.drag,touchZoom:false,
+    scrollWheelZoom:false,doubleClickZoom:false,boxZoom:false,keyboard:false,inertia:false,
+    fadeAnimation:false,zoomAnimation:false,markerZoomAnimation:false});
+  pg.map=m;
+  const off=OFFS[pg.okey]||{x:0,y:0}, c=inv(pg.sheet.cx+off.x,pg.sheet.cy+off.y);
+  m.setView([c[1],c[0]],zoomFor(pg.S,c[1]),{animate:false});
+  if(pg.sat){
+    const tl=L.tileLayer(`https://mt1.google.com/vt/lyrs=${g.lyr==='y'?'y':'s'}&x={x}&y={y}&z={z}`,
+      {tileSize:g.hi?128:256,zoomOffset:g.hi?1:0,maxNativeZoom:g.hi?19:20,maxZoom:24,keepBuffer:0});
+    track(tl); tl.addTo(m);
+  }
+  const rd=L.svg({padding:g.drag?1:0.15});
+  const lb=m.getBounds(), bb=lb.pad(g.drag?1:0.15), box=[bb.getWest(),bb.getSouth(),bb.getEast(),bb.getNorth()];
+  const vb=[lb.getWest(),lb.getSouth(),lb.getEast(),lb.getNorth()];
+  pg.kinds=[];
+  if(pg.sat||g.skf){
+    for(const kind of FKINDS){
+      const ps=FPOLY.filter(P=>P.kind===kind&&boxHit(P.box,box)); if(!ps.length)continue;
+      if(FPOLY.some(P=>P.kind===kind&&boxHit(P.box,vb))) pg.kinds.push(kind);
+      for(const P of ps) L.polygon(P.rings.map(r=>r.map(([lo,la])=>[la,lo])),
+        {renderer:rd,className:'rpf-'+kind,color:RK[kind].c,weight:pg.sat?1.7:1.1,opacity:pg.sat?1:.8,fillOpacity:1,interactive:false}).addTo(m);
+    }
+  }
+  if(g.row) for(const pgn of rowGeom(CUR)) L.polygon(pgn[0].map(([lo,la])=>[la,lo]),
+    {renderer:rd,fill:false,color:pg.sat?'#ffe600':'#9e9e9e',weight:1.2,dashArray:'6 4',interactive:false}).addTo(m);
+  for(const p of sp.G.polys){
+    const ll=llRings(p);
+    if(pg.sat){
+      L.polygon(ll,{renderer:rd,fill:false,color:'#fff',weight:4.6,opacity:.9,interactive:false}).addTo(m);
+      L.polygon(ll,{renderer:rd,color:AC,weight:2,fillColor:AC,fillOpacity:.22,interactive:false}).addTo(m);
+    }else L.polygon(ll,{renderer:rd,color:AC,weight:1.5,fillColor:'#ff8ac4',fillOpacity:.28,interactive:false}).addTo(m);
+  }
+  if(!pg.sat){
+    const V=verts(sp.G);
+    for(const v of V){const q=inv(v.x,v.y);
+      L.circleMarker([q[1],q[0]],{renderer:rd,radius:2.8,color:'#6d4c00',weight:.9,fillColor:'#ffd400',fillOpacity:1,interactive:false}).addTo(m);}
+  }
+  m.on('moveend',()=>{
+    if(g.drag){const cc=m.getCenter(), u=fwd(cc.lng,cc.lat); OFFS[pg.okey]={x:u[0]-pg.sheet.cx,y:u[1]-pg.sheet.cy};}
+    overlay(pg);
+  });
+  renderLegend(pg);
+  pg.titleEl.innerHTML=titleHtml(sp.k,sp.G);
+  renderCallout(pg);
+  overlay(pg);
+}
+function renderLegend(pg){
+  const sp=pg.spec, a=thd(areaTxt(sp.G.m2));
+  const sw=(fill,stroke,dash,extra)=>`<svg viewBox="0 0 40 20"><rect x="2" y="2" width="36" height="16" fill="${fill}" stroke="${stroke}" stroke-width="2" ${dash?`stroke-dasharray="${dash}"`:''}/>${extra||''}</svg>`;
+  let h=`<div class="h">คำอธิบายสัญลักษณ์แผนที่</div>`;
+  if(pg.sat){
+    const what=sp.k==='p2'?' (ในเขตป่าสงวนแห่งชาติ)':'';
+    h+=`<div class="i">${sw('rgba(255,20,147,.22)',AC)}<span>พื้นที่ขออนุญาต${what} เนื้อที่ ${a} ไร่</span></div>`;
+  }else{
+    h+=`<div class="i"><svg viewBox="0 0 40 20"><circle cx="20" cy="10" r="5" fill="#ffd400" stroke="#6d4c00" stroke-width="1.4"/></svg><span>จุดพิกัดพื้นที่ขออนุญาต (เลขตามตารางค่าพิกัด)</span></div>`;
+    h+=`<div class="i">${sw('rgba(255,138,196,.28)',AC)}<span>พื้นที่ขออนุญาต เนื้อที่ ${a} ไร่</span></div>`;
+  }
+  if(ST.g.row) h+=`<div class="i"><svg viewBox="0 0 40 20"><line x1="2" y1="10" x2="38" y2="10" stroke="${pg.sat?'#c9b400':'#9e9e9e'}" stroke-width="2.4" stroke-dasharray="6 4"/></svg><span>แนวเขตทางหลวง ${esc(thd(CUR))}</span></div>`;
+  for(const k of (pg.kinds||[])) h+=`<div class="i">${sw(`url(#rp-${k})`,RK[k].c)}<span>แนวเขต${esc(thd(fName(k)))}</span></div>`;
+  if(pg.lblSkip) h+=`<div class="nt">* แสดงเลขเฉพาะจุดที่ไม่ซ้อนกัน — ค่าพิกัดครบทุกจุดอยู่ในตารางค่าพิกัด</div>`;
+  pg.lg.innerHTML=nw(h);
+}
+function renderCallout(pg){
+  if(!pg.co)return;
+  const G=pg.spec.G; let h;
+  if(pg.spec.k==='p2'||G.kinds.size===1){
+    h=`<b>พื้นที่ขออนุญาต${pg.spec.k==='p2'?'':''} เนื้อที่ ${areaTxt(G.m2)} ไร่</b>`;
+    const k=[...G.kinds][0]; h+=`<br>อยู่ในเขต${esc(fName(k))}`;
+  }else{
+    h=`<b>พื้นที่ขออนุญาต เนื้อที่ ${areaTxt(G.m2)} ไร่</b>`;
+    for(const k of FKINDS) if(G.perKind[k]) h+=`<br>อยู่ในเขต${esc(fName(k))} เนื้อที่ ${areaTxt(G.perKind[k])} ไร่`;
+    h+=`<br><span style="font-size:7pt">(พื้นที่ที่ป่าซ้อนกันนับครั้งเดียวในยอดรวม)</span>`;
+  }
+  pg.co.innerHTML=nw(h);
+}
+function rectOf(el){return el?{x:el.offsetLeft,y:el.offsetTop,w:el.offsetWidth,h:el.offsetHeight}:null;}
+const ovl=(a,b)=>Math.max(0,Math.min(a.x+a.w,b.x+b.w)-Math.max(a.x,b.x))*Math.max(0,Math.min(a.y+a.h,b.y+b.h)-Math.max(a.y,b.y));
+function overlay(pg){
+  const m=pg.map, sz=m.getSize(), W=sz.x, H=sz.y, S=pg.S, I=GRIDI[S]||Math.round(S/20), NS='http://www.w3.org/2000/svg';
+  const sat=pg.sat, col=sat?'#fff':'#555';
+  const toC=(x,y)=>{const q=inv(x,y);return m.latLngToContainerPoint([q[1],q[0]]);};
+  let svg='', lab='';
+  const cs=[[0,0],[W,0],[0,H],[W,H]].map(p=>{const ll=m.containerPointToLatLng(p);return fwd(ll.lng,ll.lat);});
+  const xs=cs.map(c=>c[0]), ys=cs.map(c=>c[1]);
+  const xmin=Math.min(...xs),xmax=Math.max(...xs),ymin=Math.min(...ys),ymax=Math.max(...ys), T=2.6*MM;
+  for(let gx=Math.ceil(xmin/I)*I;gx<=xmax;gx+=I){
+    const A=toC(gx,ymin-I), B=toC(gx,ymax+I), at=y=>A.x+(B.x-A.x)*(y-A.y)/(B.y-A.y);
+    const xt=at(0), xb=at(H);
+    if(ST.g.grid) svg+=`<line x1="${xt}" y1="0" x2="${xb}" y2="${H}" stroke="${col}" stroke-width=".5" opacity=".7"/>`;
+    if(xt>=4&&xt<=W-4){svg+=`<line x1="${xt}" y1="0" x2="${xt}" y2="${T}" stroke="#000" stroke-width="1"/>`;lab+=`<span class="t" style="left:${xt}px;top:-1.2mm">${gx}</span>`;}
+    if(xb>=4&&xb<=W-4){svg+=`<line x1="${xb}" y1="${H}" x2="${xb}" y2="${H-T}" stroke="#000" stroke-width="1"/>`;lab+=`<span class="b" style="left:${xb}px;top:calc(${H}px + 1.2mm)">${gx}</span>`;}
+  }
+  for(let gy=Math.ceil(ymin/I)*I;gy<=ymax;gy+=I){
+    const A=toC(xmin-I,gy), B=toC(xmax+I,gy), at=x=>A.y+(B.y-A.y)*(x-A.x)/(B.x-A.x);
+    const yl=at(0), yr=at(W);
+    if(ST.g.grid) svg+=`<line x1="0" y1="${yl}" x2="${W}" y2="${yr}" stroke="${col}" stroke-width=".5" opacity=".7"/>`;
+    if(yl>=4&&yl<=H-4){svg+=`<line x1="0" y1="${yl}" x2="${T}" y2="${yl}" stroke="#000" stroke-width="1"/>`;lab+=`<span class="l" style="left:-2.6mm;top:${yl}px">${gy}</span>`;}
+    if(yr>=4&&yr<=H-4){svg+=`<line x1="${W}" y1="${yr}" x2="${W-T}" y2="${yr}" stroke="#000" stroke-width="1"/>`;lab+=`<span class="r" style="left:calc(${W}px + 2.6mm);top:${yr}px">${gy}</span>`;}
+  }
+  const avoid=[rectOf(pg.nb),rectOf(pg.lg),rectOf(pg.ix)].filter(Boolean);
+  // จุดของรูปแปลงบนจอ
+  const V=verts(pg.spec.G), st=Math.max(1,Math.floor(V.length/1500)), pts=[];
+  for(let i=0;i<V.length;i+=st){const p=toC(V[i].x,V[i].y);if(p.x>=0&&p.x<=W&&p.y>=0&&p.y<=H)pts.push(p);}
+  // ป้ายพื้นที่ (callout) + เส้นชี้
+  if(pg.co&&pts.length){
+    const bw=pg.co.offsetWidth,bh=pg.co.offsetHeight,pd=10,nb=rectOf(pg.nb);
+    const C=[[pd,pd],[pd,H*0.28],[pd,H*0.5-bh/2],[W/2-bw/2,pd],[W-bw-pd,nb.y+nb.h+pd],[W-bw-pd,H*0.5-bh/2],[W/2-bw/2,H*0.62],[pd,H*0.62-bh]];
+    let best=null;
+    for(const [x,y] of C){
+      const r={x,y,w:bw,h:bh}, e={x:x-14,y:y-14,w:bw+28,h:bh+28};
+      let sc=0; for(const p of pts) if(p.x>=e.x&&p.x<=e.x+e.w&&p.y>=e.y&&p.y<=e.y+e.h) sc+=1000;
+      for(const a of avoid) sc+=ovl(r,a)*50;
+      if(x<0||y<0||x+bw>W||y+bh>H) sc+=1e7;
+      let dmin=Infinity,tg=null; for(const p of pts){const d=Math.hypot(p.x-(x+bw/2),p.y-(y+bh/2));if(d<dmin){dmin=d;tg=p;}}
+      sc+=dmin/4; if(!best||sc<best.sc)best={sc,x,y,tg};
+    }
+    pg.co.style.left=best.x+'px'; pg.co.style.top=best.y+'px';
+    const t=best.tg, sx=Math.max(best.x,Math.min(best.x+bw,t.x)), sy=Math.max(best.y,Math.min(best.y+bh,t.y));
+    if(Math.hypot(t.x-sx,t.y-sy)>6) svg+=`<line x1="${sx}" y1="${sy}" x2="${t.x}" y2="${t.y}" stroke="#000" stroke-width="3" opacity=".55"/>
+      <line x1="${sx}" y1="${sy}" x2="${t.x}" y2="${t.y}" stroke="#fff9c4" stroke-width="1.5"/><circle cx="${t.x}" cy="${t.y}" r="2.6" fill="#fff9c4" stroke="#000" stroke-width=".8"/>`;
+  }
+  // เลขจุด (แผนที่สังเขป) — ไม่ให้ป้ายซ้อนกัน
+  if(!sat){
+    const placed=avoid.slice(), fs=8; let skip=0;
+    for(const v of V){
+      const p=toC(v.x,v.y); if(p.x<0||p.x>W||p.y<0||p.y>H)continue;
+      const tw=String(v.n).length*fs*0.58+2, th=fs+1, ok=[[4,-4-th],[4,4],[-4-tw,-4-th],[-4-tw,4]].map(([dx,dy])=>({x:p.x+dx,y:p.y+dy,w:tw,h:th}))
+        .find(r=>r.x>=1&&r.y>=1&&r.x+r.w<=W-1&&r.y+r.h<=H-1&&!placed.some(q=>ovl(r,q)>0));
+      if(!ok){skip++;continue;}
+      placed.push(ok);
+      svg+=`<text x="${ok.x+1}" y="${ok.y+fs-0.5}" font-size="${fs}" font-family="Arial,sans-serif" font-weight="700" fill="#222" stroke="#fff" stroke-width="2.2" paint-order="stroke">${v.n}</text>`;
+    }
+    const was=!!pg.lblSkip; pg.lblSkip=skip>0; if(was!==pg.lblSkip) renderLegend(pg);
+  }
+  pg.ov.setAttribute('viewBox',`0 0 ${W} ${H}`); pg.ov.innerHTML=svg; pg.lab.innerHTML=lab;
+  void NS;
+}
+
+/* ---------- ตารางค่าพิกัด ---------- */
+function tablePages(sp,mk){
+  const G=sp.G, rows=[];
+  let n=0;
+  G.polys.forEach((p,pi)=>p.rings.forEach((r,ri)=>{
+    rows.push({h:ri?`รูเจาะในแปลงที่ ${pi+1}`:`แปลงที่ ${pi+1} · เนื้อที่ ${areaTxt(p.m2)} ไร่`,
+      h2:ri?'(พื้นที่ไม่รวมในแปลง)':(p.kr&&p.kr[0]?`กม. ${p.kr[0]} – ${p.kr[1]}`:'')});
+    r.forEach(([x,y])=>rows.push({n:++n,x,y}));
+  }));
+  const cols=[]; let cur=[], used=0;                      // หัวแปลงสูง 2 แถว
+  for(let i=0;i<rows.length;i++){
+    const rw=rows[i], u=rw.h?2:1;
+    if(used+u+(rw.h?1:0)>ROWS){cols.push(cur);cur=[];used=0;}  // หัวแปลงไม่ค้างท้ายคอลัมน์
+    cur.push(rw); used+=u;
+  }
+  if(cur.length)cols.push(cur);
+  const np=Math.ceil(cols.length/COLS);
+  for(let p=0;p<np;p++){
+    const el=mk(), part=cols.slice(p*COLS,p*COLS+COLS);
+    el.innerHTML=`<div class="rp-title"></div><div class="rp-tw">${part.map(c=>`<table class="rp-t"><thead><tr><th>ID</th><th>X (E)</th><th>Y (N)</th></tr></thead><tbody>${
+      c.map(r=>r.h?`<tr><td class="h" colspan="3">${esc(r.h)}${r.h2?`<br><span>${esc(r.h2)}</span>`:''}</td></tr>`:`<tr><td>${r.n}</td><td>${r.x.toFixed(3)}</td><td>${r.y.toFixed(3)}</td></tr>`).join('')}</tbody></table>`).join('')}</div>
+      ${p===np-1?`<div class="rp-tsum">รวม ${n} จุด · ${G.polys.length} แปลง · เนื้อที่รวม ${areaTxt(G.m2)} ไร่ (${G.m2.toLocaleString('en-US',{minimumFractionDigits:2,maximumFractionDigits:2})} ตร.ม.)</div>`:''}
+      <div class="rp-foot"><span>ระบบพิกัด WGS 1984 UTM Zone 47N · ค่าพิกัดมุมแปลงทุกจุด (ไม่ลดทอนจุด) · ${esc(CUR)}</span><span>ตารางค่าพิกัด แผ่นที่ ${p+1}/${np}</span></div>`;
+    PAGES.push({el,spec:sp,titleEl:el.querySelector('.rp-title')});
+  }
+  return np;
+}
+function updateTexts(){
+  for(const pg of PAGES){
+    pg.titleEl.innerHTML=titleHtml(pg.spec.k,pg.spec.G); fitTitle(pg.titleEl);
+    if(pg.lg) renderLegend(pg);
+    if(pg.co){renderCallout(pg); if(pg.map) overlay(pg);}
+  }
+}
+
+/* ---------- เปิด/ปิด/พิมพ์ ---------- */
+async function setRoute(name){
+  CUR=name; ST.last=name; R(); save();
+  if(ALLREQ==null) ALLREQ=await readReqs();
+  REQS=matchReqs();
+  if(!R().f._filled) prefill(false);
+  renderForm(); rebuild();
+}
+function openRpt(name){
+  if(!areaReady){toast('กำลังคำนวณพื้นที่เขตทางในป่า… ลองใหม่อีกครู่',2600);return;}
+  const names=Object.keys(AREA); if(!names.length){toast('ไม่มีสายทางที่อยู่ในเขตป่า',2600);return;}
+  closeAllPanels();
+  UI.classList.add('show'); document.body.style.overflow='hidden';
+  const pick=(name&&AREA[name])?name:(areaFocus&&AREA[areaFocus])?areaFocus:(ST.last&&AREA[ST.last])?ST.last:names.sort((a,b)=>a.localeCompare(b,'th',{numeric:true}))[0];
+  setRoute(pick);
+}
+function closeRpt(){UI.classList.remove('show');document.body.style.overflow='';destroy();$('rptPages').innerHTML='';}
+async function doPrint(){
+  if(!document.querySelector('#rptPages .rpt-pw')){toast('ยังไม่มีหน้ารายงาน',2000);return;}
+  const t0=Date.now();
+  while(pending()>0&&Date.now()-t0<40000){stat();await sleep(300);}
+  if(pending()>0&&!confirm(`ภาพดาวเทียมยังโหลดไม่ครบ (เหลือ ${pending()} ภาพ) — พิมพ์ต่อหรือไม่?`))return;
+  try{if(document.fonts&&document.fonts.ready)await document.fonts.ready;}catch(e){}
+  await sleep(200);
+  document.body.classList.add('rpt-printing');
+  const done=()=>{document.body.classList.remove('rpt-printing');window.removeEventListener('afterprint',done);};
+  window.addEventListener('afterprint',done);
+  window.print();
+  setTimeout(done,1500);
+}
+$('rpX').onclick=closeRpt;
+$('rpP').onclick=doPrint;
+const rb=document.createElement('div');
+rb.className='chip'; rb.id='chipRpt'; rb.textContent='🖨️ รายงานแผนที่';
+rb.title='สร้างแผนที่ประกอบคำขอใช้พื้นที่ป่า (A4) — แผนที่ดาวเทียม / เฉพาะป่าสงวน / แผนที่สังเขป / ตารางค่าพิกัด';
+rb.onclick=()=>openRpt();
+const ab=document.getElementById('tbArea'); if(ab&&ab.nextSibling) ab.parentNode.insertBefore(rb,ab.nextSibling); else chipsL.appendChild(rb);
+window.openReport=openRpt;
+})();
 </script>
 </body>
 </html>
