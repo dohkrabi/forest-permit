@@ -3132,8 +3132,11 @@ ${ck('rfDrag',g.drag,'ลากเลื่อนแผนที่ในกร�
 <label class="f">ตร.วา ทศนิยม</label>${seg('rfDec',g.dec,[['0','0 ตำแหน่ง'],['1','1 ตำแหน่ง'],['2','2 ตำแหน่ง']])}
 <h4>6. ส่งออก SHP สำหรับ ArcGIS</h4>
 <div class="note">ใช้สายทาง ป่า แปลง และข้อมูลหัวเรื่องตามที่เลือกไว้ด้านบน · ระบบพิกัด WGS 1984 UTM Zone 47N · ชื่อไฟล์ภาษาอังกฤษ ข้อความในตารางภาษาไทย (UTF-8)</div>
+<label class="f">ป่าที่จะส่งออก</label>
+<div class="seg">${(()=>{const fk_=FK(), ks_=kindsOf(CUR);return REQK.map(k=>{const on=k===fk_, has=ks_.includes(k);return `<label class="${on?'on':''}" style="${has?'':'opacity:.4;pointer-events:none'}"><input type="radio" name="rxFk" value="${k}" ${on?'checked':''} ${has?'':'disabled'}>${k==='nrf'?'🌲 ป่าสงวน':'🌊 ป่าชายเลน'}${has?'':' (ไม่มี)'}</label>`;}).join('');})()}</div>
+<div class="note">ใช้ค่าเดียวกับ "ป่า" ด้านบน (เปลี่ยนที่นี่ รายงานจะเปลี่ยนตาม) · ไฟล์ที่ส่งออกมีเฉพาะ${RK[FK()].n}</div>
 <label class="f">รูปแบบไฟล์</label>${seg('rxFmt',g.xp.fmt,[['std','แบบเดิม (ทล.4276)'],['ocl','แบบ ศอปล. (2 โฟลเดอร์)']])}
-${g.xp.fmt==='ocl'?`<div class="note">1_inspect_all: เขตทางช่วงตรวจสอบ + จุดมุมแปลงแยกตามชนิดป่า · 2_…_pieces: 1 ไฟล์ต่อ 1 แปลงของป่าที่เลือก</div>
+${g.xp.fmt==='ocl'?`<div class="note">1_inspect_all: เขตทางช่วงตรวจสอบ + จุดมุมแปลง (เฉพาะป่าที่เลือก) · 2_…_pieces: 1 ไฟล์ต่อ 1 แปลงของป่าที่เลือก</div>
 <label class="f">ช่วงตรวจสอบ กม. (เว้นว่าง = ตั้งแต่แปลงแรกถึงแปลงสุดท้ายอัตโนมัติ)</label>
 <div class="row2"><input type="text" id="rxK0" placeholder="เช่น 7+900" value="${esc((R().ikm||[])[0]||'')}"><input type="text" id="rxK1" placeholder="เช่น 14+100" value="${esc((R().ikm||[])[1]||'')}"></div>`:
 `<label class="ck"><input type="checkbox" checked disabled>พื้นที่ขออนุญาต (Polygon) — ฟิลด์ตามแบบไฟล์ ทล.4276</label>`}
@@ -3159,7 +3162,7 @@ function later(fn,ms){clearTimeout(tmr);tmr=setTimeout(fn,ms||450);}
 function bindForm(){
   const F=$('rpF');
   $('rfRoute').onchange=e=>setRoute(e.target.value);
-  F.querySelectorAll('input[name=rfFk]').forEach(i=>i.onchange=()=>{const r=R(); if(r.fk===i.value)return;
+  F.querySelectorAll('input[name=rfFk],input[name=rxFk]').forEach(i=>i.onchange=()=>{const r=R(); if(r.fk===i.value)return;
     r.fk=i.value; r.mode='all'; r.sel=[]; save(); renderForm(); later(rebuild,50);});
   F.querySelectorAll('input[name=rfMode]').forEach(i=>i.onchange=()=>{const r=R();r.mode=i.value;
     if(r.mode==='pick'&&!r.sel.length) r.sel=routePieces(CUR).filter(p=>p.kind===FK()).map(p=>p.key); save(); renderForm(); later(rebuild,50);});
@@ -3763,7 +3766,7 @@ async function exportOcl(){
   try{
     const {GF,fk}=geoms(); if(!GF){toast('ยังไม่ได้เลือกแปลง',2200);return;}
     const r=R(), f=r.f, sel=r.mode==='pick'?new Set(r.sel):null;
-    const all=routePieces(CUR).filter(p=>!sel||p.kind!==fk||sel.has(p.key)).filter(p=>!sel||p.kind===fk);
+    const all=routePieces(CUR).filter(p=>p.kind===fk&&(!sel||sel.has(p.key)));
     const code=routeCode(CUR), fkc=fk==='mgr'?'MGR':'NRF', base=`${code}_${fkc}`, top=`${base}_SHP_OCL/`, d1='1_inspect_all/';
     const files=[], enc=s=>XP_ENC.encode(s), prj=enc(XP_PRJ), cpg=enc('UTF-8');
     const add=(dir,nm,type,geo,fields,rows)=>{const S=xpShp(type,geo);
@@ -3779,7 +3782,7 @@ async function exportOcl(){
        ['KM_FROM','C',12,0],['KM_TO','C',12,0],['ROUTE','C',60,0]],
       [[0,r11(RG.m2),rr,rg,rw,r11(sec.m2),r11(sec.m2/1600),sec.km[0],sec.km[1],CUR]]);
     // 2) จุดมุมแปลง แยกตามชนิดป่า
-    const kinds=REQK.filter(k=>all.some(p=>p.kind===k));
+    const kinds=[fk];
     for(const k of kinds){
       const ps=all.filter(p=>p.kind===k), tot=ps.reduce((s,p)=>s+p.m2,0), geo=[], rows=[]; let n=0;
       ps.forEach((p,pi)=>{const fo=k==='nrf'?forestOfPiece(p):null;
