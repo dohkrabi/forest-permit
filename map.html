@@ -2858,13 +2858,13 @@ const AC='#ff1493';                                 // สีพื้นที�
 const MAXSHEET=80, ROWS=50, COLS=3;
 const LSK='khet_rpt_v1';
 const DEF_G={org:'แขวงทางหลวงกระบี่ กรมทางหลวง',img:'Google',lyr:'s',hi:true,thai:true,dec:1,grid:false,row:true,
-  skf:false,drag:false,scale:'auto',lay:'e',fnm:true,nsub:1,pages:{p1:true,p2:true,p3:true,tb:true,tba:false}};
+  skf:false,drag:false,scale:'auto',lay:'e',fnm:true,nsub:1,xp:{pts:true,row:false,frs:false,one:false},pages:{p1:true,p2:true,p3:true,tb:true,tba:false}};
 const TEXT_KEYS=['org','img','purpose','moo','tambon','amphoe','province','nrfName','permName','mgrName','cab','cabMgr'];
 const CAB_MGR_DEF='30 สิงหาคม 2543';
 const REQK=['nrf','mgr'];                          // ป่าที่ยื่นคำขอได้ (ป่าถาวรไม่นับเป็นพื้นที่ขออนุญาต)
 let ST={g:JSON.parse(JSON.stringify(DEF_G)),r:{},last:null};
 try{const s=JSON.parse(localStorage.getItem(LSK)||'null');
-  if(s){ST.g=Object.assign({},DEF_G,s.g||{});ST.g.pages=Object.assign({},DEF_G.pages,(s.g||{}).pages||{});ST.r=s.r||{};ST.last=s.last||null;}}catch(e){}
+  if(s){ST.g=Object.assign({},DEF_G,s.g||{});ST.g.xp=Object.assign({},DEF_G.xp,(s.g||{}).xp||{});ST.g.pages=Object.assign({},DEF_G.pages,(s.g||{}).pages||{});ST.r=s.r||{};ST.last=s.last||null;}}catch(e){}
 function save(){try{localStorage.setItem(LSK,JSON.stringify(ST));}catch(e){}}
 let CUR=null, PAGES=[], TL=[], OFFS={}, REQS=null;
 const $=s=>document.getElementById(s);
@@ -3130,6 +3130,14 @@ ${ck('rfSkf',g.skf,'แสดงแนวเขตป่าในแผนที
 ${ck('rfThai',g.thai,'ใช้เลขไทยในหัวเรื่องและคำอธิบายสัญลักษณ์')}
 ${ck('rfDrag',g.drag,'ลากเลื่อนแผนที่ในกรอบได้ (ปรับตำแหน่งก่อนพิมพ์)')}
 <label class="f">ตร.วา ทศนิยม</label>${seg('rfDec',g.dec,[['0','0 ตำแหน่ง'],['1','1 ตำแหน่ง'],['2','2 ตำแหน่ง']])}
+<h4>6. ส่งออก SHP สำหรับ ArcGIS</h4>
+<div class="note">ใช้สายทาง ป่า แปลง และข้อมูลหัวเรื่องตามที่เลือกไว้ด้านบน · ระบบพิกัด WGS 1984 UTM Zone 47N · ชื่อไฟล์ภาษาอังกฤษ ข้อความในตารางภาษาไทย (UTF-8)</div>
+<label class="ck"><input type="checkbox" checked disabled>พื้นที่ขออนุญาต (Polygon) — ฟิลด์ตามแบบไฟล์ ทล.4276</label>
+${ck('rxPts',g.xp.pts,'จุดพิกัด (Point) — เลขจุดตรงกับตารางค่าพิกัด')}
+${ck('rxRow',g.xp.row,'เขตทางทั้งเส้น (Polygon)')}
+${ck('rxFrs',g.xp.frs,'แนวเขตป่าที่เส้นทางพาดผ่าน (Polygon) พร้อมชื่อป่า')}
+${ck('rxOne',g.xp.one,'รวมทุกแปลงเป็นแถวเดียว (multipart) แบบไฟล์ตัวอย่าง')}
+<div class="mini"><button id="rxGo" style="background:#1565c0;color:#fff;border-color:#1565c0;font-weight:700;padding:8px 0">⤓ ส่งออก SHP (ArcGIS)</button></div>
 <div class="note warn"><b>ตั้งค่าเครื่องพิมพ์ให้มาตราส่วนถูกต้อง</b><br>ขนาดกระดาษ A4 แนวตั้ง · ระยะขอบ <b>ไม่มี (None)</b> · มาตราส่วน <b>100%</b> (ห้าม "พอดีกับหน้า") · เปิด <b>กราฟิกพื้นหลัง</b><br>แนะนำ Chrome / Edge บนคอมพิวเตอร์</div>`;
   bindForm(); updSum();
 }
@@ -3166,6 +3174,8 @@ function bindForm(){
   for(const [id,k] of Object.entries(pg)) if($(id)) $(id).onchange=e=>{ST.g.pages[k]=e.target.checked;save();later(rebuild,50);};
   $('rfScale').onchange=e=>{ST.g.scale=e.target.value;save();later(rebuild,50);};
   $('rfSub').onchange=e=>{ST.g.nsub=+e.target.value;save();later(rebuild,50);};
+  for(const [id,k] of Object.entries({rxPts:'pts',rxRow:'row',rxFrs:'frs',rxOne:'one'})) $(id).onchange=e=>{ST.g.xp[k]=e.target.checked;save();};
+  $('rxGo').onclick=exportArc;
   const bools={rfHi:'hi',rfRow:'row',rfGrid:'grid',rfSkf:'skf',rfFnm:'fnm',rfThai:'thai',rfDrag:'drag'};
   for(const [id,k] of Object.entries(bools)) $(id).onchange=e=>{ST.g[k]=e.target.checked;save();
     if(k==='thai'){updSum();} later(rebuild,50);};
@@ -3618,6 +3628,102 @@ function updateTexts(){
     if(pg.co){renderCallout(pg); if(pg.map) overlay(pg);}
   }
 }
+
+/* ---------- ⤓ ส่งออก SHP สำหรับ ArcGIS ---------- */
+const XEN={'กระบี่':'Krabi','นครฯ':'NakhonSi','หมวดเมือง':'Mueang','ห้วยน้ำขาว':'HuaiNamKhao','อ่าวนาง':'AoNang','เขตตรัง':'Trang','ตรัง':'Trang'};
+function routeCode(name){
+  const m=String(name).match(/(\d+)\s*(.*)$/); if(!m)return 'ROUTE';
+  const ex=m[2].trim(); let t=ex?(XEN[ex]||Object.entries(XEN).filter(([k])=>ex.includes(k)).map(([,v])=>v).join('_')||'S'+(Object.keys(BUILTIN).indexOf(name)+1)):'';
+  return 'HW'+m[1]+(t?'_'+t:'');
+}
+function orientRings(rings){ // วงนอกตามเข็ม (CW) · รูทวนเข็ม · ปิดวง
+  return rings.map((r,ri)=>{let q=r.slice(); const a=q[0],z=q[q.length-1]; if(q.length>1&&a[0]===z[0]&&a[1]===z[1])q.pop();
+    const cw=xpShoelace(q)>0; if(ri?cw:!cw)q.reverse(); return q.concat([q[0]]);});
+}
+function forestOfPiece(p){
+  const r=p.rings[0], n=r.length; let pt=null;
+  for(let i=0;i<n&&!pt;i++){const a=r[i],b=r[(i+Math.floor(n/2))%n],m=[(a[0]+b[0])/2,(a[1]+b[1])/2]; if(pip(r,m[0],m[1]))pt=m;}
+  if(!pt||typeof NRF_IX==='undefined')return {code:'',name:''};
+  const [lo,la]=inv(pt[0],pt[1]);
+  for(const P of FPOLY){ if(P.kind!=='nrf')continue; const b=P.box; if(lo<b[0]||lo>b[2]||la<b[1]||la>b[3])continue;
+    if(inRings(P.rings,lo,la)){const i=NRF_IX[P.pi]; if(i==null)break; const [c,nm]=NRF_NT[i].split('|'); return {code:c,name:nm};}}
+  return {code:'',name:''};
+}
+let xpBusy2=false;
+async function exportArc(){
+  if(xpBusy2)return; xpBusy2=true;
+  try{
+    const {GF,fk}=geoms(); if(!GF){toast('ยังไม่ได้เลือกแปลง',2200);return;}
+    const g=ST.g, f=R().f, x=g.xp, code=routeCode(CUR), fkc=fk==='mgr'?'MGR':'NRF', base=`${code}_${fkc}`, dir=`${base}_SHP/`, files=[];
+    const enc=s=>XP_ENC.encode(s), prj=enc(XP_PRJ), cpg=enc('UTF-8');
+    const add=(nm,type,geoms_,fields,rows)=>{const S=xpShp(type,geoms_);
+      files.push({name:dir+nm+'.shp',data:S.shp},{name:dir+nm+'.shx',data:S.shx},{name:dir+nm+'.dbf',data:xpDbf(fields,rows)},
+        {name:dir+nm+'.prj',data:prj},{name:dir+nm+'.cpg',data:cpg});};
+    const num=v=>{const m=String(v||'').match(/\d+/);return m?+m[0]:null;};
+    const rw=m2=>{const [r,gg,w]=rngwD(m2,2);return [r,gg,w];};
+    const objective=f.purpose?'เพื่อ'+strip(f.purpose,'เพื่อ'):'';
+    const q0=(REQS||[])[0], reqNo=q0?num(q0.request_no):null;
+    const kindTh=RK[fk].n;
+    // 1) พื้นที่ขออนุญาต — ฟิลด์ 11 ตัวแรกตามแบบไฟล์ ทล.4276 + ฟิลด์เสริม
+    const PF=[['NAME','C',169,0],['moo','N',10,0],['tambon','C',100,0],['province','C',120,0],['objective','C',254,0],
+      ['area','N',10,0],['rai','N',10,0],['ngan','N',10,0],['tarangwa','N',11,2],['remark','C',100,0],['district','C',100,0],['No_1','N',10,0],
+      ['PIECE','N',4,0],['FOREST','C',60,0],['NRF_CODE','C',12,0],['FR_NAME','C',200,0],['KM_FROM','C',12,0],['KM_TO','C',12,0],
+      ['ROUTE','C',60,0],['AREA_M2','N',16,3],['N_PTS','N',6,0]];
+    const common=[g.org,num(f.moo),strip(f.tambon,'ตำบล'),strip(f.province||'กระบี่','จังหวัด'),objective];
+    const pieces=GF.polys.map((p,i)=>{const fo=fk==='nrf'?forestOfPiece(p):{code:'',name:String(f.mgrName||'').trim()};
+      return {p,i,fo,npts:p.rings.reduce((s,r)=>s+r.length,0)};});
+    if(x.one){
+      const m2=GF.m2, [r,gg,w]=rw(m2), codes=[...new Set(pieces.map(t=>t.fo.code).filter(Boolean))], nms=[...new Set(pieces.map(t=>t.fo.name).filter(Boolean))];
+      add(base+'_permit_area',5,[pieces.flatMap(t=>orientRings(t.p.rings))],PF,
+        [[...common,Math.round(m2),r,gg,w,fName(fk),strip(f.amphoe,'อำเภอ'),reqNo,pieces.length,kindTh,codes.join(','),nms.join(' / '),
+          pieces[0].p.kr[0]||'',pieces[pieces.length-1].p.kr[1]||'',CUR,Math.round(m2*1000)/1000,pieces.reduce((s,t)=>s+t.npts,0)]]);
+    }else{
+      add(base+'_permit_area',5,pieces.map(t=>orientRings(t.p.rings)),PF,pieces.map(t=>{const [r,gg,w]=rw(t.p.m2);
+        return [...common,Math.round(t.p.m2),r,gg,w,kindTh+(t.fo.name?' '+t.fo.name:''),strip(f.amphoe,'อำเภอ'),reqNo,t.i+1,kindTh,t.fo.code,t.fo.name,
+          t.p.kr[0]||'',t.p.kr[1]||'',CUR,Math.round(t.p.m2*1000)/1000,t.npts];}));
+    }
+    // 2) จุดพิกัด
+    if(x.pts){
+      const V=verts(GF);
+      add(base+'_points',1,V.map(v=>[v.x,v.y]),[['ID','N',8,0],['X','N',19,3],['Y','N',19,3],['PIECE','N',4,0],['RING','N',3,0],['ROUTE','C',60,0]],
+        V.map(v=>[v.n,Math.round(v.x*1000)/1000,Math.round(v.y*1000)/1000,v.pi+1,v.ri,CUR]));
+    }
+    // 3) เขตทางทั้งเส้น
+    if(x.row){
+      const RG=rowG(CUR);
+      add(code+'_row_full',5,RG.polys.map(p=>orientRings(p.rings)),[['ROUTE','C',60,0],['area','N',12,0],['rai','N',10,0],['ngan','N',10,0],['tarangwa','N',11,2],['AREA_M2','N',16,3]],
+        RG.polys.map(p=>{const [r,gg,w]=rw(p.m2);return [CUR,Math.round(p.m2),r,gg,w,Math.round(p.m2*1000)/1000];}));
+    }
+    // 4) แนวเขตป่าที่เส้นทางพาดผ่าน
+    if(x.frs){
+      const row=rowGeom(CUR), rb=RPOLY.find(P=>P.name===CUR).box, rec=[], geo=[];
+      for(const P of FPOLY){ if(!boxHit(P.box,rb))continue;
+        let hit=false; try{hit=PC.intersection(row,[P.rings]).length>0;}catch(e){}
+        if(!hit)continue;
+        const nmc=(P.kind==='nrf'&&typeof NRF_IX!=='undefined'&&NRF_IX[P.pi]!=null)?NRF_NT[NRF_IX[P.pi]].split('|'):['',''];
+        const rings=P.rings.map(r=>r.map(([lo,la])=>fwd(lo,la)));
+        const m2=rings.reduce((s,r,i)=>s+(i?-1:1)*Math.abs(xpShoelace(r)),0);
+        geo.push(orientRings(rings)); rec.push([P.kind,RK[P.kind].n,nmc[0],nmc[1],Math.round(m2/1600*100)/100]);
+      }
+      if(geo.length) add(code+'_forest_bnd',5,geo,[['KIND','C',6,0],['FOREST','C',60,0],['NRF_CODE','C',12,0],['FR_NAME','C',200,0],['AREA_RAI','N',14,2]],rec);
+    }
+    const readme=[`ส่งออกจากแอปแผนที่เขตทาง แขวงทางหลวงกระบี่ — ${new Date().toLocaleString('th-TH')}`,
+      `สายทาง: ${CUR} · ป่าที่ยื่นคำขอ: ${fName(fk)} · ${R().mode==='pick'?'เลือกบางแปลง':'ทั้งสายทาง'}`,
+      `เนื้อที่รวม: ${areaTxt(GF.m2).replace(/\u00a0/g,' ')} ไร่ (${GF.m2.toFixed(2)} ตร.ม.) · ${GF.polys.length} แปลง · ${verts(GF).length} จุด`,
+      `ระบบพิกัด: WGS 1984 UTM Zone 47N (EPSG:32647) · ข้อความภาษาไทยเข้ารหัส UTF-8 (มีไฟล์ .cpg)`,'',
+      `${base}_permit_area : พื้นที่ขออนุญาต (Polygon)${x.one?' รวมเป็นแถวเดียว':' 1 แถว = 1 แปลง'} — ฟิลด์ NAME..No_1 ตามแบบไฟล์ส่งคำขอ ทล.4276`,
+      '   NAME=หน่วยงาน, moo=หมู่ที่, tambon=ตำบล, province=จังหวัด, objective=วัตถุประสงค์, area=ตร.ม., rai/ngan/tarangwa=ไร่-งาน-ตร.วา,',
+      '   remark=ป่า, district=อำเภอ, No_1=เลขที่คำขอ, PIECE=แปลงที่, NRF_CODE/FR_NAME=รหัส/ชื่อป่าสงวน, KM_FROM/KM_TO=ช่วง กม.',
+      x.pts?`${base}_points : จุดพิกัด (Point) — ID ตรงกับตารางค่าพิกัดในรายงาน`:'',
+      x.row?`${code}_row_full : เขตทางทั้งเส้น (Polygon)`:'', x.frs?`${code}_forest_bnd : แนวเขตป่าที่เส้นทางพาดผ่าน (Polygon)`:''].filter(v=>v!=='').join('\r\n');
+    files.push({name:dir+'README.txt',data:enc('\ufeff'+readme)});
+    toast('⏳ กำลังสร้างไฟล์ SHP…',4000);
+    xpDownload(await xpZip(files),base+'_SHP.zip');
+    toast(`ส่งออก ${base}_SHP.zip แล้ว`,3000);
+  }catch(e){console.error(e);toast('ส่งออกไม่สำเร็จ: '+e.message,5000);}
+  finally{xpBusy2=false;}
+}
+window.__rptExportArc=exportArc;
 
 /* ---------- เปิด/ปิด/พิมพ์ ---------- */
 async function setRoute(name){
