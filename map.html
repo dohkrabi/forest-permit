@@ -333,7 +333,30 @@ html,body{height:100%;font-family:'Segoe UI',Tahoma,'Leelawadee UI',sans-serif}
   .rpt-bar b{display:none}
 }
 @page{size:A4 portrait;margin:0}
+/* v78 หน้าแผนผังเส้นทาง */
+.rp-plan .rp-title div:first-child{border:.3mm solid #000;padding:.6mm 5mm;font-weight:700;margin-bottom:1.2mm}
+.rp-plan .rp-title div{font-weight:400}
+.rp-plan .rp-map.pick{cursor:crosshair}
+.pl-box{position:absolute;z-index:660;background:#fff;border:.3mm solid #000;font-size:8.3pt;line-height:1.3;text-align:center;padding:1mm 2mm;white-space:nowrap}
+.pl-box b{display:block;font-size:8.8pt}
+.pl-na{position:absolute;z-index:660;width:17mm;height:20mm}
+.pl-lm{position:relative}
+.pl-lm i{position:absolute;left:-2.4mm;top:-2.4mm;width:4.8mm;height:4.8mm;border-radius:50%;border:.5mm solid #fff;color:#fff;font:700 7.5pt/4.8mm sans-serif;font-style:normal;text-align:center;box-shadow:0 0 0 .2mm #0006}
+.pl-lm span{position:absolute;top:-2.2mm;white-space:nowrap;font-size:8.5pt;font-weight:700;color:#000;text-shadow:-1px -1px 0 #fff,1px -1px 0 #fff,-1px 1px 0 #fff,1px 1px 0 #fff,0 0 3px #fff}
+.pl-lm.r span{left:3.4mm}.pl-lm.l span{right:3.4mm}
+.pl-strip{position:absolute;left:20mm;width:172mm;display:flex;justify-content:space-between;align-items:flex-start;font-size:8.5pt}
+.pl-strip .lg b{display:block;text-decoration:underline;margin-bottom:1mm;font-size:9pt}
+.pl-strip .lg span{display:inline-flex;align-items:center;gap:1.2mm;margin:0 3.5mm 1mm 0}
+.pl-strip .lg span i{width:4mm;height:4mm;border-radius:50%;color:#fff;font:700 6.5pt/4mm sans-serif;font-style:normal;text-align:center;display:inline-block}
+.pl-strip .nts{text-align:center}.pl-strip .nts b{display:block;font-size:13pt;text-decoration:underline}
+.pl-ed{position:fixed;z-index:99999;left:50%;top:30%;transform:translate(-50%,0);background:#fff;color:#222;border-radius:10px;box-shadow:0 8px 30px #0006;padding:14px 16px;width:300px;font-size:14px}
+.pl-ed input,.pl-ed select{width:100%;box-sizing:border-box;margin:4px 0 8px;padding:6px;font-size:14px}
+.pl-ed .bt{display:flex;gap:6px}.pl-ed .bt button{flex:1;padding:7px 0;border-radius:6px;border:1px solid #bbb;background:#f5f5f5}
+.pl-ed .bt .ok{background:#1565c0;color:#fff;border-color:#1565c0}.pl-ed .bt .del{color:#c62828}
+.pl-bar .b{display:inline-block;border:1px solid #bbb;border-radius:12px;padding:1px 9px;margin:2px 2px;background:#fff;cursor:pointer;font-size:12.5px}
+.pl-bar .b.on{background:#1565c0;color:#fff;border-color:#1565c0}
 @media print{
+  body.rpt-printing .rp-plan.hidebg .leaflet-tile-pane{visibility:hidden !important}
   html,body{height:auto !important;overflow:visible !important;background:#fff !important}
   body.rpt-printing > *:not(#rpt){display:none !important}
   body.rpt-printing #rpt{position:static !important;display:block !important;overflow:visible !important;background:#fff !important}
@@ -2937,7 +2960,7 @@ const AC='#ff1493';                                 // สีพื้นที�
 const MAXSHEET=80, ROWS=50, COLS=3;
 const LSK='khet_rpt_v1';
 const DEF_G={org:'แขวงทางหลวงกระบี่ กรมทางหลวง',img:'Google',lyr:'s',hi:true,thai:true,dec:1,grid:false,row:true,
-  skf:false,drag:false,scale:'auto',lay:'e',fnm:true,nsub:1,alroLine:true,xp:{pts:true,row:false,frs:false,one:false,fmt:'std'},pages:{p1:true,p2:true,p3:true,tb:true,tba:false}};
+  skf:false,drag:false,scale:'auto',lay:'e',fnm:true,nsub:1,alroLine:true,xp:{pts:true,row:false,frs:false,one:false,fmt:'std'},pages:{p1:true,p2:true,p3:true,tb:true,tba:false,pl:false},plBg:true,plHide:true};
 const TEXT_KEYS=['org','img','purpose','moo','tambon','amphoe','province','nrfName','permName','mgrName','cab','cabMgr'];
 const CAB_MGR_DEF='30 สิงหาคม 2543';
 const REQK=['nrf','mgr'];                          // ป่าที่ยื่นคำขอได้ (ป่าถาวรไม่นับเป็นพื้นที่ขออนุญาต)
@@ -3128,6 +3151,16 @@ function cabOf(kind){const f=R().f; return kind==='mgr'?(f.cabMgr==null?CAB_MGR_
 function autoTitle(k,G){
   const f=R().f, g=ST.g, a=`เนื้อที่ ${areaTxt(G.m2)} ไร่`, ok1=G.kinds.size===1?[...G.kinds][0]:null;
   const cv=String(cabOf(ok1||FK())||'').trim(), cab=cv?` (ขอตามมติคณะรัฐมนตรี เมื่อวันที่ ${cv})`:'';
+  if(k==='pl'){                                             // v78 หน้าแผนผังเส้นทาง
+    const fk=FK(), [num]=splitNum(CUR), ex=String(CUR).replace(/^ทล\.?\s*\d+\s*/,'').trim(), [r,gg,w]=rngwD(G.m2,+ST.g.dec);
+    const cvk=String(cabOf(fk)||'').trim(), alro=cutFor(CUR,fk).alro;
+    const L=[`แผนผังแสดงแนวเส้นทาง ทางหลวงหมายเลข ${num||CUR}${ex?' ตอน '+ex:''}`];
+    if(fk==='nrf') L.push('ขอใช้พื้นที่ของส่วนราชการหรือหน่วยงานของรัฐภายในเขตป่าสงวนแห่งชาติ ตามมาตรา 13/1','แห่งพระราชบัญญัติป่าสงวนแห่งชาติ พ.ศ. 2507 และแก้ไขเพิ่มเติม');
+    else L.push(`ขอใช้พื้นที่ป่าชายเลน${f.purpose?' เพื่อ'+strip(f.purpose,'เพื่อ'):''}`);
+    if(cvk) L.push(`กรณีคำขอตามมติคณะรัฐมนตรี เมื่อวันที่ ${cvk}`);
+    L.push(`เนื้อที่ ${r.toLocaleString('en-US')} ไร่ ${gg} งาน ${w.toFixed(+ST.g.dec)} ตารางวา${alro?' (ไม่รวมพื้นที่ในเขต ส.ป.ก.)':''}`);
+    return L;
+  }
   k=k.replace(/m$/,'');
   const pur=f.purpose?' เพื่อ'+strip(f.purpose,'เพื่อ'):'', loc=locTxt();
   const oneKind=G.kinds.size===1?[...G.kinds][0]:null;
@@ -3201,7 +3234,7 @@ ${ks.length>1?(fk==='nrf'?tf('mgrName','ชื่อป่าชายเลน 
 ${hasPerm?tf('permName','ชื่อป่าไม้ถาวร (แสดงเป็นแนวเขตในคำอธิบายสัญลักษณ์เท่านั้น)','(ถ้ามี)'):''}
 ${tf('img','แหล่งภาพถ่ายดาวเทียม (แสดงในหัวเรื่อง)')}
 <details><summary>✎ แก้หัวเรื่องเอง (เว้นว่าง = สร้างอัตโนมัติ)</summary>
-${(fk==='nrf'?[['p1','หน้า 1'],['p2','หน้า 2'],['p3','หน้า 3'],['tb','ตารางพิกัด']]:[['p1','หน้า 1'],['p2m','หน้า 2'],['p3m','หน้า 3'],['tbm','ตารางพิกัด']]).concat(ks.length>1?[['tba','ตารางพิกัดรวม']]:[]).map(([k,t])=>`<label class="f">${t} — ขึ้นบรรทัดใหม่ได้</label><textarea data-tt="${k}">${esc(r.tt[k]||'')}</textarea>`).join('')}
+${(fk==='nrf'?[['p1','หน้า 1'],['p2','หน้า 2'],['p3','หน้า 3'],['tb','ตารางพิกัด']]:[['p1','หน้า 1'],['p2m','หน้า 2'],['p3m','หน้า 3'],['tbm','ตารางพิกัด']]).concat(ks.length>1?[['tba','ตารางพิกัดรวม']]:[]).concat([['pl','หน้าแผนผังเส้นทาง']]).map(([k,t])=>`<label class="f">${t} — ขึ้นบรรทัดใหม่ได้</label><textarea data-tt="${k}">${esc(r.tt[k]||'')}</textarea>`).join('')}
 </details>
 <h4>3. หน้าที่จะพิมพ์</h4>
 ${ck('rpg1',g.pages.p1,'หน้า 1 แผนที่ภาพถ่ายดาวเทียม (ภาพรวม ป่าสงวน + ป่าชายเลน)')}
@@ -3209,6 +3242,11 @@ ${ck('rpg2',g.pages.p2,`หน้า 2 แผนที่ภาพถ่าย�
 ${ck('rpg3',g.pages.p3,'หน้า 3 แผนที่สังเขป + เลขจุดพิกัด')}
 ${ck('rpgt',g.pages.tb,'ตารางค่าพิกัด (แผ่นแยก ต่อหน้าอัตโนมัติ)')}
 ${ks.length>1?ck('rpga',g.pages.tba,'ตารางค่าพิกัดรวม ป่าสงวน + ป่าชายเลน'):''}
+${ck('rpgpl',g.pages.pl,'หน้าแผนผังเส้นทาง (ไม่ตามมาตราส่วน) + สถานที่สำคัญ')}
+${g.pages.pl?`<div class="pl-bar note" style="margin-left:22px"><b>📍 ปักสถานที่:</b><br>${Object.entries(LMT).map(([k,t])=>`<span class="b ${PLMODE===k?'on':''}" data-lmt="${k}">${t.ch} ${t.n}</span>`).join('')}
+<br>เลือกประเภท แล้วแตะบนหน้าแผนผัง → พิมพ์ชื่อ · ลากย้ายได้ · แตะจุดเพื่อแก้ชื่อ/ลบ · ปักแล้ว ${(R().lm||[]).length} จุด
+${(R().lm||[]).length?' · <a href="#" id="plClr">ลบทั้งหมด</a>':''}</div>
+<div style="margin-left:22px">${ck('rpgplBg',g.plBg,'แสดงพื้นหลังแผนที่ Google (โรดแมป) บนจอ ไว้ดูตำแหน่ง')}${ck('rpgplHide',g.plHide,'ซ่อนพื้นหลังเมื่อสั่งพิมพ์')}</div>`:''}
 <h4>4. มาตราส่วน</h4>
 <select id="rfScale"><option value="auto" ${g.scale==='auto'?'selected':''}>อัตโนมัติ — พอดี 1 แผ่น</option>
 ${SCALES.map(s=>`<option value="${s}" ${String(g.scale)===String(s)?'selected':''}>1:${s.toLocaleString('en-US')}</option>`).join('')}</select>
@@ -3291,6 +3329,13 @@ function bindForm(){
     const ck_=FK()==='mgr'?'cabMgr':'cab'; R().f[ck_]=txt; F.querySelector(`input[data-k=${ck_}]`).value=txt; save(); updateTexts();};
   $('rfPre').onclick=()=>{prefill(true);renderForm();updateTexts();toast('ดึงข้อมูลจากคำขอแล้ว',1800);};
   const pg={rpg1:'p1',rpg2:'p2',rpg3:'p3',rpgt:'tb',rpga:'tba'};
+  if($('rpgpl')) $('rpgpl').onchange=e=>{ST.g.pages.pl=e.target.checked; if(!e.target.checked)PLMODE=null; save(); renderForm(); later(rebuild,50);};
+  if($('rpgplBg')) $('rpgplBg').onchange=e=>{ST.g.plBg=e.target.checked;save();later(rebuild,50);};
+  if($('rpgplHide')) $('rpgplHide').onchange=e=>{ST.g.plHide=e.target.checked;save();for(const p of PAGES) if(p.plan) p.el.classList.toggle('hidebg',ST.g.plHide);};
+  F.querySelectorAll('[data-lmt]').forEach(b=>b.onclick=()=>{PLMODE=PLMODE===b.dataset.lmt?null:b.dataset.lmt; renderForm();
+    for(const p of PAGES) if(p.plan) p.mapEl.classList.toggle('pick',!!PLMODE);
+    if(PLMODE){toast(`แตะบนหน้าแผนผังเพื่อวาง${LMT[PLMODE].n}`,2600); const p=PAGES.find(q=>q.plan); if(p) p.el.parentNode.scrollIntoView({behavior:'smooth',block:'center'});}});
+  if($('plClr')) $('plClr').onclick=e=>{e.preventDefault(); if(!confirm('ลบสถานที่ที่ปักไว้ทั้งหมดของสายนี้?'))return; R().lm=[]; save(); renderForm(); for(const p of PAGES) if(p.plan) drawLm(p);};
   for(const [id,k] of Object.entries(pg)) if($(id)) $(id).onchange=e=>{ST.g.pages[k]=e.target.checked;save();later(rebuild,50);};
   $('rfScale').onchange=e=>{ST.g.scale=e.target.value;save();later(rebuild,50);};
   $('rfSub').onchange=e=>{ST.g.nsub=+e.target.value;save();later(rebuild,50);};
@@ -3399,8 +3444,10 @@ function rebuild(){
   }
   if(g.pages.tb) specs.push({k:'tb'+m,type:'tbl',G:GF,lab:`ตารางพิกัด (${fn})`});
   if(g.pages.tba&&GA&&GA.kinds.size>1) specs.push({k:'tba',type:'tbl',G:GA,lab:'ตารางพิกัดรวม (ป่าสงวน + ป่าชายเลน)'});
+  if(g.pages.pl) specs.push({k:'pl',type:'plan',G:GF,lab:'หน้าแผนผังเส้นทาง (ไม่ตามมาตราส่วน)'});
   let pn=0;
   for(const sp of specs){
+    if(sp.type==='plan'){PAGES.push(planPage(wrapPage(sp.lab),sp)); info.push(`${sp.lab}: สถานที่ ${(R().lm||[]).length} จุด`); continue;}
     if(sp.type==='tbl'){const n=tablePages(sp,()=>wrapPage(`${sp.lab}`));info.push(`${sp.lab}: ${n} แผ่น · ${verts(sp.G).length} จุด`);continue;}
     // ทุกหน้าแผนที่ต้องเห็นทั้งพื้นที่ใน 1 แผ่น — ถ้ามาตราส่วนที่เลือกไม่พอดี ใช้มาตราส่วนที่พอดีแทน
     const Sf=sp.Sfix||fitScale(sp.G); let S=sp.Sfix||(g.scale==='auto'?Sf:+g.scale), sh=sheetsFor(sp.G,S), note='';
@@ -3414,9 +3461,9 @@ function rebuild(){
   }
   $('rfScInfo').innerHTML=info.join('<br>');
   layout();
-  for(const pg of PAGES) if(pg.sheet) initSheet(pg);
+  for(const pg of PAGES) if(pg.sheet) initSheet(pg); else if(pg.plan) initPlan(pg);
   updateTexts();
-  try{document.fonts.ready.then(()=>{for(const pg of PAGES){fitTitle(pg.titleEl); if(pg.map) overlay(pg);}});}catch(e){}
+  try{document.fonts.ready.then(()=>{for(const pg of PAGES){fitTitle(pg.titleEl); if(pg.map&&!pg.plan) overlay(pg); if(pg.plan) placePlan(pg);}});}catch(e){}
 }
 function layout(){
   const host=$('rptPages'); if(!host)return;
@@ -3550,6 +3597,108 @@ function initSheet(pg){
   pg.titleEl.innerHTML=titleHtml(sp.k,sp.GT||sp.G);
   renderCallout(pg);
   overlay(pg);
+}
+/* ---------- v78 หน้าแผนผังเส้นทาง (ไม่ตามมาตราส่วน) + สถานที่สำคัญ ---------- */
+const LMT={s:{ch:'ร',c:'#1565c0',n:'โรงเรียน'},w:{ch:'ว',c:'#e65100',n:'วัด'},m:{ch:'ม',c:'#6a1b9a',n:'มัสยิด'},g:{ch:'ส',c:'#2e7d32',n:'สถานที่ราชการ'},o:{ch:'●',c:'#455a64',n:'อื่นๆ'}};
+let PLMODE=null;
+function planPage(el,sp){
+  el.classList.add('rp-plan'); el.classList.toggle('hidebg',!!ST.g.plHide);
+  const top=46,h=214;
+  el.innerHTML=`<div class="rp-title"></div>
+  <div class="rp-frame" style="left:20mm;top:${top}mm;width:172mm;height:${h}mm"><div class="rp-map"></div><svg class="rp-ov" style="position:absolute;inset:0;z-index:640;pointer-events:none"></svg></div>
+  <div class="pl-strip" style="top:${top+h+3}mm"><div class="lg"></div><div class="nts"><b>แผนผังเส้นทาง</b>ไม่ตามมาตราส่วน (NOT TO SCALE)</div></div>
+  <div class="rp-foot"><span>ระบบพิกัด WGS 1984 UTM Zone 47N · ${esc(CUR)} · จัดทำจากแอปแผนที่เขตทาง แขวงทางหลวงกระบี่</span><span class="sn"></span></div>`;
+  return {el,spec:sp,plan:true,titleEl:el.querySelector('.rp-title'),frame:el.querySelector('.rp-frame'),mapEl:el.querySelector('.rp-map'),
+    ov:el.querySelector('.rp-ov'),lgEl:el.querySelector('.pl-strip .lg'),boxes:[]};
+}
+function planEnds(){
+  const ls=routeLines(CUR), K=KMCAL[CUR];
+  if(K&&K.p0&&K.p1){const a={ll:L.latLng(K.p0.lat,K.p0.lng),km:K.km0}, b={ll:L.latLng(K.p1.lat,K.p1.lng),km:K.km1};
+    return a.km<=b.km?[a,b]:[b,a];}
+  if(!ls.length)return [];
+  const P=NAVLINES[CUR][0]; return [{ll:L.latLng(P[0][1],P[0][0]),km:null},{ll:L.latLng(P[P.length-1][1],P[P.length-1][0]),km:null}];
+}
+function initPlan(pg){
+  const g=ST.g;
+  const m=L.map(pg.mapEl,{zoomSnap:0,zoomControl:false,attributionControl:false,dragging:false,touchZoom:false,scrollWheelZoom:false,
+    doubleClickZoom:false,boxZoom:false,keyboard:false,inertia:false,fadeAnimation:false,zoomAnimation:false,markerZoomAnimation:false});
+  pg.map=m;
+  const lines=(NAVLINES[CUR]||[]).map(l=>l.map(([lo,la])=>[la,lo]));
+  let bb=null; for(const l of lines){const b=L.latLngBounds(l); bb=bb?bb.extend(b):b;}
+  if(!bb){const r=rowGeom(CUR); bb=L.latLngBounds(r[0][0].map(([lo,la])=>[la,lo]));}
+  m.fitBounds(bb,{padding:[95,95],animate:false});
+  if(g.plBg){const tl=L.tileLayer('https://mt1.google.com/vt/lyrs=m&hl=th&x={x}&y={y}&z={z}',{tileSize:g.hi?128:256,zoomOffset:g.hi?1:0,maxNativeZoom:g.hi?19:20,maxZoom:24,keepBuffer:0,opacity:.8});
+    track(tl); tl.addTo(m);}
+  const rd=L.svg({padding:.3});
+  for(const l of lines){L.polyline(l,{renderer:rd,color:'#000',weight:7,lineJoin:'round',lineCap:'round',interactive:false}).addTo(m);
+    L.polyline(l,{renderer:rd,color:'#fff',weight:4.4,lineJoin:'round',lineCap:'round',interactive:false}).addTo(m);}
+  pg.lmLayer=L.layerGroup().addTo(m);
+  m.on('click',e=>{ if(!PLMODE)return; const t=PLMODE;
+    lmEdit({t,n:'',lat:e.latlng.lat,lng:e.latlng.lng,s:'r'},true,pg); });
+  pg.mapEl.classList.toggle('pick',!!PLMODE);
+  drawLm(pg); placePlan(pg);
+  pg.titleEl.innerHTML=titleHtml('pl',pg.spec.G);
+}
+function drawLm(pg){
+  if(!pg.lmLayer)return; pg.lmLayer.clearLayers();
+  const lm=R().lm||[];
+  lm.forEach((p,i)=>{const t=LMT[p.t]||LMT.o;
+    const mk=L.marker([p.lat,p.lng],{draggable:true,icon:L.divIcon({className:'',iconSize:[0,0],
+      html:`<div class="pl-lm ${p.s==='l'?'l':'r'}"><i style="background:${t.c}">${t.ch}</i><span>${esc(p.n||t.n)}</span></div>`})}).addTo(pg.lmLayer);
+    mk.on('dragend',()=>{const ll=mk.getLatLng(); p.lat=ll.lat; p.lng=ll.lng; save();});
+    mk.on('click',e=>{L.DomEvent.stop(e); lmEdit(p,false,pg);});
+  });
+  const used=[...new Set(lm.map(p=>p.t))].filter(k=>LMT[k]);
+  pg.lgEl.innerHTML=`<b>คำอธิบายสัญลักษณ์</b>${used.map(k=>`<span><i style="background:${LMT[k].c}">${LMT[k].ch}</i>${LMT[k].n}</span>`).join('')}
+    <span><svg width="30" height="10"><line x1="1" y1="5" x2="29" y2="5" stroke="#000" stroke-width="6"/><line x1="1" y1="5" x2="29" y2="5" stroke="#fff" stroke-width="3.6"/></svg>ทางหลวงหมายเลข ${esc(thd(splitNum(CUR)[0]||CUR))}</span>`;
+}
+function lmEdit(p,isNew,pg){
+  document.querySelectorAll('.pl-ed').forEach(e=>e.remove());
+  const d=document.createElement('div'); d.className='pl-ed';
+  d.innerHTML=`<b>${isNew?'เพิ่มสถานที่':'แก้ไขสถานที่'}</b><br>ชื่อ<input id="plN" value="${esc(p.n||'')}" placeholder="เช่น โรงเรียนบ้าน…">
+    ประเภท<select id="plT">${Object.entries(LMT).map(([k,t])=>`<option value="${k}" ${p.t===k?'selected':''}>${t.ch} ${t.n}</option>`).join('')}</select>
+    ป้ายชื่อ<select id="plS"><option value="r" ${p.s!=='l'?'selected':''}>ด้านขวาของจุด</option><option value="l" ${p.s==='l'?'selected':''}>ด้านซ้ายของจุด</option></select>
+    <div class="bt"><button class="ok">บันทึก</button>${isNew?'':'<button class="del">ลบ</button>'}<button class="cc">ยกเลิก</button></div>`;
+  document.body.appendChild(d); const inp=d.querySelector('#plN'); setTimeout(()=>inp.focus(),30);
+  const close=()=>d.remove();
+  const ok=()=>{p.n=inp.value.trim(); p.t=d.querySelector('#plT').value; p.s=d.querySelector('#plS').value;
+    const r=R(); r.lm=r.lm||[]; if(isNew) r.lm.push(p); save(); close(); drawLm(pg); renderForm();};
+  d.querySelector('.ok').onclick=ok; inp.onkeydown=e=>{if(e.key==='Enter')ok(); if(e.key==='Escape')close();};
+  d.querySelector('.cc').onclick=close;
+  if(!isNew) d.querySelector('.del').onclick=()=>{const r=R(); r.lm=(r.lm||[]).filter(q=>q!==p); save(); close(); drawLm(pg); renderForm();};
+}
+function placePlan(pg){
+  const m=pg.map; if(!m)return;
+  pg.boxes.forEach(b=>b.remove()); pg.boxes=[];
+  const sz=m.getSize(), W=sz.x, H=sz.y;
+  // จุดตามเส้นทางบนจอ (ไว้เลี่ยงไม่ให้กล่องทับเส้น)
+  const pts=[]; for(const l of (NAVLINES[CUR]||[])){const st=Math.max(1,Math.floor(l.length/600)); for(let i=0;i<l.length;i+=st){const q=m.latLngToContainerPoint([l[i][1],l[i][0]]); pts.push(q);}}
+  const hit=r=>{let c=0;for(const q of pts) if(q.x>=r.x-6&&q.x<=r.x+r.w+6&&q.y>=r.y-6&&q.y<=r.y+r.h+6)c++;return c;};
+  const placed=[];
+  const out=r=>r.x<3||r.y<3||r.x+r.w>W-3||r.y+r.h>H-3;
+  // ลูกศรทิศเหนือ: มุมที่ทับเส้นทางน้อยที่สุด
+  const na=document.createElement('div'); na.className='pl-na';
+  na.innerHTML=`<svg viewBox="-20 -24 40 46" width="100%" height="100%"><circle r="11" fill="none" stroke="#000" stroke-width="1.4"/><path d="M0,-15 L4.2,4 L0,1 L-4.2,4 Z" fill="#000"/><text y="-17" text-anchor="middle" font-size="7" font-weight="700" font-family="Arial,sans-serif">N</text></svg>`;
+  pg.frame.appendChild(na); pg.boxes.push(na);
+  {const w=na.offsetWidth,h=na.offsetHeight,pd=12, C=[[pd,pd],[W-w-pd,pd],[pd,H-h-pd],[W-w-pd,H-h-pd]];
+   let best=null; C.forEach(([x,y],i)=>{const r={x,y,w,h},sc=hit(r)*100+i; if(!best||sc<best.sc)best={sc,r};});
+   na.style.left=best.r.x+'px'; na.style.top=best.r.y+'px'; placed.push(best.r);}
+  let svg='';
+  planEnds().forEach((e,i)=>{
+    const q=m.latLngToContainerPoint(e.ll), u=fwd(e.ll.lng,e.ll.lat);
+    const b=document.createElement('div'); b.className='pl-box';
+    b.innerHTML=nw(`<b>${i?'จุดสิ้นสุดสายทาง':'จุดเริ่มต้นสายทาง'}</b>${e.km!=null?`กม. ${fmtKm(Math.round(e.km))}<br>`:''}ค่าพิกัด X,Y (${u[0].toFixed(0)}, ${u[1].toFixed(0)})`);
+    pg.frame.appendChild(b); pg.boxes.push(b);
+    const w=b.offsetWidth,h=b.offsetHeight; let best=null;
+    for(const [dx,dy] of [[-1,1],[1,1],[-1,-1],[1,-1],[0,1],[0,-1],[-1,0],[1,0]]) for(const D of [55,85,120]){
+      const x=q.x+dx*D-(dx<0?w:dx>0?0:w/2), y=q.y+dy*D-(dy<0?h:dy>0?0:h/2), r={x,y,w,h};
+      let sc=hit(r)*50+D*.1; if(out(r))sc+=1e5; for(const o of placed) if(ovl(r,o)>0) sc+=1e6;
+      if(!best||sc<best.sc)best={sc,r};}
+    const r=best.r; b.style.left=r.x+'px'; b.style.top=r.y+'px'; placed.push(r);
+    const ay=r.y>q.y?r.y:r.y+r.h, ax1=r.x+r.w*.38, ax2=r.x+r.w*.62;
+    svg+=`<line x1="${q.x}" y1="${q.y}" x2="${ax1}" y2="${ay}" stroke="#000" stroke-width="1"/><line x1="${q.x}" y1="${q.y}" x2="${ax2}" y2="${ay}" stroke="#000" stroke-width="1"/>`;
+  });
+  pg.ov.setAttribute('viewBox',`0 0 ${W} ${H}`); pg.ov.innerHTML=svg;
 }
 function renderLegend(pg){
   const sp=pg.spec, a=thd(areaTxt((sp.GT||sp.G).m2));
