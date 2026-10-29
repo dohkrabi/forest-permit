@@ -354,10 +354,12 @@ html,body{height:100%;font-family:'Segoe UI',Tahoma,'Leelawadee UI',sans-serif}
 .pl-ed .bt .ok{background:#1565c0;color:#fff;border-color:#1565c0}.pl-ed .bt .del{color:#c62828}
 .pl-bar .b{display:inline-block;border:1px solid #bbb;border-radius:12px;padding:1px 9px;margin:2px 2px;background:#fff;cursor:pointer;font-size:12.5px}
 .pl-bar .b.on{background:#1565c0;color:#fff;border-color:#1565c0}
+.pl-rst{position:absolute;right:3mm;top:3mm;z-index:700;display:none;background:#fff;border:1px solid #1565c0;color:#1565c0;border-radius:6px;padding:3px 9px;font:600 12px sans-serif;cursor:pointer;box-shadow:0 1px 4px #0003}
+.rp-plan.zoomed .pl-rst{display:block}.rp-plan.zoomed .pl-box,.rp-plan.zoomed .pl-na,.rp-plan.zoomed .rp-ov{visibility:hidden}
 .pl-h{width:9px;height:9px;margin:-5px 0 0 -5px;background:#ff1493;border:1.5px solid #fff;border-radius:2px;box-shadow:0 0 0 1px #0007;cursor:move}
 .pl-rl{white-space:nowrap;font-size:7.8pt;font-weight:700;color:#000;transform:translate(-50%,-50%);text-shadow:-1px -1px 0 #fff,1px -1px 0 #fff,-1px 1px 0 #fff,1px 1px 0 #fff,0 0 3px #fff}
 @media print{
-  body.rpt-printing .pl-h{display:none !important}
+  body.rpt-printing .pl-h,body.rpt-printing .pl-rst{display:none !important}
   body.rpt-printing .rp-plan.hidebg .leaflet-tile-pane{visibility:hidden !important}
   html,body{height:auto !important;overflow:visible !important;background:#fff !important}
   body.rpt-printing > *:not(#rpt){display:none !important}
@@ -3247,7 +3249,7 @@ ${ks.length>1?ck('rpga',g.pages.tba,'ตารางค่าพิกัดร�
 ${ck('rpgpl',g.pages.pl,'หน้าแผนผังเส้นทาง (ไม่ตามมาตราส่วน) + สถานที่สำคัญ')}
 ${g.pages.pl?`<div class="pl-bar note" style="margin-left:22px"><b>📍 ปักสถานที่:</b><br>${Object.entries(LMT).map(([k,t])=>`<span class="b ${PLMODE===k?'on':''}" data-lmt="${k}">${t.ch} ${t.n}</span>`).join('')}
 <span class="b ${PLMODE==='road'?'on':''}" data-lmt="road">＋ ทางเชื่อม</span>
-<br>เลือกประเภท แล้วแตะบนหน้าแผนผัง → พิมพ์ชื่อ · ลากย้ายได้ · แตะจุดเพื่อแก้ชื่อ/ลบ · ปักแล้ว ${(R().lm||[]).length} จุด · ทางเชื่อมที่วาดเอง ${(R().plr||[]).length} เส้น
+<br>เลือกประเภท แล้วแตะบนหน้าแผนผัง → พิมพ์ชื่อ · ระหว่างปัก: หมุนล้อเมาส์/ถ่างนิ้วเพื่อซูม ลากเพื่อเลื่อน · ลากย้ายได้ · แตะจุดเพื่อแก้ชื่อ/ลบ · ปักแล้ว ${(R().lm||[]).length} จุด · ทางเชื่อมที่วาดเอง ${(R().plr||[]).length} เส้น
 ${(R().lm||[]).length?' · <a href="#" id="plClr">ลบทั้งหมด</a>':''}<br>กล่องจุดเริ่มต้น/สิ้นสุด: วางอัตโนมัติไม่ให้ทับเส้นทาง · ลากย้ายเองได้${R().plb&&Object.keys(R().plb).length?' · <a href="#" id="plRst">คืนตำแหน่งอัตโนมัติ</a>':''}</div>
 <div style="margin-left:22px">${ck('rpgplJ',g.plJ,'แสดงทางเชื่อมจากทางหลวงสายอื่นอัตโนมัติ')}${(R().plJh||[]).length?`<div class="note" style="margin:0 0 4px 24px">ซ่อนไว้ ${(R().plJh||[]).length} จุด · <a href="#" id="plJr">แสดงทั้งหมด</a></div>`:''}${ck('rpgplBg',g.plBg,'แสดงพื้นหลังแผนที่ Google (โรดแมป) บนจอ ไว้ดูตำแหน่ง')}${ck('rpgplHide',g.plHide,'ซ่อนพื้นหลังเมื่อสั่งพิมพ์')}</div>`:''}
 <h4>4. มาตราส่วน</h4>
@@ -3338,7 +3340,7 @@ function bindForm(){
   if($('rpgplBg')) $('rpgplBg').onchange=e=>{ST.g.plBg=e.target.checked;save();later(rebuild,50);};
   if($('rpgplHide')) $('rpgplHide').onchange=e=>{ST.g.plHide=e.target.checked;save();for(const p of PAGES) if(p.plan) p.el.classList.toggle('hidebg',ST.g.plHide);};
   F.querySelectorAll('[data-lmt]').forEach(b=>b.onclick=()=>{PLMODE=PLMODE===b.dataset.lmt?null:b.dataset.lmt; renderForm();
-    for(const p of PAGES) if(p.plan) p.mapEl.classList.toggle('pick',!!PLMODE);
+    for(const p of PAGES) if(p.plan){p.mapEl.classList.toggle('pick',!!PLMODE); setPlanZoom(p,!!PLMODE);}
     for(const p of PAGES) if(p.plan){p.roadA=null; if(p.tmp){p.tmp.remove();p.tmp=null;}}
     if(PLMODE){toast(PLMODE==='road'?'แตะจุดบนเส้นทาง (ต้นทางเชื่อม) แล้วแตะอีกจุดเพื่อกำหนดทิศ/ความยาว':`แตะบนหน้าแผนผังเพื่อวาง${LMT[PLMODE].n}`,3200); const p=PAGES.find(q=>q.plan); if(p) p.el.parentNode.scrollIntoView({behavior:'smooth',block:'center'});}});
   if($('plRst')) $('plRst').onclick=e=>{e.preventDefault(); delete R().plb; save(); renderForm(); for(const p of PAGES) if(p.plan) placePlan(p);};
@@ -3628,13 +3630,14 @@ function planEnds(){
 function initPlan(pg){
   const g=ST.g;
   const m=L.map(pg.mapEl,{zoomSnap:0,zoomControl:false,attributionControl:false,dragging:false,touchZoom:false,scrollWheelZoom:false,
-    doubleClickZoom:false,boxZoom:false,keyboard:false,inertia:false,fadeAnimation:false,zoomAnimation:false,markerZoomAnimation:false});
+    doubleClickZoom:false,boxZoom:false,keyboard:false,inertia:false,fadeAnimation:false,zoomAnimation:false,markerZoomAnimation:false,
+    maxZoom:19,wheelPxPerZoomLevel:120});
   pg.map=m;
   const lines=(NAVLINES[CUR]||[]).map(l=>l.map(([lo,la])=>[la,lo]));
   let bb=null; for(const l of lines){const b=L.latLngBounds(l); bb=bb?bb.extend(b):b;}
   if(!bb){const r=rowGeom(CUR); bb=L.latLngBounds(r[0][0].map(([lo,la])=>[la,lo]));}
-  m.fitBounds(bb,{padding:[95,95],animate:false});
-  if(g.plBg){const tl=L.tileLayer('https://mt1.google.com/vt/lyrs=m&hl=th&x={x}&y={y}&z={z}',{tileSize:g.hi?128:256,zoomOffset:g.hi?1:0,maxNativeZoom:g.hi?19:20,maxZoom:24,keepBuffer:0,opacity:.8});
+  m.fitBounds(bb,{padding:[95,95],animate:false}); pg.bb=bb;
+  if(g.plBg){const tl=L.tileLayer('https://mt1.google.com/vt/lyrs=m&hl=th&scale=2&x={x}&y={y}&z={z}',{tileSize:256,zoomOffset:0,maxNativeZoom:20,maxZoom:24,keepBuffer:1});
     track(tl); tl.addTo(m);}
   pg.rdJ=L.svg({padding:.3}); m.addLayer(pg.rdJ); pg.jLayer=L.layerGroup().addTo(m);   // v81 ทางเชื่อม (อยู่ใต้เส้นทางหลัก)
   const rd=L.svg({padding:.3});
@@ -3651,7 +3654,11 @@ function initPlan(pg){
       roadEdit(o,true,pg); return;}
     lmEdit({t,n:'',lat:e.latlng.lat,lng:e.latlng.lng,s:'r'},true,pg); });
   pg.mapEl.classList.toggle('pick',!!PLMODE);
+  const rb=document.createElement('div'); rb.className='pl-rst'; rb.textContent='↺ กลับมุมมองเต็มสาย'; pg.frame.appendChild(rb);
+  rb.onclick=e=>{e.stopPropagation(); planReset(pg);};
+  m.on('movestart zoomstart',()=>{if(pg.zoomOn&&!pg.resetting){pg.moved=true; pg.el.classList.add('zoomed');}});
   drawJ(pg); drawLm(pg); placePlan(pg);
+  setPlanZoom(pg,!!PLMODE);
   pg.titleEl.innerHTML=titleHtml('pl',pg.spec.G);
 }
 /* ---- v81 ทางเชื่อม: อัตโนมัติจากทางหลวงสายอื่นในระบบ + วาดเอง ---- */
@@ -3736,6 +3743,17 @@ function roadEdit(o,isNew,pg){
   d.querySelector('.ok').onclick=ok; inp.onkeydown=e=>{if(e.key==='Enter')ok(); if(e.key==='Escape')close();};
   d.querySelector('.cc').onclick=close;
   if(!isNew) d.querySelector('.del').onclick=()=>{const r=R(); r.plr=(r.plr||[]).filter(q=>q!==o); save(); close(); drawJ(pg); renderForm();};
+}
+/* ---- v82 ซูม/เลื่อนดูหน้าแผนผังระหว่างปักจุด · ออกจากโหมดปักหรือสั่งพิมพ์ → กลับมุมมองเต็มสาย ---- */
+function setPlanZoom(pg,on){
+  const m=pg.map; if(!m)return; pg.zoomOn=on;
+  for(const h of ['dragging','scrollWheelZoom','touchZoom']) if(m[h]) on?m[h].enable():m[h].disable();
+  if(!on) planReset(pg);
+}
+function planReset(pg){
+  const m=pg.map; if(!m||!pg.bb)return;
+  if(pg.moved){pg.resetting=true; m.fitBounds(pg.bb,{padding:[95,95],animate:false}); pg.resetting=false; pg.moved=false; drawJ(pg); drawLm(pg); placePlan(pg);}
+  pg.el.classList.remove('zoomed');
 }
 function drawLm(pg){
   if(!pg.lmLayer)return; pg.lmLayer.clearLayers();
@@ -4288,6 +4306,7 @@ function openRpt(name){
 function closeRpt(){UI.classList.remove('show');document.body.style.overflow='';destroy();$('rptPages').innerHTML='';}
 async function doPrint(){
   if(!document.querySelector('#rptPages .rpt-pw')){toast('ยังไม่มีหน้ารายงาน',2000);return;}
+  if(PLMODE){PLMODE=null; renderForm();} for(const p of PAGES) if(p.plan) setPlanZoom(p,false);   // v82 พิมพ์ด้วยมุมมองเต็มสายเสมอ
   const t0=Date.now();
   while(pending()>0&&Date.now()-t0<40000){stat();await sleep(300);}
   if(pending()>0&&!confirm(`ภาพดาวเทียมยังโหลดไม่ครบ (เหลือ ${pending()} ภาพ) — พิมพ์ต่อหรือไม่?`))return;
