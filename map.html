@@ -1707,11 +1707,14 @@ if(!Object.keys(KMCAL).length)
 // ใช้ var (ไม่ใช่ let/const) เพราะ refreshTicks() ที่ประกาศไว้ก่อนหน้าเรียก refreshFx() ได้ทุกเมื่อ
 var FX_KIND={nrf:{n:'ป่าสงวนแห่งชาติ',c:'#00b8d4',layer:gNRF},perm:{n:'ป่าไม้ถาวร',c:'#d500f9',layer:gPERM},mgr:{n:'ป่าชายเลน',c:'#2979ff',layer:gMGR}};
 var FKINDS=['nrf','perm','mgr'];
+var AKINDS=['nrf','mgr'];   // v83 ชั้นที่แสดงใน "เขตทางในป่า" (ไม่รวมป่าไม้ถาวร)
+function hasA(n){return !!(AREA[n]&&AKINDS.some(k=>AREA[n][k]));}
+function areaNames(){return Object.keys(AREA).filter(hasA);}
 // ชั้นป่าเริ่มต้นปิด: ถ้าไม่ได้เปิดชั้นป่าใดเลย ให้ "เขตทางในป่า" / หมุด ◆ แสดงทุกชนิดป่า · ถ้าเปิดบางชั้น แสดงเฉพาะชั้นที่เปิด (แบบเดิม)
 function fkVis(kind){return map.hasLayer(FX_KIND[kind].layer)||!FKINDS.some(k=>map.hasLayer(FX_KIND[k].layer));}   // ลำดับชั้นเขตป่า
 var FK_AB={nrf:'ส.',perm:'ถ.',mgr:'ช.'}, FK_SHORT={nrf:'ป่าสงวน',perm:'ป่าถาวร',mgr:'ป่าชายเลน'};
 var FK_FILL={nrf:'#ffea00',perm:'#ff6d00',mgr:'#2979ff'}, FK_DASH={nrf:null,perm:'6 4',mgr:'2 5'}, FK_TXT={nrf:'#80deea',perm:'#f48fb1',mgr:'#82b1ff'};
-function fkMulti(rec){return FKINDS.filter(k=>rec[k]).length>1;}
+function fkMulti(rec){return AKINDS.filter(k=>rec[k]).length>1;}
 var FX_ZOOM=14;            // แสดงหมุดจุดตัดตั้งแต่ซูมระดับนี้
 var FX=[], fxReady=false, fxOn=false;
 var pickMode=false, pickMk=null, pickPopup=null, lastTapLL=null, PK=null;
@@ -2040,7 +2043,7 @@ function computeArea(){
         if(!fs.length)continue;
         const inter=PC.intersection(row,PC.union(...fs.map(f=>[f])));
         if(!inter.length)continue;
-        unionKinds.push(inter);
+        if(kind!=='perm') unionKinds.push(inter);
         const pieces=inter.map(poly=>{
           // หมุนวงนอกให้เริ่มที่จุดตัด ◆ (อ่านง่าย: เริ่มจากจุดเข้าเขตป่า)
           const rings=poly.map(r=>r.slice(0,-1));
@@ -2055,8 +2058,8 @@ function computeArea(){
         if(!pieces.length)continue;
         rec[kind]={pieces,m2:pieces.reduce((s,p)=>s+p.m2,0)};
       }
-      if(unionKinds.length){
-        const u=unionKinds.length>1?PC.union(...unionKinds):unionKinds[0];
+      if(Object.keys(rec).length){                  // v83: rec.any = ป่าสงวน ∪ ป่าชายเลน (ไม่รวมป่าไม้ถาวร) · ป่าถาวรยังเก็บไว้ใช้ในรายงาน
+        const u=unionKinds.length>1?PC.union(...unionKinds):(unionKinds[0]||[]);
         rec.any=u.reduce((s,p)=>s+polyM2(p),0);
         AREA[name]=rec;
       }
@@ -2220,11 +2223,11 @@ function densPiece(name,pc,step){
 function showAreaRoute(name){
   if(!areaReady){toast('กำลังคำนวณพื้นที่… ลองใหม่อีกครู่',2600);return;}
   const r=AREA[name];
-  if(!r){toast(`${name} ไม่มีส่วนที่อยู่ในเขตป่า`,2600);return;}
+  if(!hasA(name)){toast(`${name} ไม่มีส่วนที่อยู่ในเขตป่า`,2600);return;}
   areaShow=true;areaFocus=name;document.getElementById('tbArea').classList.add('on');
   closeAllPanels(); map.closePopup();
   const g=L.featureGroup();
-  for(const k of FKINDS) if(r[k]) r[k].pieces.forEach(p=>L.polygon(p.rings[0].map(([lo,la])=>[la,lo])).addTo(g));
+  for(const k of AKINDS) if(r[k]) r[k].pieces.forEach(p=>L.polygon(p.rings[0].map(([lo,la])=>[la,lo])).addTo(g));
   try{map.fitBounds(g.getBounds(),{padding:[70,40]});}catch(e){}
   refreshArea();
   toast(`${name} · แตะพื้นที่เพื่อดูเนื้อที่ · ซูม 16+ เห็นหมุดมุม · 19+ เห็นเลขมุม`,4200);
@@ -2233,9 +2236,9 @@ function showAreaHere(name){
   // ซูมไปแปลงที่ใกล้จุดที่แตะ (ถ้ามี) ไม่งั้นแสดงทั้งสาย
   const ll=lastTapLL;
   if(!areaReady){toast('กำลังคำนวณพื้นที่… ลองใหม่อีกครู่',2600);return;}
-  const r=AREA[name]; if(!r){toast(`${name} ไม่มีส่วนที่อยู่ในเขตป่า`,2600);return;}
+  const r=AREA[name]; if(!hasA(name)){toast(`${name} ไม่มีส่วนที่อยู่ในเขตป่า`,2600);return;}
   let best=null;
-  if(ll) for(const k of FKINDS) if(r[k]) r[k].pieces.forEach(p=>{
+  if(ll) for(const k of AKINDS) if(r[k]) r[k].pieces.forEach(p=>{
     const b=L.latLngBounds(p.rings[0].map(([lo,la])=>[la,lo]));
     const d=b.contains(ll)?0:ll.distanceTo(b.getCenter());
     if(!best||d<best.d) best={d,b};
@@ -2260,13 +2263,13 @@ function pieceKm(name,pc){
 function updateAreaCard(){
   const el=document.getElementById('arCard');
   const name=(areaShow&&areaReady)?areaFocus:null;
-  if(!name||!AREA[name]){el.style.display='none';cardKey=null;return;}
+  if(!name||!hasA(name)){el.style.display='none';cardKey=null;return;}
   const key=name+'|'+cardMin;
   el.style.display='block';
   if(key===cardKey)return; cardKey=key;
   const rec=AREA[name];
   const rows=[];
-  for(const kind of FKINDS){const R=rec[kind]; if(!R)continue;
+  for(const kind of AKINDS){const R=rec[kind]; if(!R)continue;
     R.pieces.forEach((pc,pi)=>rows.push({kind,pi,pc,kr:pieceKm(name,pc)}));}
   rows.sort((a,b)=>(a.kr?a.kr[0]:0)-(b.kr?b.kr[0]:0));
   const ai=(typeof alroInfo==='function')?alroInfo(name):null;
@@ -2275,10 +2278,10 @@ function updateAreaCard(){
   el.innerHTML=`<div class="ach"><b>🌲 ${name}</b><span>เขตทางในเขตป่า</span>
       <button id="acMin">${cardMin?'▲':'▼'}</button><button id="acX">✕</button></div>
     ${cardMin?`<div class="acmini">
-      ${FKINDS.filter(k=>rec[k]).map(k=>`<span class="${k}">${FK_AB[k]} <b>${m2Short(rec[k].m2)}</b></span>`).join('')}
+      ${AKINDS.filter(k=>rec[k]).map(k=>`<span class="${k}">${FK_AB[k]} <b>${m2Short(rec[k].m2)}</b></span>`).join('')}
       ${fkMulti(rec)?`<span class="any">รวม <b>${m2Short(rec.any)}</b></span>`:''}
       <span class="u">ไร่-งาน-ตร.ว. · ${rows.length} แปลง</span></div>`:`<div class="acsum">
-      ${FKINDS.filter(k=>rec[k]).map(k=>`<div class="acr ${k}"><span>${FX_KIND[k].n}</span>${tot(k)}</div>`).join('')}
+      ${AKINDS.filter(k=>rec[k]).map(k=>`<div class="acr ${k}"><span>${FX_KIND[k].n}</span>${tot(k)}</div>`).join('')}
       ${fkMulti(rec)?`<div class="acr any"><span>รวมไม่นับซ้ำ</span><b>${m2Txt(rec.any)}</b><small>${rec.any.toLocaleString(undefined,{maximumFractionDigits:2})} ตร.ม. · ส่วนที่ซ้อนกันหลายป่านับครั้งเดียว</small></div>`:''}
       ${alroRow}
     </div>`}
@@ -2287,7 +2290,7 @@ function updateAreaCard(){
       return `<div class="aci ${r.kind}" data-i="${i}"><span class="k">${FK_AB[r.kind]}</span>
         <span class="t">${r.kr?'กม. '+fmtKm(Math.round(r.kr[0]))+(r.kr[1]-r.kr[0]>=1?' – '+fmtKm(Math.round(r.kr[1])):''):lab}</span>
         <span class="v">${m2Short(r.pc.m2)}</span></div>`;}).join('')}</div>
-    <div class="acfoot">ไร่-งาน-ตร.ว. · ส. = ป่าสงวน · ถ. = ป่าถาวร · ช. = ป่าชายเลน · แตะรายการเพื่อซูมไปแปลงนั้น</div>`}`;
+    <div class="acfoot">ไร่-งาน-ตร.ว. · ส. = ป่าสงวน · ช. = ป่าชายเลน · แตะรายการเพื่อซูมไปแปลงนั้น</div>`}`;
   el.querySelector('#acX').onclick=()=>{el.style.display='none';cardKey='hidden';areaFocus=null;refreshArea();};
   el.querySelector('#acMin').onclick=()=>{cardMin=!cardMin;updateAreaCard();};
   el.querySelectorAll('.aci').forEach(d=>d.onclick=()=>{
@@ -2316,7 +2319,7 @@ function refreshArea(){
   const z=map.getZoom(), b=map.getBounds().pad(0.1);
   for(const [name,rec] of Object.entries(AREA)){
     if(areaFocus&&areaFocus!==name)continue;
-    for(const kind of FKINDS){
+    for(const kind of AKINDS){
       const R=rec[kind]; if(!R||!fkVis(kind))continue;
       const col=FK_FILL[kind];
       R.pieces.forEach((pc,pi)=>{
@@ -2390,15 +2393,15 @@ var areaPanel=document.getElementById('arPanel');
 function renderAreaList(){
   const el=document.getElementById('arList'); if(!el)return;
   if(!areaReady){el.innerHTML='<div class="arwait">⏳ กำลังคำนวณ…</div>';return;}
-  const names=Object.keys(AREA);
+  const names=areaNames();
   if(!names.length){el.innerHTML='<div class="arwait">ไม่พบเขตทางที่อยู่ในเขตป่า</div>';return;}
   const tK={nrf:0,perm:0,mgr:0}; let tA=0;
   el.innerHTML='';
   for(const name of names){
-    const r=AREA[name]; for(const k of FKINDS) tK[k]+=r[k]?r[k].m2:0; tA+=r.any||0;
+    const r=AREA[name]; for(const k of AKINDS) tK[k]+=r[k]?r[k].m2:0; tA+=r.any||0;
     const d=document.createElement('div'); d.className='krow';
     d.innerHTML=`<span class="kn">${name}<br><span style="font-size:11px;color:rgba(255,255,255,.65)">
-      ${FKINDS.filter(k=>r[k]).map(k=>`<span style="color:${FK_TXT[k]}">${FK_AB[k]} ${m2Short(r[k].m2)}</span>`).join(' ')}</span></span>`;
+      ${AKINDS.filter(k=>r[k]).map(k=>`<span style="color:${FK_TXT[k]}">${FK_AB[k]} ${m2Short(r[k].m2)}</span>`).join(' ')}</span></span>`;
     const b1=document.createElement('button'); b1.textContent='ดู';
     b1.onclick=()=>showAreaRoute(name);
     const b2=document.createElement('button'); b2.textContent='CSV'; b2.onclick=()=>exportAreaCsv(name);
@@ -2406,7 +2409,7 @@ function renderAreaList(){
     d.appendChild(b1); d.appendChild(b2); d.appendChild(b3); el.appendChild(d);
   }
   const s=document.createElement('div'); s.className='arsum';
-  s.innerHTML=`รวม ${names.length} สาย · `+FKINDS.filter(k=>tK[k]>0).map(k=>`<span style="color:${FK_TXT[k]}">${FK_SHORT[k]} ${m2Txt(tK[k])}</span>`).join('<br>')+
+  s.innerHTML=`รวม ${names.length} สาย · `+AKINDS.filter(k=>tK[k]>0).map(k=>`<span style="color:${FK_TXT[k]}">${FK_SHORT[k]} ${m2Txt(tK[k])}</span>`).join('<br>')+
     `<br>ไม่นับซ้ำ (ป่าใดป่าหนึ่ง) ${m2Txt(tA)}`;
   el.prepend(s);
 }
@@ -2420,7 +2423,7 @@ function areaRows(names){
   const strip=[['สายทาง','ชั้นเขตป่า','แปลงที่','จาก','ถึง','เนื้อที่ (ตร.ม.)','ไร่-งาน-ตร.วา']];
   for(const name of names){
     const rec=AREA[name]; if(!rec)continue;
-    for(const kind of FKINDS){
+    for(const kind of AKINDS){
       const R=rec[kind]; if(!R)continue;
       sum.push([name,FX_KIND[kind].n,R.pieces.length,R.m2.toFixed(2),m2Txt(R.m2)]);
       R.pieces.forEach((pc,pi)=>{
@@ -2464,11 +2467,11 @@ function exportAreaCsv(name){
 }
 function exportAreaKml(name){
   if(!areaReady){toast('กำลังคำนวณ… ลองใหม่อีกครู่');return;}
-  const names=name?[name]:Object.keys(AREA);
+  const names=name?[name]:areaNames();
   const co=r=>r.concat([r[0]]).map(v=>`${v[0]},${v[1]},0`).join(' ');
   let pm='';
   for(const n of names){const rec=AREA[n]; if(!rec)continue;
-    for(const kind of FKINDS){const R=rec[kind]; if(!R)continue;
+    for(const kind of AKINDS){const R=rec[kind]; if(!R)continue;
       R.pieces.forEach((pc0,pi)=>{
         const pc=Object.assign({},pc0,{rings:densPiece(n,pc0,AREA_STEP).rings});
         pm+=`<Placemark><name>${n} ใน${FX_KIND[kind].n}${R.pieces.length>1?' แปลง '+(pi+1):''}</name><styleUrl>#${kind}</styleUrl>
@@ -2766,7 +2769,7 @@ var XP_PF=[['Id','N',6,0],['area','F',19,11],['ไร่','F',19,11],['งาน
 var XP_TF=[['Id','N',6,0],['X','F',19,11],['Y','F',19,11],['PIECE','N',4,0],['TYPE','C',80,0],['MARK_NO','N',6,0],['KM','C',12,0],['PAIR','C',20,0],['WIDTH_M','F',10,2]];
 async function xpSegment(name,step){
   const dir=`แผนที่ ค่าพิกัด เขตป่า ${name}/`, files=[], segRows=[], sheets=[], sum=[];
-  for(const kind of FKINDS){
+  for(const kind of AKINDS){
     await new Promise(r=>setTimeout(r,0));
     const Ly=xpLayer(name,kind,step); if(!Ly)continue;
     const base=`${name} ${XP_KIND[kind]}`, pbase=`พิกัด ${base}`;
@@ -2807,13 +2810,13 @@ async function exportShp(name){
   try{
     const step=AREA_STEP;
     if(name){
-      if(!AREA[name]){toast(`${name} ไม่มีส่วนที่อยู่ในเขตป่า`,2600);return;}
+      if(!hasA(name)){toast(`${name} ไม่มีส่วนที่อยู่ในเขตป่า`,2600);return;}
       toast(`⏳ กำลังสร้าง SHP ${name}…`,8000);
       const s=await xpSegment(name,step);
       xpDownload(await xpZip(s.files),`${name}.zip`);
       toast(`ส่งออก SHP ${name} แล้ว (${s.sum.map(x=>XP_KIND[x.kind]+' '+x.n+' แปลง').join(' · ')})`,4000);
     }else{
-      const names=Object.keys(AREA), files=[], sumRows=[]; let k=0;
+      const names=areaNames(), files=[], sumRows=[]; let k=0;
       for(const n of names){
         toast(`⏳ กำลังสร้าง SHP ${++k}/${names.length} · ${n}`,8000);
         const s=await xpSegment(n,step); if(!s)continue;
@@ -2822,9 +2825,9 @@ async function exportShp(name){
       }
       const rows=[['สรุปเนื้อที่เขตทางที่อยู่ในเขตป่า รายช่วงสายทาง — แขวงทางหลวงกระบี่ (คำนวณบน UTM 47N)'],
         ['สายทาง','ชั้นเขตป่า','จำนวนแปลง','เนื้อที่ (ตร.ม.)','ไร่','งาน','ตร.วา']].concat(sumRows);
-      for(const kf of FKINDS.map(k=>XP_KFULL[k])){const t=sumRows.filter(r=>r[1]===kf).reduce((s,r)=>s+r[3],0);rows.push([`รวม${kf} ทุกสาย`,'','',Math.round(t*100)/100,...xpRngw(t)]);}
+      for(const kf of AKINDS.map(k=>XP_KFULL[k])){const t=sumRows.filter(r=>r[1]===kf).reduce((s,r)=>s+r[3],0);rows.push([`รวม${kf} ทุกสาย`,'','',Math.round(t*100)/100,...xpRngw(t)]);}
       const ta=names.reduce((s,n)=>s+(AREA[n].any||0),0); rows.push(['รวมไม่นับซ้ำ ทุกสาย','','',Math.round(ta*100)/100,...xpRngw(ta)]);
-      const none=Object.keys(BUILTIN).filter(n=>!AREA[n]);
+      const none=Object.keys(BUILTIN).filter(n=>!hasA(n));
       if(none.length){rows.push([]);rows.push([`หมายเหตุ: ${none.join(' และ ')} ไม่มีส่วนทับซ้อนกับชั้นข้อมูลเขตป่าในแผนที่ จึงไม่มีไฟล์`]);}
       rows.push([`จุดแบ่ง/จุดคู่ตามหน้าตัด: ${step?'ทุก '+step+' ม.':'ไม่แบ่ง (เฉพาะมุม)'} · ส่งออกจากแอปแผนที่เขตทาง ${new Date().toLocaleString('th-TH')}`]);
       files.unshift({name:'สรุปเนื้อที่เขตทางในเขตป่า.xlsx',data:await xpXlsx([{name:'สรุป',head:2,title:true,widths:[26,18,11,16,8,7,8],fmt:{3:3},bold:r=>String(r[0]).startsWith('รวม'),rows}])});
@@ -2967,6 +2970,14 @@ const DEF_G={org:'แขวงทางหลวงกระบี่ กรม�
   skf:false,drag:false,scale:'auto',lay:'e',fnm:true,nsub:1,alroLine:true,xp:{pts:true,row:false,frs:false,one:false,fmt:'std'},pages:{p1:true,p2:true,p3:true,tb:true,tba:false,pl:false},plBg:true,plHide:true,plJ:true};
 const TEXT_KEYS=['org','img','purpose','moo','tambon','amphoe','province','nrfName','permName','mgrName','cab','cabMgr'];
 const CAB_MGR_DEF='30 สิงหาคม 2543';
+// v83 เนื้อที่จาก ArcGIS (SHP Arcgis\10_ป่า2484 · 11_ป่าไม้ถาวร · 30/10/2569) — ใช้ในกล่องเนื้อที่หน้า 1
+const GIS_AREA={"ทล.4033": {"row": 161263.917, "f2484": 81714.814, "perm": 72813.819}, "ทล.4034": {"row": 669248.037, "f2484": 585640.81, "perm": 78818.559}, "ทล.4037": {"row": 1001342.719, "f2484": 776353.023, "perm": 155439.054}, "ทล.4038 กระบี่": {"row": 994862.251, "f2484": 937037.011, "perm": 57825.24}, "ทล.4038 นครฯ": {"row": 602680.326, "f2484": 327772.547, "perm": 272392.882}, "ทล.4041": {"row": 129650.305, "f2484": 129650.305, "perm": 0}, "ทล.4046": {"row": 729982.771, "f2484": 704823.83, "perm": 0}, "ทล.4151 กระบี่": {"row": 358343.289, "f2484": 159826.074, "perm": 184123.902}, "ทล.4151 นครฯ": {"row": 783085.588, "f2484": 560146.57, "perm": 216599.255}, "ทล.4156 กระบี่": {"row": 1426550.157, "f2484": 550483.776, "perm": 838111.642}, "ทล.4156 นครฯ": {"row": 189125.658, "f2484": 189125.658, "perm": 0}, "ทล.4201": {"row": 102843.194, "f2484": 44926.347, "perm": 57916.848}, "ทล.4202": {"row": 155747.698, "f2484": 62903.192, "perm": 92660.233}, "ทล.4203": {"row": 136350.131, "f2484": 61413.103, "perm": 74937.028}, "ทล.4204": {"row": 245542.526, "f2484": 185619.399, "perm": 51656.963}, "ทล.4206": {"row": 809848.804, "f2484": 642200.249, "perm": 71338.603}, "ทล.4225 กระบี่": {"row": 188357.527, "f2484": 137597.647, "perm": 50759.879}, "ทล.4225 นครฯ": {"row": 1203574.406, "f2484": 356763.199, "perm": 809541.076}, "ทล.4236": {"row": 1127469.647, "f2484": 617275.853, "perm": 347004.102}, "ทล.4252": {"row": 253245.415, "f2484": 213599.586, "perm": 39645.828}, "ทล.4258": {"row": 316666.351, "f2484": 0, "perm": 316666.351}, "ทล.4276": {"row": 683402.884, "f2484": 32852.877, "perm": 616518.412}, "ทล.4278": {"row": 421197.328, "f2484": 27489.789, "perm": 378708.552}, "ทล.4345": {"row": 569463.072, "f2484": 177911.431, "perm": 376462.888}, "ทล.4348": {"row": 304642.779, "f2484": 159116.59, "perm": 145526.189}, "ทล.4 ห้วยน้ำขาว": {"row": 1625644.183, "f2484": 1547301.95, "perm": 52433.495}, "ทล.4 เขตตรัง": {"row": 966276.732, "f2484": 879744.456, "perm": 19478.688}, "ทล.4 อ่าวนาง": {"row": 1202151.872, "f2484": 1004489.974, "perm": 188295.207}, "ทล.4 หมวดเมือง": {"row": 1634720.923, "f2484": 1602230.987, "perm": 32274.573}};
+function permArea(n){const g=GIS_AREA[n]; return g?g.perm:kindArea(n,'perm');}
+function f2484Area(n){const g=GIS_AREA[n]; return g?g.f2484:null;}
+function p1Lines(n){const L=[];                         // [ชื่อ, ตร.ม.] สำหรับหน้า 1
+  for(const k of FKINDS){const v=k==='perm'?permArea(n):kindArea(n,k); if(v>0.5) L.push([RK[k].n,v]);}
+  const z=f2484Area(n); if(z!=null&&z>0.5) L.push(['ป่า 2484',z]);
+  return L;}
 const REQK=['nrf','mgr'];                          // ป่าที่ยื่นคำขอได้ (ป่าถาวรไม่นับเป็นพื้นที่ขออนุญาต)
 let ST={g:JSON.parse(JSON.stringify(DEF_G)),r:{},last:null};
 try{const s=JSON.parse(localStorage.getItem(LSK)||'null');
@@ -3305,7 +3316,7 @@ function updSum(){
     if(cf.oth&&AREA[CUR][OTHK[fk]]) parts.push(`${RK[OTHK[fk]].n} −${areaTxt(b-cutArea(CUR,fk,{oth:true}))}`);
     rows.push(`<span style="color:#e65100">✂ ทั้งสาย: ก่อนตัด ${areaTxt(b)} · ตัดออก ${areaTxt(b-a)} (${parts.join(' · ')}) · หลังตัด <b>${areaTxt(a)}</b> ไร่ · ${routePieces(CUR).filter(p=>p.kind===fk).length} แปลง</span>`);
   }
-  rows.push(`<span style="color:#8a8f96">หน้า 1 (เขตทางทั้งเส้น) ระบุในป้าย: `+FKINDS.filter(k=>kindArea(CUR,k)>0).map(k=>`${RK[k].n} ${areaTxt(kindArea(CUR,k))}`).join(' · ')+` ไร่</span>`);
+  rows.push(`<span style="color:#8a8f96">หน้า 1 (เขตทางทั้งเส้น) ระบุในป้าย: `+p1Lines(CUR).map(([t,v])=>`${t} ${areaTxt(v)}`).join(' · ')+` ไร่</span>`);
   el.innerHTML=rows.join('<br>');
 }
 let tmr=null;
@@ -3873,7 +3884,7 @@ function renderCallout(pg){
   }else if(G.isRow){
     const fk=FK();
     h=`<b>พื้นที่ขออนุญาต (${RK[fk].n}) เนื้อที่ ${areaTxt(pg.spec.GT.m2)} ไร่</b>`;
-    for(const k of FKINDS){const v=kindArea(CUR,k); if(v>0) h+=`<br>อยู่ในเขต${RK[k].n} เนื้อที่ ${areaTxt(v)} ไร่`;}
+    for(const [t,v] of p1Lines(CUR)) h+=`<br>อยู่ในเขต${t} เนื้อที่ ${areaTxt(v)} ไร่`;
   }else if(G.kinds.size===1){
     h=`<b>พื้นที่ขออนุญาต เนื้อที่ ${areaTxt(G.m2)} ไร่</b>`;
     const k=[...G.kinds][0]; h+=`<br>อยู่ในเขต${RK[k].n}`;
