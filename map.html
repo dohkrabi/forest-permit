@@ -263,6 +263,8 @@ html,body{height:100%;font-family:'Segoe UI',Tahoma,'Leelawadee UI',sans-serif}
   border-radius:7px;padding:6px 4px;cursor:pointer;font-size:12.5px}
 .rpt-form .seg label.on{background:#fff3c4;border-color:#f5b400;font-weight:600}
 .rpt-form .seg input{display:none}
+.rpt-form .seg label{white-space:nowrap;min-width:0}
+.rpt-form .seg.k4{gap:4px}.rpt-form .seg.k4 label{font-size:12.5px;padding-left:2px;padding-right:2px;gap:3px}
 .rpt-form .pl{max-height:220px;overflow-y:auto;border:1px solid #e2e4e8;border-radius:7px;padding:4px 6px;margin-top:6px}
 .rpt-form .pl .ck{font-size:12px;margin:3px 0}
 .rpt-form .pl .ck span b{display:inline-block;min-width:30px}
@@ -3010,7 +3012,7 @@ function p1Lines(n){const L=[];                         // [ชื่อ, ตร
   const z=f2484Area(n); if(z!=null&&z>0.5) L.push(['ป่า 2484',z]);
   return L;}
 const REQK=['nrf','mgr','perm','f84'];                 // v84 ยื่นคำขอได้ 4 ชนิด
-const REQ2=['nrf','mgr'], RLAB={nrf:'🌲 ป่าสงวน',mgr:'🌊 ป่าชายเลน',perm:'🌳 ป่าไม้ถาวร',f84:'📄 ป่า 2484'}, SUFK={nrf:'',mgr:'m',perm:'q',f84:'z'}, FKC={nrf:'NRF',mgr:'MGR',perm:'PERM',f84:'F2484'};
+const REQ2=['nrf','mgr'], RLAB={nrf:'🌲 ป่าสงวน',mgr:'🌊 ชายเลน',perm:'🌳 ป่าถาวร',f84:'📄 ป่า 2484'}, SUFK={nrf:'',mgr:'m',perm:'q',f84:'z'}, FKC={nrf:'NRF',mgr:'MGR',perm:'PERM',f84:'F2484'};
 function ks2Of(n){return kindsOf(n).filter(k=>REQ2.includes(k));}
 function kNameOf(k){const f=R().f; return String((k==='mgr'?f.mgrName:k==='perm'?f.permName:k==='nrf'?f.nrfName:'')||'').trim();}                          // ป่าที่ยื่นคำขอได้ (ป่าถาวรไม่นับเป็นพื้นที่ขออนุญาต)
 let ST={g:JSON.parse(JSON.stringify(DEF_G)),r:{},last:null};
@@ -3260,7 +3262,7 @@ function renderForm(){
 <h4>1. สายทาง / ป่าที่ยื่นคำขอ / ขอบเขต</h4>
 <select id="rfRoute">${names.map(n=>`<option ${n===CUR?'selected':''}>${esc(n)}</option>`).join('')}</select>
 <label class="f">ยื่นคำขอสำหรับ</label>
-<div class="seg">${REQK.map(k=>{const on=k===fk, has=ks.includes(k);return `<label class="${on?'on':''}" style="${has?'':'opacity:.4;pointer-events:none'}"><input type="radio" name="rfFk" value="${k}" ${on?'checked':''} ${has?'':'disabled'}>${RLAB[k]}${has?'':' (ไม่มี)'}</label>`;}).join('')}</div>
+<div class="seg k4">${REQK.map(k=>{const on=k===fk, has=ks.includes(k);return `<label class="${on?'on':''}" title="${has?'':'สายนี้ไม่มี'+RK[k].n}" style="${has?'':'opacity:.35;pointer-events:none;text-decoration:line-through'}"><input type="radio" name="rfFk" value="${k}" ${on?'checked':''} ${has?'':'disabled'}>${RLAB[k]}</label>`;}).join('')}</div>
 ${cutBox()}
 <div style="margin-top:6px">${seg('rfMode',r.mode,[['all','ทั้งสายทาง'],['pick','เลือกแปลง']])}</div>
 ${r.mode==='pick'?`<div class="pl">${P.map(p=>`<label class="ck"><input type="checkbox" data-pk="${p.key}" ${sel.has(p.key)?'checked':''}><span><b>${FK_AB[p.kind]}${p.id}</b> กม. ${esc(p.kf||'?')}–${esc(p.kt||'?')} · ${m2Short(p.m2)} ไร่</span></label>`).join('')}</div>
@@ -3318,12 +3320,12 @@ ${ck('rfDrag',g.drag,'ลากเลื่อนแผนที่ในกร�
 <label class="f">ตร.วา ทศนิยม</label>${seg('rfDec',g.dec,[['0','0 ตำแหน่ง'],['1','1 ตำแหน่ง'],['2','2 ตำแหน่ง']])}
 <h4>6. ส่งออก SHP สำหรับ ArcGIS</h4>
 <div class="note">ใช้สายทาง ป่า แปลง และข้อมูลหัวเรื่องตามที่เลือกไว้ด้านบน · ระบบพิกัด WGS 1984 UTM Zone 47N · ชื่อไฟล์ภาษาอังกฤษ ข้อความในตารางภาษาไทย (UTF-8)</div>
-<label class="f">รูปแบบไฟล์</label>${seg('rxFmt',g.xp.fmt,[['std','📦 เขตทางทั้งสาย'],['ocl','📁 ชุดตรวจสอบ (2 โฟลเดอร์)']])}
+<label class="f">รูปแบบไฟล์</label>${seg('rxFmt',g.xp.fmt,[['std','📦 เขตทางทั้งสาย'],['ocl','📁 ชุดตรวจสอบ']])}
 ${g.xp.fmt==='ocl'?`<label class="f">ป่าที่จะส่งออก</label>
-<div class="seg">${(()=>{const fk_=FK(), ks_=kindsOf(CUR);return REQK.map(k=>{const on=k===fk_, has=ks_.includes(k);return `<label class="${on?'on':''}" style="${has?'':'opacity:.4;pointer-events:none'}"><input type="radio" name="rxFk" value="${k}" ${on?'checked':''} ${has?'':'disabled'}>${RLAB[k]}${has?'':' (ไม่มี)'}</label>`;}).join('');})()}</div>
+<div class="seg k4">${(()=>{const fk_=FK(), ks_=kindsOf(CUR);return REQK.map(k=>{const on=k===fk_, has=ks_.includes(k);return `<label class="${on?'on':''}" title="${has?'':'สายนี้ไม่มี'+RK[k].n}" style="${has?'':'opacity:.35;pointer-events:none;text-decoration:line-through'}"><input type="radio" name="rxFk" value="${k}" ${on?'checked':''} ${has?'':'disabled'}>${RLAB[k]}</label>`;}).join('');})()}</div>
 <div class="note">ใช้ค่าเดียวกับ "ป่า" ด้านบน (เปลี่ยนที่นี่ รายงานจะเปลี่ยนตาม) · ไฟล์ที่ส่งออกมีเฉพาะ${RK[FK()].n}</div>
 ${cutTxt()?`<div class="note" style="color:#e65100">✂ ตัด${cutTxt()}ออกแล้ว (ตั้งที่ข้อ 1) — แปลง จุด กม. เรียงเลขใหม่หลังตัด</div>`:''}
-<div class="note">1_inspect_all: เขตทางทั้งเส้น + เขตทางช่วงตรวจสอบ + จุดมุมแปลง (เฉพาะป่าที่เลือก) · 2_…_pieces: 1 ไฟล์ต่อ 1 แปลงของป่าที่เลือก</div>
+<div class="note">ชุดตรวจสอบ 2 โฟลเดอร์ · 1_inspect_all: เขตทางทั้งเส้น + เขตทางช่วงตรวจสอบ + จุดมุมแปลง (เฉพาะป่าที่เลือก) · 2_…_pieces: 1 ไฟล์ต่อ 1 แปลงของป่าที่เลือก</div>
 <label class="f">ช่วงตรวจสอบ กม. (เว้นว่าง = ตั้งแต่แปลงแรกถึงแปลงสุดท้ายอัตโนมัติ)</label>
 <div class="row2"><input type="text" id="rxK0" placeholder="เช่น 7+900" value="${esc((R().ikm||[])[0]||'')}"><input type="text" id="rxK1" placeholder="เช่น 14+100" value="${esc((R().ikm||[])[1]||'')}"></div>`:
 `<div class="note">ส่งออกเฉพาะเขตทางของสายที่เลือก: <b>row_full</b> (Polygon เขตทางทั้งเส้น) + <b>row_points</b> (Point จุดมุมเขตทางทุกจุด พร้อมเลขหมุดเขตทาง) · จับพิกัดทางการ ตรงกับไฟล์ ArcGIS · ไม่ขึ้นกับป่า/แปลง/การตัดที่เลือกด้านบน</div>`}
