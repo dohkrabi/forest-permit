@@ -3323,7 +3323,7 @@ ${ck('rfDrag',g.drag,'ลากเลื่อนแผนที่ในกร�
 <div class="note">ใช้ค่าเดียวกับ "ป่า" ด้านบน (เปลี่ยนที่นี่ รายงานจะเปลี่ยนตาม) · ไฟล์ที่ส่งออกมีเฉพาะ${RK[FK()].n}</div>
 ${cutTxt()?`<div class="note" style="color:#e65100">✂ ตัด${cutTxt()}ออกแล้ว (ตั้งที่ข้อ 1) — แปลง จุด กม. เรียงเลขใหม่หลังตัด</div>`:''}
 <label class="f">รูปแบบไฟล์</label>${seg('rxFmt',g.xp.fmt,[['std','แบบเดิม (ทล.4276)'],['ocl','แบบ ศอปล. (2 โฟลเดอร์)']])}
-${g.xp.fmt==='ocl'?`<div class="note">1_inspect_all: เขตทางช่วงตรวจสอบ + จุดมุมแปลง (เฉพาะป่าที่เลือก) · 2_…_pieces: 1 ไฟล์ต่อ 1 แปลงของป่าที่เลือก</div>
+${g.xp.fmt==='ocl'?`<div class="note">1_inspect_all: เขตทางทั้งเส้น + เขตทางช่วงตรวจสอบ + จุดมุมแปลง (เฉพาะป่าที่เลือก) · 2_…_pieces: 1 ไฟล์ต่อ 1 แปลงของป่าที่เลือก</div>
 <label class="f">ช่วงตรวจสอบ กม. (เว้นว่าง = ตั้งแต่แปลงแรกถึงแปลงสุดท้ายอัตโนมัติ)</label>
 <div class="row2"><input type="text" id="rxK0" placeholder="เช่น 7+900" value="${esc((R().ikm||[])[0]||'')}"><input type="text" id="rxK1" placeholder="เช่น 14+100" value="${esc((R().ikm||[])[1]||'')}"></div>`:
 `<label class="ck"><input type="checkbox" checked disabled>พื้นที่ขออนุญาต (Polygon) — ฟิลด์ตามแบบไฟล์ ทล.4276</label>`}
@@ -4294,6 +4294,11 @@ async function exportOcl(){
       [['Id','N',6,0],['area','F',19,11],['rai','F',19,11],['ngan','F',19,11],['tarangwa','F',19,11],['area_1','F',19,11],['rai_1','F',19,11],
        ['KM_FROM','C',12,0],['KM_TO','C',12,0],['ROUTE','C',60,0]],
       [[0,r11(RG.m2),rr,rg,rw,r11(sec.m2),r11(sec.m2/1600),sec.km[0],sec.km[1],CUR]]);
+    // 1b) v85 เขตทางทั้งเส้น (ไม่ตัดช่วง/ไม่ตัด ส.ป.ก./ไม่ขึ้นกับป่าที่เลือก)
+    const offR=xpOfficial(CUR), RF=RG.polys.map(p=>{const rings=p.rings.map(r=>r.map(([x,y])=>{const j=xpSnap(offR,x,y);return j==null?[x,y]:[offR.xs[j]/1e6,offR.ys[j]/1e6];}));   // จับพิกัดทางการ (ตรงกับไฟล์ ArcGIS)
+      return {rings,m2:rings.reduce((t,r,i)=>t+(i?-1:1)*Math.abs(xpShoelace(r)),0)};}), RFm2=RF.reduce((t,p)=>t+p.m2,0);
+    add(d1,'row_full',5,RF.map(p=>orientRings(p.rings)),[['ROUTE','C',60,0],['area','N',12,0],['rai','N',10,0],['ngan','N',10,0],['tarangwa','N',11,2],['AREA_M2','N',16,3]],
+      RF.map(p=>{const [a,b,c]=rngwD(p.m2,2);return [CUR,Math.round(p.m2),a,b,c,Math.round(p.m2*1000)/1000];}));
     // 2) จุดมุมแปลง แยกตามชนิดป่า
     const kinds=[fk];
     for(const k of kinds){
@@ -4317,6 +4322,7 @@ async function exportOcl(){
       add(d2,'piece_'+(i+1),5,[orientRings(p.rings)],F,[head.concat([r11(totF),r11(totF/1600),r11(p.m2),r11(p.m2/1600),a,b,c,i+1,p.kf||'',p.kt||'',CUR])]);});
     const readme=[`ส่งออกแบบ ศอปล. — แอปแผนที่เขตทาง แขวงทางหลวงกระบี่ · ${new Date().toLocaleString('th-TH')}`,
       `สายทาง: ${CUR} · ป่าที่ยื่นคำขอ: ${RK[fk].n}${cutTxt()?' (ตัด'+cutTxt()+'ออกแล้ว)':''} · ระบบพิกัด WGS 1984 UTM Zone 47N (EPSG:32647) · UTF-8`,'',
+      `1_inspect_all/row_full : เขตทางทั้งเส้น ${CUR} ${RF.length} แถว · ${areaTxt(RFm2).replace(/\u00a0/g,' ')} ไร่ (${RFm2.toFixed(2)} ตร.ม.) · ไม่ตัดช่วงตรวจสอบ/ส.ป.ก./ชนิดป่า`,
       `1_inspect_all/inspect_area : เขตทางช่วงตรวจสอบ กม. ${sec.km[0]} – ${sec.km[1]} · area/rai/ngan/tarangwa = เขตทางทั้งเส้น ${RG.m2.toFixed(2)} ตร.ม. · area_1/rai_1 = ช่วงตรวจสอบ ${sec.m2.toFixed(2)} ตร.ม.`,
       ...kinds.map(k=>`1_inspect_all/points_${k} : จุดมุมแปลง${RK[k].n} (area/rai = เนื้อที่รวม${RK[k].n}ในเขตทาง · ORIG_FID = แปลงที่−1 · PT_ID = ลำดับจุด)`),
       `${d2}piece_1..${mine.length} : แปลง${RK[fk].n} 1 ไฟล์ต่อแปลง เรียง กม. น้อยไปมาก (area/rai = รวม · area_1/rai_1 = แปลงนี้ · rai_r/ngan_r/wa_r = ไร่-งาน-ตร.วา)`,
