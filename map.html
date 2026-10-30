@@ -3318,22 +3318,18 @@ ${ck('rfDrag',g.drag,'ลากเลื่อนแผนที่ในกร�
 <label class="f">ตร.วา ทศนิยม</label>${seg('rfDec',g.dec,[['0','0 ตำแหน่ง'],['1','1 ตำแหน่ง'],['2','2 ตำแหน่ง']])}
 <h4>6. ส่งออก SHP สำหรับ ArcGIS</h4>
 <div class="note">ใช้สายทาง ป่า แปลง และข้อมูลหัวเรื่องตามที่เลือกไว้ด้านบน · ระบบพิกัด WGS 1984 UTM Zone 47N · ชื่อไฟล์ภาษาอังกฤษ ข้อความในตารางภาษาไทย (UTF-8)</div>
-<label class="f">ป่าที่จะส่งออก</label>
+<label class="f">รูปแบบไฟล์</label>${seg('rxFmt',g.xp.fmt,[['std','📦 เขตทางทั้งสาย'],['ocl','📁 ชุดตรวจสอบ (2 โฟลเดอร์)']])}
+${g.xp.fmt==='ocl'?`<label class="f">ป่าที่จะส่งออก</label>
 <div class="seg">${(()=>{const fk_=FK(), ks_=kindsOf(CUR);return REQK.map(k=>{const on=k===fk_, has=ks_.includes(k);return `<label class="${on?'on':''}" style="${has?'':'opacity:.4;pointer-events:none'}"><input type="radio" name="rxFk" value="${k}" ${on?'checked':''} ${has?'':'disabled'}>${RLAB[k]}${has?'':' (ไม่มี)'}</label>`;}).join('');})()}</div>
 <div class="note">ใช้ค่าเดียวกับ "ป่า" ด้านบน (เปลี่ยนที่นี่ รายงานจะเปลี่ยนตาม) · ไฟล์ที่ส่งออกมีเฉพาะ${RK[FK()].n}</div>
 ${cutTxt()?`<div class="note" style="color:#e65100">✂ ตัด${cutTxt()}ออกแล้ว (ตั้งที่ข้อ 1) — แปลง จุด กม. เรียงเลขใหม่หลังตัด</div>`:''}
-<label class="f">รูปแบบไฟล์</label>${seg('rxFmt',g.xp.fmt,[['std','แบบเดิม (ทล.4276)'],['ocl','แบบ ศอปล. (2 โฟลเดอร์)']])}
-${g.xp.fmt==='ocl'?`<div class="note">1_inspect_all: เขตทางทั้งเส้น + เขตทางช่วงตรวจสอบ + จุดมุมแปลง (เฉพาะป่าที่เลือก) · 2_…_pieces: 1 ไฟล์ต่อ 1 แปลงของป่าที่เลือก</div>
+<div class="note">1_inspect_all: เขตทางทั้งเส้น + เขตทางช่วงตรวจสอบ + จุดมุมแปลง (เฉพาะป่าที่เลือก) · 2_…_pieces: 1 ไฟล์ต่อ 1 แปลงของป่าที่เลือก</div>
 <label class="f">ช่วงตรวจสอบ กม. (เว้นว่าง = ตั้งแต่แปลงแรกถึงแปลงสุดท้ายอัตโนมัติ)</label>
 <div class="row2"><input type="text" id="rxK0" placeholder="เช่น 7+900" value="${esc((R().ikm||[])[0]||'')}"><input type="text" id="rxK1" placeholder="เช่น 14+100" value="${esc((R().ikm||[])[1]||'')}"></div>`:
-`<label class="ck"><input type="checkbox" checked disabled>พื้นที่ขออนุญาต (Polygon) — ฟิลด์ตามแบบไฟล์ ทล.4276</label>`}
-${g.xp.fmt==='ocl'?'':`${ck('rxPts',g.xp.pts,'จุดพิกัด (Point) — เลขจุดตรงกับตารางค่าพิกัด')}
-${ck('rxRow',g.xp.row,'เขตทางทั้งเส้น (Polygon)')}
-${ck('rxFrs',g.xp.frs,'แนวเขตป่าที่เส้นทางพาดผ่าน (Polygon) พร้อมชื่อป่า')}
-${ck('rxOne',g.xp.one,'รวมทุกแปลงเป็นแถวเดียว (multipart) แบบไฟล์ตัวอย่าง')}`}
+`<div class="note">ส่งออกเฉพาะเขตทางของสายที่เลือก: <b>row_full</b> (Polygon เขตทางทั้งเส้น) + <b>row_points</b> (Point จุดมุมเขตทางทุกจุด พร้อมเลขหมุดเขตทาง) · จับพิกัดทางการ ตรงกับไฟล์ ArcGIS · ไม่ขึ้นกับป่า/แปลง/การตัดที่เลือกด้านบน</div>`}
 <div class="mini"><button id="rxGo" style="background:#1565c0;color:#fff;border-color:#1565c0;font-weight:700;padding:8px 0">⤓ ส่งออก SHP (ArcGIS)</button></div>
 ${ALRO_CUT[CUR]?`<div class="mini"><button id="rxAlro" style="border-color:#ff9800;color:#e65100;font-weight:700;padding:8px 0">⤓ ส่งออกแปลง ส.ป.ก. ในเขตทาง (SHP)</button></div>
-<div class="note">แยกจากรายงาน · เขตทาง ∩ เขต ส.ป.ก. ทั้งสาย (ไม่ขึ้นกับป่าที่เลือก) · 1 แถว = 1 แปลง + จุดพิกัดถ้าเลือก "จุดพิกัด"</div>`:''}
+<div class="note">แยกจากรายงาน · เขตทาง ∩ เขต ส.ป.ก. ทั้งสาย (ไม่ขึ้นกับป่าที่เลือก) · 1 แถว = 1 แปลง + จุดพิกัด</div>`:''}
 <div class="note warn"><b>ตั้งค่าเครื่องพิมพ์ให้มาตราส่วนถูกต้อง</b><br>ขนาดกระดาษ A4 แนวตั้ง · ระยะขอบ <b>ไม่มี (None)</b> · มาตราส่วน <b>100%</b> (ห้าม "พอดีกับหน้า") · เปิด <b>กราฟิกพื้นหลัง</b><br>แนะนำ Chrome / Edge บนคอมพิวเตอร์</div>`;
   bindForm(); updSum();
 }
@@ -3396,7 +3392,7 @@ function bindForm(){
   for(const [id,k] of Object.entries({rxPts:'pts',rxRow:'row',rxFrs:'frs',rxOne:'one'})) if($(id)) $(id).onchange=e=>{ST.g.xp[k]=e.target.checked;save();};
   F.querySelectorAll('input[name=rxFmt]').forEach(i=>i.onchange=()=>{ST.g.xp.fmt=i.value;save();renderForm();});
   for(const [id,j] of [['rxK0',0],['rxK1',1]]) if($(id)) $(id).oninput=e=>{const r=R();r.ikm=r.ikm||['',''];r.ikm[j]=e.target.value.trim();save();};
-  $('rxGo').onclick=()=>ST.g.xp.fmt==='ocl'?exportOcl():exportArc();
+  $('rxGo').onclick=()=>ST.g.xp.fmt==='ocl'?exportOcl():exportRow();
   if($('rxAlro')) $('rxAlro').onclick=exportAlro;
   const bools={rfHi:'hi',rfRow:'row',rfGrid:'grid',rfSkf:'skf',rfFnm:'fnm',rfThai:'thai',rfDrag:'drag'};
   for(const [id,k] of Object.entries(bools)) $(id).onchange=e=>{ST.g[k]=e.target.checked;save();
@@ -4200,6 +4196,38 @@ async function exportArc(){
 }
 window.__rptExportArc=exportArc;
 
+/* ---- v86 ปุ่ม "📦 เขตทางทั้งสาย": ส่งออกเฉพาะเขตทาง (row_full + row_points) ---- */
+async function exportRow(){
+  if(xpBusy2)return; xpBusy2=true;
+  try{
+    const code=routeCode(CUR), base=`${code}_ROW`, dir=`${base}_SHP/`, files=[], enc=s=>XP_ENC.encode(s), prj=enc(XP_PRJ), cpg=enc('UTF-8');
+    const add=(nm,type,geo,fields,rows)=>{const S=xpShp(type,geo);
+      files.push({name:dir+nm+'.shp',data:S.shp},{name:dir+nm+'.shx',data:S.shx},{name:dir+nm+'.dbf',data:xpDbf(fields,rows)},{name:dir+nm+'.prj',data:prj},{name:dir+nm+'.cpg',data:cpg});};
+    const off=xpOfficial(CUR), RG=rowG(CUR);
+    const RF=RG.polys.map(p=>{const rings=p.rings.map(r=>r.map(([x,y])=>{const j=xpSnap(off,x,y);return j==null?{x,y,xu:null}:{x:off.xs[j]/1e6,y:off.ys[j]/1e6,xu:off.xs[j]+','+off.ys[j]};}));
+      return {rings,m2:rings.reduce((t,r,i)=>t+(i?-1:1)*Math.abs(xpShoelace(r.map(q=>[q.x,q.y]))),0)};});
+    const tot=RF.reduce((t,p)=>t+p.m2,0);
+    add(`${code}_row_full`,5,RF.map(p=>orientRings(p.rings.map(r=>r.map(q=>[q.x,q.y])))),
+      [['ROUTE','C',60,0],['PART','N',4,0],['area','N',12,0],['rai','N',10,0],['ngan','N',10,0],['tarangwa','N',11,2],['AREA_M2','N',16,3],['N_PTS','N',6,0]],
+      RF.map((p,i)=>{const [a,b,c]=rngwD(p.m2,2);return [CUR,i+1,Math.round(p.m2),a,b,c,Math.round(p.m2*1000)/1000,p.rings.reduce((t,r)=>t+r.length,0)];}));
+    const V=[]; let n=0, nm=0;
+    RF.forEach((p,pi)=>p.rings.forEach((r,ri)=>r.forEach(q=>{const mno=q.xu!=null&&off.marks.has(q.xu)?off.marks.get(q.xu):null; if(mno!=null)nm++;
+      V.push([++n,Math.round(q.x*1000)/1000,Math.round(q.y*1000)/1000,pi+1,ri,mno,mno!=null?'หมุดเขตทางที่ '+mno:'มุมแนวเขตทาง',CUR]);})));
+    add(`${code}_row_points`,1,V.map(v=>[v[1],v[2]]),[['ID','N',8,0],['X','N',19,3],['Y','N',19,3],['PART','N',4,0],['RING','N',3,0],['MARK_NO','N',6,0],['TYPE','C',80,0],['ROUTE','C',60,0]],V);
+    const readme=[`ส่งออกจากแอปแผนที่เขตทาง แขวงทางหลวงกระบี่ — ${new Date().toLocaleString('th-TH')}`,
+      `สายทาง: ${CUR} · เขตทางทั้งสาย ${RF.length} ส่วน · ${areaTxt(tot).replace(/ /g,' ')} ไร่ (${tot.toFixed(3)} ตร.ม.)`,
+      `ระบบพิกัด: WGS 1984 UTM Zone 47N (EPSG:32647) · ข้อความภาษาไทยเข้ารหัส UTF-8 (มีไฟล์ .cpg) · พิกัดจับตามค่าพิกัดทางการของเขตทาง`,'',
+      `${code}_row_full : เขตทางทั้งเส้น (Polygon) · PART = ส่วนที่ · area/rai/ngan/tarangwa = เนื้อที่ · N_PTS = จำนวนจุด`,
+      `${code}_row_points : จุดมุมเขตทางทุกจุด ${V.length} จุด (Point) · MARK_NO = เลขหมุดเขตทาง (${nm} หมุด) · TYPE = ชนิดจุด`].join('\r\n');
+    files.push({name:dir+'README.txt',data:enc('﻿'+readme)});
+    toast('⏳ กำลังสร้างไฟล์ SHP เขตทาง…',4000);
+    xpDownload(await xpZip(files),`${base}_SHP.zip`);
+    toast(`ส่งออก ${base}_SHP.zip แล้ว`,3000);
+  }catch(e){console.error(e);toast('ส่งออกไม่สำเร็จ: '+e.message,5000);}
+  finally{xpBusy2=false;}
+}
+window.__rptExportRow=exportRow;
+
 /* ---- v75 ส่งออกแปลง ส.ป.ก. ในเขตทาง (SHP แยก ไม่กระทบรายงาน) ---- */
 async function exportAlro(){
   if(xpBusy2)return; xpBusy2=true;
@@ -4227,7 +4255,7 @@ async function exportAlro(){
     add(base+'_area',5,ps.map(p=>orientRings(p.xy)),PF,ps.map((p,i)=>{const [r,gg,w]=rngwD(p.m2,2);
       return [...common,Math.round(p.m2),r,gg,w,'เขต ส.ป.ก.',strip(f.amphoe,'อำเภอ'),reqNo,i+1,Math.round(p.inN*1000)/1000,
         p.kr[0]||'',p.kr[1]||'',CUR,Math.round(p.m2*1000)/1000,p.xy.reduce((t,r)=>t+r.length,0)];}));
-    if(x.pts){
+    {
       const V=[]; let n=0; ps.forEach((p,pi)=>p.xy.forEach((r,ri)=>r.forEach(([X,Y])=>V.push([++n,X,Y,pi+1,ri]))));
       add(base+'_points',1,V.map(v=>[v[1],v[2]]),[['ID','N',8,0],['X','N',19,3],['Y','N',19,3],['PIECE','N',4,0],['RING','N',3,0],['ROUTE','C',60,0]],
         V.map(v=>[v[0],Math.round(v[1]*1000)/1000,Math.round(v[2]*1000)/1000,v[3],v[4],CUR]));
@@ -4238,7 +4266,7 @@ async function exportAlro(){
       `เนื้อที่รวม: ${areaTxt(tot).replace(/ /g,' ')} ไร่ (${tot.toFixed(2)} ตร.ม.) · ${ps.length} แปลง · ซ้อนป่าสงวน ${totN.toFixed(2)} ตร.ม.`,
       `ระบบพิกัด: WGS 1984 UTM Zone 47N (EPSG:32647) · ข้อความภาษาไทยเข้ารหัส UTF-8 (มีไฟล์ .cpg)`,'',
       `${base}_area : 1 แถว = 1 แปลง — ฟิลด์ NAME..No_1 ตามแบบไฟล์ส่งคำขอ ทล.4276 · IN_NRF_M2 = ส่วนที่ซ้อนป่าสงวน (ตร.ม.)`,
-      x.pts?`${base}_points : จุดพิกัด (Point)`:''].filter(v=>v!=='').join('\r\n');
+      `${base}_points : จุดพิกัด (Point)`].filter(v=>v!=='').join('\r\n');
     files.push({name:dir+'README.txt',data:enc('﻿'+readme)});
     toast('⏳ กำลังสร้างไฟล์ SHP ส.ป.ก.…',4000);
     xpDownload(await xpZip(files),base+'_SHP.zip');
