@@ -3583,10 +3583,10 @@ function indexSvg(G,sheets,cur,pre){
   sheets.forEach((t,i)=>{s+=`<text x="${X(t.cx)}" y="${Y(t.cy)+1}" font-size="${Math.min(3.2,t.Hm*k*0.45)}" text-anchor="middle" font-family="Arial" font-weight="${i===cur?700:400}">${pre}${i+1}</text>`;});
   return `<svg viewBox="0 0 ${BW} ${BH}">${s}</svg><div>ดัชนีแผ่น (แผ่นที่ ${pre}${cur+1} จาก ${sheets.length})</div>`;
 }
+// v88: นับภาพที่ยังโหลดไม่เสร็จจากสถานะจริงของชั้นภาพ (เดิมนับ +/− ตามเหตุการณ์ → ภาพที่ถูกยกเลิกตอนซูม/เลื่อนไม่ถูกหักออก ค้างไม่ถึง 0)
 function track(tl){
-  const o={pend:0}; TL.push(o);
-  tl.on('tileloadstart',()=>{o.pend++;stat();});
-  tl.on('tileload tileerror',()=>{o.pend=Math.max(0,o.pend-1);stat();});
+  const o={tl,get pend(){if(!tl._map)return 0; let n=0; for(const k in tl._tiles){const t=tl._tiles[k]; if(t.current&&!t.loaded)n++;} return n;}}; TL.push(o);
+  tl.on('tileloadstart tileload tileerror tileabort tileunload load',()=>stat());
 }
 function pending(){return TL.reduce((s,o)=>s+o.pend,0);}
 function stat(){const el=$('rpSt'); if(!el)return; const p=pending();
@@ -3658,7 +3658,7 @@ function planPage(el,sp){
   const top=46,h=214;
   el.innerHTML=`<div class="rp-title"></div>
   <div class="rp-frame" style="left:20mm;top:${top}mm;width:172mm;height:${h}mm"><div class="rp-map"></div><svg class="rp-ov" style="position:absolute;inset:0;z-index:640;pointer-events:none"></svg></div>
-  <div class="pl-strip" style="top:${top+h+3}mm"><div class="lg"></div><div class="nts"><b>แผนผังเส้นทาง</b>ไม่ตามมาตราส่วน (NOT TO SCALE)</div></div>
+  <div class="pl-strip" style="top:${top+h+3}mm"><div class="lg"></div></div>
   <div class="rp-foot"><span>ระบบพิกัด WGS 1984 UTM Zone 47N · ${esc(CUR)} · จัดทำจากแอปแผนที่เขตทาง แขวงทางหลวงกระบี่</span><span class="sn"></span></div>`;
   return {el,spec:sp,plan:true,titleEl:el.querySelector('.rp-title'),frame:el.querySelector('.rp-frame'),mapEl:el.querySelector('.rp-map'),
     ov:el.querySelector('.rp-ov'),lgEl:el.querySelector('.pl-strip .lg'),boxes:[]};
@@ -3681,7 +3681,7 @@ function initPlan(pg){
   if(!bb){const r=rowGeom(CUR); bb=L.latLngBounds(r[0][0].map(([lo,la])=>[la,lo]));}
   m.fitBounds(bb,{padding:[95,95],animate:false}); pg.bb=bb;
   if(g.plBg){const tl=L.tileLayer('https://mt1.google.com/vt/lyrs=m&hl=th&scale=2&x={x}&y={y}&z={z}',{tileSize:256,zoomOffset:0,maxNativeZoom:20,maxZoom:24,keepBuffer:1});
-    track(tl); tl.addTo(m);}
+    if(!g.plHide) track(tl); tl.addTo(m);}
   pg.rdJ=L.svg({padding:.3}); m.addLayer(pg.rdJ); pg.jLayer=L.layerGroup().addTo(m);   // v81 ทางเชื่อม (อยู่ใต้เส้นทางหลัก)
   const rd=L.svg({padding:.3});
   for(const l of lines){L.polyline(l,{renderer:rd,color:'#000',weight:7,lineJoin:'round',lineCap:'round',interactive:false}).addTo(m);
