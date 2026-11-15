@@ -242,6 +242,9 @@ html,body{height:100%;font-family:'Segoe UI',Tahoma,'Leelawadee UI',sans-serif}
 .rpt-bar{position:sticky;top:0;z-index:20;display:flex;align-items:center;gap:8px;background:#1a1c1e;color:#fff;
   padding:8px 12px;box-shadow:0 2px 8px rgba(0,0,0,.35)}
 .rpt-bar b{font-size:14px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.rpt-bar .sync{font-size:12px;cursor:pointer;white-space:nowrap;padding:3px 8px;border-radius:8px;background:rgba(255,255,255,.08)}
+.rpt-bar .sync[data-st=lock],.rpt-bar .sync[data-st=err]{background:#b71c1c}
+.rpt-bar .sync[data-st=view]{background:rgba(255,255,255,.15)}
 .rpt-bar .st{flex:1;min-width:0;font-size:12px;color:#ffd54f;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .rpt-bar button{border:1px solid rgba(255,255,255,.3);background:rgba(255,255,255,.1);color:#fff;border-radius:8px;
   padding:7px 12px;font-size:13px;font-family:inherit;cursor:pointer;white-space:nowrap}
@@ -2998,7 +3001,10 @@ const GRIDI={1000:50,2000:100,4000:200,5000:250,10000:500,20000:1000,25000:1000,
 const RK={nrf:{n:'ป่าสงวนแห่งชาติ',c:'#e60000'},perm:{n:'ป่าไม้ถาวร',c:'#00a884'},mgr:{n:'ป่าชายเลน',c:'#0091ea'},f84:{n:'ป่า 2484',c:'#ff7043'}};
 const AC='#ff1493';                                 // สีพื้นที่ขออนุญาต
 const MAXSHEET=80, ROWS=50, COLS=3;
-const LSK='khet_rpt_v1';
+const LSK='khet_rpt_v2';                            // v89 แยกคีย์จาก v88 (khet_rpt_v1) — v88 เขียนทับข้อมูลของ v89 ไม่ได้
+try{const v1=localStorage.getItem('khet_rpt_v1');
+  if(v1&&!localStorage.getItem('khet_rpt_v1_backup88')) localStorage.setItem('khet_rpt_v1_backup88',v1);
+  if(v1&&!localStorage.getItem(LSK)) localStorage.setItem(LSK,v1);}catch(e){}
 const DEF_G={org:'แขวงทางหลวงกระบี่ กรมทางหลวง',img:'Google',lyr:'s',hi:true,thai:true,dec:1,grid:false,row:true,
   skf:false,drag:false,scale:'auto',lay:'e',fnm:true,nsub:1,alroLine:true,xp:{pts:true,row:false,frs:false,one:false,fmt:'std'},pages:{p1:true,p2:true,p3:true,tb:true,tba:false,pl:false},plBg:true,plHide:true,plJ:true};
 const TEXT_KEYS=['org','img','purpose','moo','tambon','amphoe','province','nrfName','permName','mgrName','cab','cabMgr'];
@@ -3018,7 +3024,240 @@ function kNameOf(k){const f=R().f; return String((k==='mgr'?f.mgrName:k==='perm'
 let ST={g:JSON.parse(JSON.stringify(DEF_G)),r:{},last:null};
 try{const s=JSON.parse(localStorage.getItem(LSK)||'null');
   if(s){ST.g=Object.assign({},DEF_G,s.g||{});ST.g.xp=Object.assign({},DEF_G.xp,(s.g||{}).xp||{});ST.g.pages=Object.assign({},DEF_G.pages,(s.g||{}).pages||{});ST.r=s.r||{};ST.last=s.last||null;}}catch(e){}
-function save(){try{localStorage.setItem(LSK,JSON.stringify(ST));}catch(e){}}
+/* ===== khet-sync ops (ใช้ร่วมกันทั้ง GAS และ map.html — แก้ที่เดียว) ===== */
+var KS_IDARR = ['lm', 'plr'];            // อาร์เรย์ที่แต่ละชิ้นมี id — รวมรายชิ้น
+var KS_SETARR = ['plJh'];                // อาร์เรย์ค่าแบบเซต
+var KS_SUBOBJ = ['f', 'tt', 'plb', 'cut']; // ออบเจกต์ที่รวมรายฟิลด์
+function ksClone(v) { return v === undefined ? undefined : JSON.parse(JSON.stringify(v)); }
+function ksRid() { return Date.now().toString(36) + Math.random().toString(36).slice(2, 8); }
+function ksEnsureIds(r) {
+  if (!r) return r;
+  KS_IDARR.forEach(function (a) { (Array.isArray(r[a]) ? r[a] : []).forEach(function (x) { if (x && typeof x === 'object' && !x.id) x.id = ksRid(); }); });
+  return r;
+}
+function ksIsObj(v) { return v && typeof v === 'object' && !Array.isArray(v); }
+/* คืนรายการ ops ที่เปลี่ยน b → c */
+function ksDiff(b, c) {
+  b = b || {}; c = c || {};
+  var ops = [], keys = {};
+  Object.keys(b).forEach(function (k) { keys[k] = 1; }); Object.keys(c).forEach(function (k) { keys[k] = 1; });
+  Object.keys(keys).forEach(function (k) {
+    var bv = b[k], cv = c[k];
+    if (KS_IDARR.indexOf(k) >= 0) {
+      var bm = {}, cm = {};
+      (Array.isArray(bv) ? bv : []).forEach(function (x) { if (x && x.id) bm[x.id] = x; });
+      (Array.isArray(cv) ? cv : []).forEach(function (x) { if (x && x.id) cm[x.id] = x; });
+      Object.keys(cm).forEach(function (id) {
+        if (!bm[id]) ops.push({ k: 'add', a: k, v: ksClone(cm[id]) });
+        else if (JSON.stringify(bm[id]) !== JSON.stringify(cm[id])) ops.push({ k: 'upd', a: k, v: ksClone(cm[id]) });
+      });
+      Object.keys(bm).forEach(function (id) { if (!cm[id]) ops.push({ k: 'rm', a: k, id: id }); });
+    } else if (KS_SETARR.indexOf(k) >= 0) {
+      var bs = Array.isArray(bv) ? bv : [], cs = Array.isArray(cv) ? cv : [];
+      cs.forEach(function (x) { if (bs.indexOf(x) < 0) ops.push({ k: 'sadd', a: k, v: x }); });
+      bs.forEach(function (x) { if (cs.indexOf(x) < 0) ops.push({ k: 'srm', a: k, v: x }); });
+    } else if (KS_SUBOBJ.indexOf(k) >= 0 && (ksIsObj(cv) || cv === undefined) && (ksIsObj(bv) || bv === undefined)) {
+      if (cv === undefined) { if (bv !== undefined) ops.push({ k: 'del', p: k }); return; }
+      var bo = bv || {}, sk = {};
+      Object.keys(bo).forEach(function (x) { sk[x] = 1; }); Object.keys(cv).forEach(function (x) { sk[x] = 1; });
+      Object.keys(sk).forEach(function (x) {
+        if (!(x in cv)) ops.push({ k: 'del', p: k + '.' + x });
+        else if (JSON.stringify(bo[x]) !== JSON.stringify(cv[x])) ops.push({ k: 'set', p: k + '.' + x, v: ksClone(cv[x]) });
+      });
+    } else {
+      if (cv === undefined) { if (bv !== undefined) ops.push({ k: 'del', p: k }); }
+      else if (JSON.stringify(bv) !== JSON.stringify(cv)) ops.push({ k: 'set', p: k, v: ksClone(cv) });
+    }
+  });
+  return ops;
+}
+/* นำ ops ไปใช้กับข้อมูล d (แก้ใน d และคืน d) */
+function ksApply(d, ops) {
+  d = ksIsObj(d) ? d : {};
+  (ops || []).forEach(function (o) {
+    if (!o || typeof o !== 'object') return;
+    if (o.k === 'set' || o.k === 'del') {
+      var ps = String(o.p || '').split('.'), a = ps[0], s = ps[1];
+      if (!a) return;
+      if (s == null) { if (o.k === 'set') d[a] = o.v; else delete d[a]; }
+      else if (o.k === 'set') { if (!ksIsObj(d[a])) d[a] = {}; d[a][s] = o.v; }
+      else if (ksIsObj(d[a])) delete d[a][s];
+    } else if (o.k === 'add' || o.k === 'upd') {
+      if (KS_IDARR.indexOf(o.a) < 0 || !o.v || !o.v.id) return;
+      var L = Array.isArray(d[o.a]) ? d[o.a] : (d[o.a] = []);
+      var i = -1; for (var j = 0; j < L.length; j++) if (L[j] && L[j].id === o.v.id) { i = j; break; }
+      if (i >= 0) L[i] = o.v; else if (o.k === 'add') L.push(o.v);  // upd ของชิ้นที่ถูกลบไปแล้ว = ไม่ทำ (การลบชนะ)
+    } else if (o.k === 'rm') {
+      if (Array.isArray(d[o.a])) d[o.a] = d[o.a].filter(function (x) { return !x || x.id !== o.id; });
+    } else if (o.k === 'sadd') {
+      if (KS_SETARR.indexOf(o.a) < 0) return;
+      var S = Array.isArray(d[o.a]) ? d[o.a] : (d[o.a] = []); if (S.indexOf(o.v) < 0) S.push(o.v);
+    } else if (o.k === 'srm') {
+      if (Array.isArray(d[o.a])) d[o.a] = d[o.a].filter(function (x) { return x !== o.v; });
+    }
+  });
+  return d;
+}
+/* ===== /khet-sync ops ===== */
+/* ---------- v89 ส่วนกลาง (GAS + Google Sheets) ---------- */
+const SYNC_URL_DEF='https://script.google.com/macros/s/AKfycbzb5EzRiOoBzeBqINfpNeuYwayusCbrBT3cTSxnYeULSZyy5_v4s0EAmpnkDV34PF5a/exec';
+const KS_PROMPT=['lm','plr','plb','plJh'];                // แก้ส่วนนี้แล้วยังไม่มี PIN → ถาม PIN ทันที
+const SYNC={url:'',pin:'',base:{},st:'off',msg:'',busy:false,tm:null,loaded:0,loading:null,dirty:new Set(),asked:false,formLater:false};
+try{SYNC.url=(localStorage.getItem('khet_sync_url')||SYNC_URL_DEF).trim(); if(SYNC.url.indexOf('__')===0) SYNC.url='';
+  SYNC.pin=localStorage.getItem('khet_sync_pin')||''; SYNC.base=JSON.parse(localStorage.getItem('khet_rpt_base')||'{}')||{};}catch(e){}
+const KS_WHO=(()=>{try{let w=localStorage.getItem('khet_sync_dev'); if(!w){w='dev-'+ksRid().slice(-6); localStorage.setItem('khet_sync_dev',w);} return w;}catch(e){return 'dev';}})();
+function saveBase(){try{localStorage.setItem('khet_rpt_base',JSON.stringify(SYNC.base));}catch(e){}}
+/* บันทึกในเครื่อง: เขียนเฉพาะสายที่แก้ (ไม่ทับสายอื่นที่แท็บอื่นบันทึกไว้) */
+function cacheWrite(rts){
+  try{const s=JSON.parse(localStorage.getItem(LSK)||'null')||{}; s.r=s.r||{}; s.g=ST.g; s.last=ST.last;
+    for(const rt of rts) if(ST.r[rt]) s.r[rt]=ST.r[rt];
+    localStorage.setItem(LSK,JSON.stringify(s));}catch(e){}
+}
+function save(){ cacheWrite(CUR?[CUR]:[]); if(CUR) syncSoon(CUR); }
+function syncSoon(rt,ms){ if(!SYNC.url) return; SYNC.dirty.add(rt); clearTimeout(SYNC.tm); SYNC.tm=setTimeout(syncFlush,ms==null?800:ms); }
+async function syncFlush(){
+  if(!SYNC.loaded) return;                                // ยังโหลดจากส่วนกลางไม่สำเร็จ — ค้างไว้ก่อน
+  if(SYNC.busy){clearTimeout(SYNC.tm); SYNC.tm=setTimeout(syncFlush,600); return;}
+  for(const rt of [...SYNC.dirty]){ SYNC.dirty.delete(rt); const ok=await syncRoute(rt); if(ok===false){SYNC.dirty.add(rt); break;} }
+}
+async function ksApi(body){
+  const ctl=new AbortController(), t=setTimeout(()=>ctl.abort(),20000);
+  try{
+    const r=body?await fetch(SYNC.url,{method:'POST',body:JSON.stringify(body),headers:{'Content-Type':'text/plain;charset=utf-8'},signal:ctl.signal})
+                :await fetch(SYNC.url+(SYNC.url.includes('?')?'&':'?')+'action=all&t='+Date.now(),{signal:ctl.signal});
+    return await r.json();
+  }finally{clearTimeout(t);}
+}
+/* แทนค่าข้อมูลสายในที่เดิม (คง object ของจุดเดิมไว้ เพื่อให้ marker/หน้าต่างแก้ไขที่เปิดอยู่ยังใช้ได้) */
+function applyInPlace(tg,src){
+  const ch=new Set();
+  for(const k of Object.keys(tg)) if(!(k in src)){delete tg[k]; ch.add(k);}
+  for(const k of Object.keys(src)){
+    if(JSON.stringify(tg[k])===JSON.stringify(src[k])) continue;
+    ch.add(k);
+    if(KS_IDARR.includes(k)&&Array.isArray(src[k])){
+      const old={}; (Array.isArray(tg[k])?tg[k]:[]).forEach(x=>{if(x&&x.id) old[x.id]=x;});
+      tg[k]=src[k].map(x=>{const o=x&&x.id&&old[x.id]; if(!o) return ksClone(x); for(const q of Object.keys(o)) delete o[q]; return Object.assign(o,ksClone(x));});
+    } else tg[k]=ksClone(src[k]);
+  }
+  return ch;
+}
+function afterChange(rt,ch){
+  if(!ch.size||rt!==CUR||!UI.classList.contains('show')) return;
+  const has=a=>a.some(k=>ch.has(k));
+  if(has(['lm','plr','plb','plJh'])) for(const p of PAGES) if(p.plan){drawJ(p); drawLm(p); placePlan(p);}
+  if(has(['sel','mode','fk','cut','f','tt','ikm','lm','plr','plJh'])) formRefresh();
+  if(has(['sel','mode','fk','cut'])) later(rebuild,50); else if(has(['f','tt'])) later(updateTexts,100);
+}
+function formRefresh(){
+  const a=document.activeElement;
+  if(a&&$('rpF').contains(a)&&/^(INPUT|TEXTAREA|SELECT)$/.test(a.tagName)){SYNC.formLater=true; return;}   // กำลังพิมพ์ — รอออกจากช่องก่อน
+  SYNC.formLater=false; renderForm();
+}
+async function syncRoute(rt){
+  const cur=ST.r[rt]; if(!cur) return true;
+  ksEnsureIds(cur);
+  const ops=ksDiff(SYNC.base[rt],cur);
+  if(!ops.length){ if(!SYNC.dirty.size) setSync(SYNC.pin?'ok':'view'); return true; }
+  if(!SYNC.pin){
+    if(!SYNC.asked&&ops.some(o=>KS_PROMPT.includes(o.a||String(o.p).split('.')[0]))){SYNC.asked=true; askPin();}
+    setSync('lock'); return false;
+  }
+  SYNC.busy=true; setSync('busy');
+  const sent=ksClone(cur);
+  try{
+    const res=await ksApi({action:'ops',route:rt,ops,pin:SYNC.pin,who:KS_WHO});
+    if(!res||!res.ok){
+      if(res&&res.err==='pin'){SYNC.pin=''; try{localStorage.removeItem('khet_sync_pin');}catch(e){} setSync('lock'); toast('PIN ไม่ถูกต้อง — แตะ 🔒 เพื่อใส่ใหม่',3500);}
+      else {setSync('err',(res&&res.err)||''); retryLater();}
+      return false;
+    }
+    SYNC.base[rt]=res.data; saveBase();
+    const after=ksDiff(sent,ST.r[rt]);                    // แก้เพิ่มระหว่างรอส่ง
+    const ch=applyInPlace(ST.r[rt],ksApply(ksClone(res.data),after));
+    cacheWrite([rt]); afterChange(rt,ch);
+    if(after.length) SYNC.dirty.add(rt);
+    setSync(SYNC.dirty.size?'busy':'ok');
+    if(SYNC.dirty.size){clearTimeout(SYNC.tm); SYNC.tm=setTimeout(syncFlush,300);}
+    return true;
+  }catch(e){ setSync('err','เชื่อมต่อไม่ได้'); retryLater(); return false; }
+  finally{SYNC.busy=false;}
+}
+function retryLater(){clearTimeout(SYNC.rt); SYNC.rt=setTimeout(()=>{if(SYNC.dirty.size) syncFlush();},20000);}
+/* โหลดทุกสายจากส่วนกลาง แล้วรวมกับการแก้ในเครื่องที่ยังไม่ได้ส่ง */
+function syncLoad(force){
+  if(!SYNC.url) {setSync('off'); return Promise.resolve();}
+  if(SYNC.loading) return SYNC.loading;
+  if(!force&&SYNC.loaded&&Date.now()-SYNC.loaded<30000) return Promise.resolve();
+  setSync('busy','กำลังโหลด');
+  SYNC.loading=(async()=>{
+    try{
+      const res=await ksApi(null); if(!res||!res.ok) throw new Error((res&&res.err)||'โหลดไม่สำเร็จ');
+      const srv=res.routes||{}, first=!SYNC.loaded&&!Object.keys(SYNC.base).length, mig={}, nMig=[0];
+      for(const rt of new Set([...Object.keys(srv),...Object.keys(ST.r)])){
+        const loc=ST.r[rt], base=SYNC.base[rt], s=srv[rt];
+        let pend=[];
+        if(loc&&base) pend=ksDiff(base,ksEnsureIds(loc));   // แก้ไว้ตอนออฟไลน์
+        else if(loc){                                        // ไม่มีฐานเดิม: หาสถานที่/ทางเชื่อมในเครื่องที่ส่วนกลางยังไม่มี
+          const sv=s||{};
+          for(const a of KS_IDARR){
+            const kf=x=>a==='lm'?(x.n||'').trim()+(x.n?'':'@'+x.lat+','+x.lng):JSON.stringify([x.a,x.b]);
+            const seen=new Set((sv[a]||[]).map(kf));
+            const add=(loc[a]||[]).filter(x=>x&&!seen.has(kf(x)));
+            if(!add.length) continue;
+            ksEnsureIds({[a]:add}); const ops=add.map(v=>({k:'add',a,v:ksClone(v)}));
+            if(first){(mig[rt]=mig[rt]||[]).push(...ops); nMig[0]+=add.length;} else pend.push(...ops);
+          }
+          if(!s) pend.push(...ksDiff({},loc).filter(o=>!KS_IDARR.includes(o.a)));
+        }
+        if(s){ SYNC.base[rt]=s; } else delete SYNC.base[rt];
+        const merged=ksApply(ksClone(s||{}),pend);
+        if(loc) afterChange(rt,applyInPlace(loc,merged)); else ST.r[rt]=merged;
+        if(pend.length) SYNC.dirty.add(rt);
+      }
+      if(nMig[0]&&confirm(`พบสถานที่/ทางเชื่อม ${nMig[0]} จุดในเครื่องนี้ที่ยังไม่มีในส่วนกลาง\n(${Object.entries(mig).map(([k,v])=>k+' '+v.length+' จุด').join(', ')})\n\nอัปโหลดขึ้นส่วนกลางหรือไม่?`)){
+        for(const [rt,ops] of Object.entries(mig)){ const r=ST.r[rt]||(ST.r[rt]={}); ksApply(r,ops); SYNC.dirty.add(rt); if(rt===CUR) afterChange(rt,new Set(['lm','plr'])); }
+      }
+      saveBase();
+      try{const s=JSON.parse(localStorage.getItem(LSK)||'null')||{}; s.g=ST.g; s.last=ST.last; s.r=ST.r; localStorage.setItem(LSK,JSON.stringify(s));}catch(e){}
+      SYNC.loaded=Date.now();
+      setSync(SYNC.pin?'ok':'view');
+      if(SYNC.dirty.size){clearTimeout(SYNC.tm); SYNC.tm=setTimeout(syncFlush,200);}
+    }catch(e){ console.warn('sync load',e); setSync('err','โหลดส่วนกลางไม่ได้ — ใช้ข้อมูลในเครื่อง'); }
+    finally{SYNC.loading=null;}
+  })();
+  return SYNC.loading;
+}
+function setSync(st,msg){
+  SYNC.st=st; SYNC.msg=msg||'';
+  const el=$('rpSync'); if(!el) return;
+  const T={off:['⚪','ยังไม่ได้ตั้งค่าส่วนกลาง'],ok:['☁️','บันทึกส่วนกลางแล้ว'],view:['👁️','ดูอย่างเดียว · แตะเพื่อใส่ PIN'],busy:['⏳','กำลังบันทึก…'],
+    lock:['🔒','ยังไม่ได้ส่งขึ้นส่วนกลาง · แตะเพื่อใส่ PIN'],err:['⚠️','ส่วนกลางขัดข้อง · แตะเพื่อลองใหม่']}[st]||['',''];
+  el.textContent=T[0]+' '+(SYNC.msg||T[1]); el.dataset.st=st;
+  el.title='ส่วนกลาง: '+(SYNC.url?'เชื่อมแล้ว':'ยังไม่ได้ตั้งค่า')+' · เครื่องนี้ '+KS_WHO;
+}
+function askPin(){
+  document.querySelectorAll('.ks-pin').forEach(e=>e.remove());
+  const d=document.createElement('div'); d.className='pl-ed ks-pin';
+  d.innerHTML=`<b>🔒 ใส่ PIN เพื่อบันทึกขึ้นส่วนกลาง</b><br><span style="font-size:12px;color:#666">ข้อมูลรายงานของทุกสายใช้ร่วมกันทุกเครื่อง · ใส่ครั้งเดียว เครื่องนี้จะจำไว้</span>
+    <input id="ksPin" type="password" inputmode="numeric" autocomplete="off" placeholder="PIN">
+    <div class="bt"><button class="ok">ตกลง</button><button class="cc">ดูอย่างเดียว</button></div>`;
+  document.body.appendChild(d); const inp=d.querySelector('#ksPin'); setTimeout(()=>inp.focus(),30);
+  const ok=async()=>{const v=inp.value.trim(); if(!v) return; d.querySelector('.ok').disabled=true;
+    try{const r=await ksApi({action:'check',pin:v});
+      if(r&&r.ok){SYNC.pin=v; try{localStorage.setItem('khet_sync_pin',v);}catch(e){} d.remove(); toast('บันทึก PIN แล้ว',2000); setSync('ok');
+        if(CUR) SYNC.dirty.add(CUR); for(const rt of Object.keys(ST.r)) if(ksDiff(SYNC.base[rt],ST.r[rt]).length) SYNC.dirty.add(rt); syncFlush();}
+      else {toast(r&&r.err==='pin'?'PIN ไม่ถูกต้อง':'ตรวจ PIN ไม่ได้: '+((r&&r.err)||''),3000); d.querySelector('.ok').disabled=false; inp.select();}
+    }catch(e){toast('เชื่อมต่อส่วนกลางไม่ได้',3000); d.querySelector('.ok').disabled=false;}};
+  d.querySelector('.ok').onclick=ok; inp.onkeydown=e=>{if(e.key==='Enter')ok(); if(e.key==='Escape')d.remove();};
+  d.querySelector('.cc').onclick=()=>d.remove();
+}
+function ksSetUrl(){
+  const v=prompt('URL ของ Web app ส่วนกลาง (ลงท้าย /exec)\nเว้นว่าง = ใช้ค่าที่ฝังในแอป',localStorage.getItem('khet_sync_url')||'');
+  if(v==null) return; try{ if(v.trim()) localStorage.setItem('khet_sync_url',v.trim()); else localStorage.removeItem('khet_sync_url'); }catch(e){}
+  SYNC.url=(v.trim()||SYNC_URL_DEF); if(SYNC.url.indexOf('__')===0) SYNC.url='';
+  SYNC.loaded=0; syncLoad(true).then(()=>{if(CUR) setRoute(CUR);});
+}
 let CUR=null, PAGES=[], TL=[], OFFS={}, REQS=null;
 const $=s=>document.getElementById(s);
 function R(){return ST.r[CUR]||(ST.r[CUR]={mode:'all',sel:[],f:{},tt:{}});}
@@ -3245,7 +3484,7 @@ UI.innerHTML=`<svg width="0" height="0" style="position:absolute"><defs>
 <pattern id="rp-mgr" width="16" height="12" patternUnits="userSpaceOnUse"><path d="M2,3 h6 M10,9 h6" stroke="${RK.mgr.c}" stroke-width="1.6" stroke-linecap="round"/></pattern>
 </defs></svg>
 <div class="rpt-bar"><button id="rpX">← กลับแผนที่</button><b>🖨️ รายงานแผนที่ประกอบคำขอ</b>
-  <span class="st" id="rpSt"></span><button id="rpP" class="pri">🖨️ พิมพ์ / บันทึก PDF</button></div>
+  <span class="st" id="rpSt"></span><span class="sync" id="rpSync" title="ส่วนกลาง"></span><button id="rpSyncR" title="โหลดข้อมูลล่าสุดจากส่วนกลาง">🔄</button><button id="rpP" class="pri">🖨️ พิมพ์ / บันทึก PDF</button></div>
 <div class="rpt-body"><div class="rpt-form" id="rpF"></div><div id="rptPages"></div></div>`;
 document.body.appendChild(UI);
 
@@ -3259,6 +3498,7 @@ function renderForm(){
   const hasPerm=!!(AREA[CUR]&&AREA[CUR].perm);
   const reqTxt=REQS==null?'กำลังอ่านคำขอ…':(REQS.length?REQS.map(q=>`ทล.${esc(q.route_no)} ${esc(q.route_extra||'')} · ${esc(q.forest_type||'')} · เลขที่ ${esc(q.request_no||'–')} · ${esc(q.status||'')}`).join('<br>'):'ไม่พบคำขอของสายนี้ในเครื่อง (กรอกเองได้)');
   $('rpF').innerHTML=`
+<div class="note" style="margin:0 0 6px">☁️ ข้อมูลรายงานของแต่ละสาย (หัวเรื่อง · แปลง · สถานที่ที่ปัก · ทางเชื่อม) ใช้ร่วมกันทุกเครื่อง · <a href="#" data-ks="pin">${SYNC.pin?'เปลี่ยน PIN':'ใส่ PIN'}</a> · <a href="#" data-ks="url">ตั้งค่าส่วนกลาง</a></div>
 <h4>1. สายทาง / ป่าที่ยื่นคำขอ / ขอบเขต</h4>
 <select id="rfRoute">${names.map(n=>`<option ${n===CUR?'selected':''}>${esc(n)}</option>`).join('')}</select>
 <label class="f">ยื่นคำขอสำหรับ</label>
@@ -4367,6 +4607,7 @@ async function exportOcl(){
 
 /* ---------- เปิด/ปิด/พิมพ์ ---------- */
 async function setRoute(name){
+  await syncLoad();
   CUR=name; ST.last=name; R(); save();
   if(ALLREQ==null) ALLREQ=await readReqs();
   REQS=matchReqs();
@@ -4400,6 +4641,11 @@ async function doPrint(){
   setTimeout(done,1500);
 }
 $('rpX').onclick=closeRpt;
+$('rpSync').onclick=()=>{const s=SYNC.st; if(s==='off') ksSetUrl(); else if(s==='lock'||s==='view') askPin(); else if(s==='err'){SYNC.loaded?syncFlush():syncLoad(true);} else syncLoad(true);};
+$('rpSyncR').onclick=async()=>{if(!SYNC.url){ksSetUrl();return;} await syncLoad(true); if(SYNC.loaded) toast('โหลดข้อมูลล่าสุดแล้ว',1500);};
+$('rpF').addEventListener('click',e=>{const a=e.target.closest('[data-ks]'); if(!a) return; e.preventDefault(); if(a.dataset.ks==='pin') askPin(); else ksSetUrl();});
+$('rpF').addEventListener('focusout',()=>setTimeout(()=>{if(SYNC.formLater) formRefresh();},200));
+setInterval(()=>{if(UI.classList.contains('show')&&document.visibilityState==='visible'&&SYNC.loaded&&!SYNC.busy&&!SYNC.dirty.size&&!document.querySelector('.pl-ed')&&!PLMODE) syncLoad(true);},60000);
 $('rpP').onclick=doPrint;
 const rb=document.createElement('div');
 rb.className='chip'; rb.id='chipRpt'; rb.textContent='🖨️ รายงานแผนที่';
